@@ -1897,6 +1897,51 @@ unsafe {
                                             packed8rgb[ind] = packedcolor;
                                         }
 
+
+
+                                        if block == 2 && cubeside == CubeSide::TOP {
+                                           
+                                            let texcoord = Blocks::get_tex_coords(block, cubeside);
+                                            for (ind, v) in side.chunks(4).enumerate().rev() {
+                                                static AMB_CHANGES: [u8; 4] = [0, 3, 6, 10];
+
+                                            
+                                                let amb_change = 0;
+
+                                                let base_light: i32 =
+                                                    v[3] as i32 - AMB_CHANGES[amb_change] as i32; // Perform calculations as i32
+                                                let adjusted_light: i32 = if hit_block {
+                                                    base_light - 3
+                                                } else {
+                                                    base_light
+                                                };
+                                                let clamped_light: u8 =
+                                                    adjusted_light.clamp(0, 15) as u8; // Clamp in i32 context, then cast to u8
+
+                                                let pack = PackedVertex::pack(
+                                                    i as u8 + v[0],
+                                                    j as u8 + v[1],
+                                                    k as u8 + v[2],
+                                                    ind as u8,
+                                                    clamped_light,
+                                                    isgrass, //TEMPORARY UNUSED
+                                                    texcoord.0,
+                                                    texcoord.1,
+                                                );
+
+                                                let packedcolor = PackedVertex::pack_rgb(
+                                                    blocklighthere.x,
+                                                    blocklighthere.y,
+                                                    blocklighthere.z,
+                                                );
+
+           
+                                                tdata32.push(pack.0);
+                                                tdata8.push(pack.1);
+                                                tdata8rgb.push(packedcolor);
+                                            }
+                                        }
+
                                         tdata32.extend_from_slice(packed32.as_slice());
                                         tdata8.extend_from_slice(packed8.as_slice());
                                         tdata8rgb.extend_from_slice(packed8rgb.as_slice());
