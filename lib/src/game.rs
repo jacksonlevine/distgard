@@ -29,9 +29,7 @@ use parking_lot::{Mutex, RwLock};
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
 
-
-pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new() );
-
+pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new());
 
 pub static mut SELECTCUBESPOT: IVec3 = IVec3 { x: 0, y: 0, z: 0 };
 use std::thread::{self, JoinHandle};
@@ -49,16 +47,13 @@ pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
 
 pub static mut VOXEL_SELECT_DISTANCE: f32 = 10.0;
 
-
-
-pub static mut BUILD_PREVIEW_MODE: bool  = false;
+pub static mut BUILD_PREVIEW_MODE: bool = false;
 
 pub static mut SELECTED_BUILD: usize = 0;
 
 pub static mut BUILD_VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
 
-pub static mut BUILD_MODEL_OFFSET: IVec2 = IVec2::new(0,0);
-
+pub static mut BUILD_MODEL_OFFSET: IVec2 = IVec2::new(0, 0);
 
 use crate::camera::Camera;
 use crate::collisioncage::*;
@@ -556,16 +551,18 @@ impl Game {
 
         let mut csys = ChunkSystem::new(10, randseed, 0, headless);
 
-        unsafe { BUILD_VOXEL_MODELS = vec![
-            JVoxModel::new(path!("assets/voxelmodels/build1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/build2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/build3.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/build4.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rock2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rock1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
-        ] };
+        unsafe {
+            BUILD_VOXEL_MODELS = vec![
+                JVoxModel::new(path!("assets/voxelmodels/build1.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/build2.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/build3.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/build4.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/rock2.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/rock1.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
+                JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
+            ]
+        };
         let voxel_models = vec![
             JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
             JVoxModel::new(path!("assets/voxelmodels/tree1.vox")),
@@ -1133,6 +1130,17 @@ impl Game {
                         path!("assets/sfx/grassstep6.mp3"),
                     ],
                 );
+
+                AUDIOPLAYER.preload_series(
+                    "bubbles",
+                    vec![
+                        path!("assets/sfx/bubble1.mp3"),
+                        path!("assets/sfx/bubble2.mp3"),
+                        path!("assets/sfx/bubble3.mp3"),
+                    ],
+                );
+
+                AUDIOPLAYER.preload(path!("assets/sfx/slide.mp3"), path!("assets/sfx/slide.mp3"));
 
                 AUDIOPLAYER.preload_series(
                     "woodstepseries",
@@ -3010,12 +3018,11 @@ impl Game {
             self.vars.walkbobtimer = self.vars.walkbobtimer + self.delta_time * 10.0;
             self.vars.walkbobtimer %= 2.0 * consts::PI;
         }
-        
-        if unsafe { BUILD_PREVIEW_MODE} {
+
+        if unsafe { BUILD_PREVIEW_MODE } {
             unsafe {
                 VOXEL_SELECT_DISTANCE = 30.0;
-
-            } 
+            }
         } else {
             unsafe {
                 VOXEL_SELECT_DISTANCE = 10.0;
@@ -3555,10 +3562,38 @@ impl Game {
             //}
 
             for i in self.faders.write().iter_mut().enumerate() {
-                if i.1.tick(self.delta_time) {
-                    if i.0 == (FaderNames::FovFader as usize) {
-                        self.camera.lock().update_fov(i.1.value);
-                    }
+                if i.0 == (FaderNames::FovFader as usize) {
+
+                    static mut headwasinwater: bool = false;
+                    
+                        let bool = i.1.tick(self.delta_time);
+                        if self.headinwater {
+                            
+                            unsafe {
+                                if !headwasinwater {
+
+                                    self.camera.lock().update_fov(i.1.value * 0.75);
+                                    headwasinwater = true;
+                                }
+                            }
+                        } else {
+                            unsafe {
+                                if headwasinwater {
+                                    self.camera.lock().update_fov(i.1.value);
+                                    headwasinwater = false;
+                                } else {
+                                    if bool {
+                                        self.camera.lock().update_fov(i.1.value);
+                                    }
+                                }
+                                
+                            }
+                            
+                        }
+                        
+                    
+                } else {
+                    i.1.tick(self.delta_time);
                 }
             }
             if ((self.controls.forward
@@ -3590,7 +3625,6 @@ impl Game {
             let camclone = self.draw_select_cube();
             //}
 
-            
             unsafe {
                 if BUILD_PREVIEW_MODE && MOUSE_ON_CUBE {
                     LIST_OF_PREVIEWED_SPOTS = Self::draw_user_build_preview(
@@ -3603,11 +3637,7 @@ impl Game {
                         &self.tex,
                     );
                 }
-                
             }
-            
-            
-            
 
             self.guisys.draw_text(0);
 
@@ -4354,9 +4384,9 @@ impl Game {
                         unsafe {
                             MOUSE_ON_CUBE = false;
                         }
-                        
+
                         0
-                    },
+                    }
                 };
 
                 BLOCK_MATERIAL = get_block_material(BLOCK_TYPE);
@@ -4365,12 +4395,11 @@ impl Game {
             match HIT_RESULT {
                 Some((_head, hit)) => {
                     unsafe {
-                        static mut LASTSPOT: IVec3 = IVec3::new(0,0,0);
+                        static mut LASTSPOT: IVec3 = IVec3::new(0, 0, 0);
 
                         SELECTCUBESPOT = hit;
 
                         if SELECTCUBESPOT != LASTSPOT {
-
                             BUILD_MODEL_OFFSET = IVec2::new(0, 0);
 
                             LASTSPOT = SELECTCUBESPOT;
@@ -4426,6 +4455,8 @@ impl Game {
 
     #[cfg(feature = "glfw")]
     pub fn draw(&self) {
+        use crate::chunk::ChW;
+
         let campitch = self.camera.lock().pitch;
 
         //Sky
@@ -4828,27 +4859,62 @@ impl Game {
                     unsafe {
                         if !CHUNKDRAWINGHERE.contains_key(&cfl.pos) {
                             CHUNKDRAWINGHERE.insert(cfl.pos, Instant::now());
+                            #[cfg(feature = "audio")]
+                            {
+
+                                let playerpos = Vec3::new(
+                                    PLAYERPOS.pos.0.load(Ordering::Relaxed),
+                                    PLAYERPOS.pos.1.load(Ordering::Relaxed),
+                                    PLAYERPOS.pos.2.load(Ordering::Relaxed),
+                                );
+
+                                let s = Vec3::new(
+                                    (cfl.pos.x * ChW) as f32,
+                                    playerpos.y,
+                                    (cfl.pos.y * ChW) as f32,
+                                );
+
+                                if s
+                                .distance(
+                                    playerpos
+                                ) < 30.0
+                                {
+                                    let _ = AUDIOPLAYER.play_next_in_series(
+                                        "bubbles",
+                                        &s,
+                                        &Vec3::ZERO,
+                                        1.0,
+                                    );
+                                }
+                            }
                         }
 
                         match CHUNKDRAWINGHERE.get(&cfl.pos) {
                             Some(instant) => {
                                 let instant = instant.value();
                                 let timeelapsed = instant.elapsed();
-                                gl::Uniform1f(gl::GetUniformLocation(
-                                    self.shader0.shader_id,
-                                    b"elapsedFade\0".as_ptr() as *const i8,
-                                ), timeelapsed.as_secs_f32().min(CHUNKFADEINTIME) * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL);
-                            },
+                                let t = timeelapsed.as_secs_f32().min(CHUNKFADEINTIME)
+                                    * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+
+                                gl::Uniform1f(
+                                    gl::GetUniformLocation(
+                                        self.shader0.shader_id,
+                                        b"elapsedFade\0".as_ptr() as *const i8,
+                                    ),
+                                    t,
+                                );
+                            }
                             None => {
-                                gl::Uniform1f(gl::GetUniformLocation(
-                                    self.shader0.shader_id,
-                                    b"elapsedFade\0".as_ptr() as *const i8,
-                                ), 0.0);
-                            },
+                                gl::Uniform1f(
+                                    gl::GetUniformLocation(
+                                        self.shader0.shader_id,
+                                        b"elapsedFade\0".as_ptr() as *const i8,
+                                    ),
+                                    0.0,
+                                );
+                            }
                         }
                     }
-                    
-                    
 
                     let error = gl::GetError();
                     if error != gl::NO_ERROR {
@@ -4897,17 +4963,38 @@ impl Game {
                             Some(instant) => {
                                 let instant = instant.value();
                                 let timeelapsed = instant.elapsed();
-                                gl::Uniform1f(gl::GetUniformLocation(
-                                    self.shader0.shader_id,
-                                    b"elapsedFade\0".as_ptr() as *const i8,
-                                ), timeelapsed.as_secs_f32().min(CHUNKFADEINTIME) * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL);
-                            },
+                                let t = timeelapsed.as_secs_f32().min(CHUNKFADEINTIME)
+                                    * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+                                if t <= 0.5 && cfl.tlength > 0 {
+                                    #[cfg(feature = "audio")]
+                                    AUDIOPLAYER.play(
+                                        path!("assets/sfx/slide.mp3"),
+                                        &Vec3::new(
+                                            (cfl.pos.x * ChW) as f32,
+                                            PLAYERPOS.pos.1.load(Ordering::Relaxed),
+                                            (cfl.pos.y * ChW) as f32,
+                                        ),
+                                        &Vec3::ZERO,
+                                        1.0,
+                                    );
+                                }
+                                gl::Uniform1f(
+                                    gl::GetUniformLocation(
+                                        self.shader0.shader_id,
+                                        b"elapsedFade\0".as_ptr() as *const i8,
+                                    ),
+                                    t,
+                                );
+                            }
                             None => {
-                                gl::Uniform1f(gl::GetUniformLocation(
-                                    self.shader0.shader_id,
-                                    b"elapsedFade\0".as_ptr() as *const i8,
-                                ), 0.0);
-                            },
+                                gl::Uniform1f(
+                                    gl::GetUniformLocation(
+                                        self.shader0.shader_id,
+                                        b"elapsedFade\0".as_ptr() as *const i8,
+                                    ),
+                                    0.0,
+                                );
+                            }
                         }
                     }
 
@@ -5826,8 +5913,6 @@ impl Game {
     }
     #[cfg(feature = "glfw")]
     pub fn scroll(&mut self, y: f64) {
-
-
         let mut invrowchange = 0;
         if y > 0.0 {
             invrowchange += 1;
@@ -5836,7 +5921,7 @@ impl Game {
             invrowchange -= 1;
         }
 
-        if unsafe {BUILD_PREVIEW_MODE} {
+        if unsafe { BUILD_PREVIEW_MODE } {
             let mut proposednewbuild = unsafe { SELECTED_BUILD } as i8 + invrowchange;
             if proposednewbuild < 0 {
                 proposednewbuild = unsafe { BUILD_VOXEL_MODELS.len() } as i8 - 1;
@@ -5853,8 +5938,6 @@ impl Game {
             self.hud.dirty = true;
             self.hud.update();
         }
-        
-        
     }
 
     #[cfg(feature = "glfw")]
@@ -5902,7 +5985,6 @@ impl Game {
             static mut LAST_MOD_IND: i32 = -99;
 
             if LAST_MOD_IND != vox.idnumber {
-
                 vec.clear();
                 //println!("Lastmodind {LAST_MOD_IND} is not equal to {}", vox.idnumber);
 
@@ -5918,23 +6000,18 @@ impl Game {
                             v.point.y as i32 - (size.y / 2) as i32,
                         );
                         //println!("{:?}", rearr_point);
-                        
-
 
                         let doorbottomuvs = DoorInfo::get_door_uvs(TextureFace::new(11, 0));
                         let doortopuvs = DoorInfo::get_door_uvs(TextureFace::new(11, 1));
 
-                     
-                        let combined = v.color_index.0 as u32; 
+                        let combined = v.color_index.0 as u32;
 
-                        vec.push((rearr_point , combined));
+                        vec.push((rearr_point, combined));
                         let block = combined & Blocks::block_id_bits();
                         let flags = combined & Blocks::block_flag_bits();
 
                         if block != 0 {
-
                             {
-       
                                 let texcoord = Blocks::get_tex_coords(block, CubeSide::LEFT);
 
                                 let blocklighthere = U16Vec3::new(5, 5, 5);
@@ -5949,44 +6026,188 @@ impl Game {
                                     0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
 
                                 for vert in [
-                                    0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 0.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 1.0 +rearr_point.z as f32, 0.0, 14.0,
-0.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-1.0 +rearr_point.x as f32, 1.0 +rearr_point.y as f32, 0.0 +rearr_point.z as f32, 0.0, 14.0,
-
-                                ].chunks(5)
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    0.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    1.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    0.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                    1.0 + rearr_point.x as f32,
+                                    1.0 + rearr_point.y as f32,
+                                    0.0 + rearr_point.z as f32,
+                                    0.0,
+                                    14.0,
+                                ]
+                                .chunks(5)
                                 {
                                     UBP_VDATA.extend_from_slice(&[
                                         vert[0] as f32,
@@ -6001,43 +6222,150 @@ impl Game {
                                     -(texcoord.1 as f32 * ONE_OVER_16),
                                 );
                                 UBP_UVDATA.extend_from_slice(&[
-                                    0.032546114176511765+tc.x, 0.999256021110341+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.966321587562561+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.999256021110341+tc.y, 0.0, 0.0,
-                            0.032546114176511765+tc.x, 0.9995140247046947+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.9665796048939228+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.9995140247046947+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 0.9997720420360565+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 0.9997720420360565+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 1.000030018389225+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 0.9670955687761307+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 1.000030018389225+tc.y, 0.0, 0.0,
-                            0.03280412033200264+tc.x, 0.9994072914123535+tc.y, 0.0, 0.0,
-                            -0.0001303069293498993+tc.x, 0.9664728343486786+tc.y, 0.0, 0.0,
-                            -0.0001303069293498993+tc.x, 0.9994072914123535+tc.y, 0.0, 0.0,
-                            0.033017635345458984+tc.x, 0.9997720406099688+tc.y, 0.0, 0.0,
-                            8.318200707435608e-05+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-                            8.318200707435608e-05+tc.x, 0.9997720406099688+tc.y, 0.0, 0.0,
-                            0.032546114176511765+tc.x, 0.999256021110341+tc.y, 0.0, 0.0,
-                            0.032546114176511765+tc.x, 0.966321587562561+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.966321587562561+tc.y, 0.0, 0.0,
-                            0.032546114176511765+tc.x, 0.9995140247046947+tc.y, 0.0, 0.0,
-                            0.032546114176511765+tc.x, 0.9665796048939228+tc.y, 0.0, 0.0,
-                            -0.00038831273559480906+tc.x, 0.9665796048939228+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 0.9997720420360565+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 1.000030018389225+tc.y, 0.0, 0.0,
-                            0.03291086480021477+tc.x, 0.9670955687761307+tc.y, 0.0, 0.0,
-                            -2.3560685804113746e-05+tc.x, 0.9670955687761307+tc.y, 0.0, 0.0,
-                            0.03280412033200264+tc.x, 0.9994072914123535+tc.y, 0.0, 0.0,
-                            0.03280412033200264+tc.x, 0.9664728343486786+tc.y, 0.0, 0.0,
-                            -0.0001303069293498993+tc.x, 0.9664728343486786+tc.y, 0.0, 0.0,
-                            0.033017635345458984+tc.x, 0.9997720406099688+tc.y, 0.0, 0.0,
-                            0.033017635345458984+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-                            8.318200707435608e-05+tc.x, 0.9668375849723816+tc.y, 0.0, 0.0,
-
+                                    0.032546114176511765 + tc.x,
+                                    0.999256021110341 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.966321587562561 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.999256021110341 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.032546114176511765 + tc.x,
+                                    0.9995140247046947 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.9665796048939228 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.9995140247046947 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    0.9997720420360565 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    0.9997720420360565 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    1.000030018389225 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    0.9670955687761307 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    1.000030018389225 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03280412033200264 + tc.x,
+                                    0.9994072914123535 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.0001303069293498993 + tc.x,
+                                    0.9664728343486786 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.0001303069293498993 + tc.x,
+                                    0.9994072914123535 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.033017635345458984 + tc.x,
+                                    0.9997720406099688 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    8.318200707435608e-05 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    8.318200707435608e-05 + tc.x,
+                                    0.9997720406099688 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.032546114176511765 + tc.x,
+                                    0.999256021110341 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.032546114176511765 + tc.x,
+                                    0.966321587562561 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.966321587562561 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.032546114176511765 + tc.x,
+                                    0.9995140247046947 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.032546114176511765 + tc.x,
+                                    0.9665796048939228 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.00038831273559480906 + tc.x,
+                                    0.9665796048939228 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    0.9997720420360565 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    1.000030018389225 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03291086480021477 + tc.x,
+                                    0.9670955687761307 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -2.3560685804113746e-05 + tc.x,
+                                    0.9670955687761307 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03280412033200264 + tc.x,
+                                    0.9994072914123535 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.03280412033200264 + tc.x,
+                                    0.9664728343486786 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    -0.0001303069293498993 + tc.x,
+                                    0.9664728343486786 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.033017635345458984 + tc.x,
+                                    0.9997720406099688 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    0.033017635345458984 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
+                                    8.318200707435608e-05 + tc.x,
+                                    0.9668375849723816 + tc.y,
+                                    0.0,
+                                    0.0,
                                 ]);
                             }
                         }
@@ -6052,7 +6380,7 @@ impl Game {
                     &UBP_VDATA,
                     &UBP_UVDATA,
                     &oldshader,
-                    UBP_VAO
+                    UBP_VAO,
                 );
             } else {
                 //WorldGeometry::bind_old_geometry_no_upload(UBP_VBO, UBP_UVBO, &oldshader);
@@ -6194,7 +6522,6 @@ impl Game {
             //println!("UVDATALEN: {}", UBP_VDATA.len() as f32 / 5.0);
 
             gl::DrawArrays(gl::TRIANGLES, 0, (*UBP_VDATA).len() as i32 / 5);
-
         }
         unsafe { vec.clone() }
     }
@@ -6997,38 +7324,41 @@ impl Game {
                     // }
                 }
                 "Place/Use" => {
-                    
                     self.vars.right_mouse_clicked = a == Action::Press;
                     if !self.vars.ship_taken_off {
-                        
                         if self.vars.right_mouse_clicked {
                             //println!("RMC");
                             if unsafe { BUILD_PREVIEW_MODE } {
-                                
                                 unsafe {
-                                    
                                     if MOUSE_ON_CUBE {
                                         let mut implic = HashSet::new();
                                         //println!("LOPS len: {}", LIST_OF_PREVIEWED_SPOTS.len());
                                         for (spot, block) in LIST_OF_PREVIEWED_SPOTS.clone() {
-                                            let spot = spot + SELECTCUBESPOT + IVec3::new(BUILD_MODEL_OFFSET.x, 0, BUILD_MODEL_OFFSET.y);
+                                            let spot = spot
+                                                + SELECTCUBESPOT
+                                                + IVec3::new(
+                                                    BUILD_MODEL_OFFSET.x,
+                                                    0,
+                                                    BUILD_MODEL_OFFSET.y,
+                                                );
                                             let chunkspot = ChunkSystem::spot_to_chunk_pos(&spot);
                                             implic.insert(chunkspot);
                                             //println!("Setting a block {} at {}", block, spot);
-                                            self.chunksys.read().set_block_no_sound(spot, block, true);
+                                            self.chunksys
+                                                .read()
+                                                .set_block_no_sound(spot, block, true);
                                         }
-                    
+
                                         for imp in implic {
-                                            self.chunksys.read().queue_rerender_with_key(imp, true, false);
+                                            self.chunksys
+                                                .read()
+                                                .queue_rerender_with_key(imp, true, false);
                                         }
-                                    }   
-                                    
-    
+                                    }
                                 }
                             } else {
                                 self.cast_place_ray();
                             }
-                            
                         }
                     }
                 }
@@ -7089,25 +7419,25 @@ impl Game {
 
         {
             if action == Action::Press && unsafe { BUILD_PREVIEW_MODE && MOUSE_ON_CUBE } {
-                unsafe { match key {
-                    Key::Left => {
-                        BUILD_MODEL_OFFSET.x -= 1;
+                unsafe {
+                    match key {
+                        Key::Left => {
+                            BUILD_MODEL_OFFSET.x -= 1;
+                        }
+                        Key::Right => {
+                            BUILD_MODEL_OFFSET.x += 1;
+                        }
+                        Key::Up => {
+                            BUILD_MODEL_OFFSET.y += 1;
+                        }
+                        Key::Down => {
+                            BUILD_MODEL_OFFSET.y -= 1;
+                        }
+                        _ => {}
                     }
-                    Key::Right => {
-                        BUILD_MODEL_OFFSET.x += 1;
-                    }
-                    Key::Up => {
-                        BUILD_MODEL_OFFSET.y += 1;
-                    }
-                    Key::Down => {
-                        BUILD_MODEL_OFFSET.y -= 1;
-                    }
-                    _ => {
-    
-                    }
-                } }
+                }
             }
-            
+
             match unsafe {
                 MISCSETTINGS
                     .keybinds
@@ -7117,7 +7447,7 @@ impl Game {
             } {
                 "Build Mode Toggle" => {
                     if action == Action::Press {
-                        unsafe{BUILD_PREVIEW_MODE = !BUILD_PREVIEW_MODE};
+                        unsafe { BUILD_PREVIEW_MODE = !BUILD_PREVIEW_MODE };
                     }
                 }
                 "Exit/Menu" => {
