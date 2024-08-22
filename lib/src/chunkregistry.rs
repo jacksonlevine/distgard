@@ -9,6 +9,8 @@ use crate::{chunk::ChunkGeo, vec};
 pub struct ChunkMemory {
     pub used: bool,
 
+    pub timebeendrawn: f32,
+
     pub vbo8: gl::types::GLuint,
     pub vbo32: gl::types::GLuint, 
     pub tvbo8: gl::types::GLuint,
@@ -34,6 +36,7 @@ impl ChunkMemory {
     pub fn new(geo: &ChunkGeo) -> ChunkMemory {
         let cm = ChunkMemory {
             used: false,
+            timebeendrawn: 0.0,
             vbo8: geo.vbo8,
             vbo32: geo.vbo32,
             tvbo8: geo.tvbo8,

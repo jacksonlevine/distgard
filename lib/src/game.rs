@@ -29,7 +29,7 @@ use parking_lot::{Mutex, RwLock};
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
 
-pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new());
+//pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new());
 
 pub static mut SELECTCUBESPOT: IVec3 = IVec3 { x: 0, y: 0, z: 0 };
 use std::thread::{self, JoinHandle};
@@ -4587,6 +4587,7 @@ impl Game {
                     cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                     cmemlock.memories[ready.geo_index].pos = ready.newpos;
                     cmemlock.memories[ready.geo_index].used = true;
+                    cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                     //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                     //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -4663,6 +4664,7 @@ impl Game {
                                 cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                                 cmemlock.memories[ready.geo_index].pos = ready.newpos;
                                 cmemlock.memories[ready.geo_index].used = true;
+                                cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                                 //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                                 //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -4837,8 +4839,8 @@ impl Game {
         }
 
         let cs = self.chunksys.read();
-        let cmem = cs.chunk_memories.lock();
-        for (_index, cfl) in cmem.memories.iter().enumerate() {
+        let mut cmem = cs.chunk_memories.lock();
+        for (_index, cfl) in cmem.memories.iter_mut().enumerate() {
             if cfl.used {
                 let dd1: Mutex<Vec<u32>> = Mutex::new(Vec::new());
                 let dd2: Mutex<Vec<u8>> = Mutex::new(Vec::new());
@@ -4857,17 +4859,17 @@ impl Game {
                     gl::Uniform2f(C_POS_LOC, cfl.pos.x as f32, cfl.pos.y as f32);
 
                     unsafe {
-                        if !CHUNKDRAWINGHERE.contains_key(&cfl.pos) {
-                            CHUNKDRAWINGHERE.insert(cfl.pos, Instant::now());
+                        
+
+                        if cfl.timebeendrawn < 1.0 {
                             #[cfg(feature = "audio")]
-                            {
+                            if cfl.timebeendrawn == 0.0 {
 
                                 let playerpos = Vec3::new(
                                     PLAYERPOS.pos.0.load(Ordering::Relaxed),
                                     PLAYERPOS.pos.1.load(Ordering::Relaxed),
                                     PLAYERPOS.pos.2.load(Ordering::Relaxed),
                                 );
-
                                 let s = Vec3::new(
                                     (cfl.pos.x * ChW) as f32,
                                     playerpos.y,
@@ -4887,33 +4889,17 @@ impl Game {
                                     );
                                 }
                             }
+                            cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
                         }
 
-                        match CHUNKDRAWINGHERE.get(&cfl.pos) {
-                            Some(instant) => {
-                                let instant = instant.value();
-                                let timeelapsed = instant.elapsed();
-                                let t = timeelapsed.as_secs_f32().min(CHUNKFADEINTIME)
-                                    * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+                        gl::Uniform1f(
+                            gl::GetUniformLocation(
+                                self.shader0.shader_id,
+                                b"elapsedFade\0".as_ptr() as *const i8,
+                            ),
+                            cfl.timebeendrawn,
+                        );
 
-                                gl::Uniform1f(
-                                    gl::GetUniformLocation(
-                                        self.shader0.shader_id,
-                                        b"elapsedFade\0".as_ptr() as *const i8,
-                                    ),
-                                    t,
-                                );
-                            }
-                            None => {
-                                gl::Uniform1f(
-                                    gl::GetUniformLocation(
-                                        self.shader0.shader_id,
-                                        b"elapsedFade\0".as_ptr() as *const i8,
-                                    ),
-                                    0.0,
-                                );
-                            }
-                        }
                     }
 
                     let error = gl::GetError();
@@ -4958,45 +4944,13 @@ impl Game {
                 unsafe {
                     gl::Uniform2f(C_POS_LOC, cfl.pos.x as f32, cfl.pos.y as f32);
 
-                    unsafe {
-                        match CHUNKDRAWINGHERE.get(&cfl.pos) {
-                            Some(instant) => {
-                                let instant = instant.value();
-                                let timeelapsed = instant.elapsed();
-                                let t = timeelapsed.as_secs_f32().min(CHUNKFADEINTIME)
-                                    * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
-                                if t <= 0.5 && cfl.tlength > 0 {
-                                    #[cfg(feature = "audio")]
-                                    AUDIOPLAYER.play(
-                                        path!("assets/sfx/slide.mp3"),
-                                        &Vec3::new(
-                                            (cfl.pos.x * ChW) as f32,
-                                            PLAYERPOS.pos.1.load(Ordering::Relaxed),
-                                            (cfl.pos.y * ChW) as f32,
-                                        ),
-                                        &Vec3::ZERO,
-                                        1.0,
-                                    );
-                                }
-                                gl::Uniform1f(
-                                    gl::GetUniformLocation(
-                                        self.shader0.shader_id,
-                                        b"elapsedFade\0".as_ptr() as *const i8,
-                                    ),
-                                    t,
-                                );
-                            }
-                            None => {
-                                gl::Uniform1f(
-                                    gl::GetUniformLocation(
-                                        self.shader0.shader_id,
-                                        b"elapsedFade\0".as_ptr() as *const i8,
-                                    ),
-                                    0.0,
-                                );
-                            }
-                        }
-                    }
+                    gl::Uniform1f(
+                            gl::GetUniformLocation(
+                                self.shader0.shader_id,
+                                b"elapsedFade\0".as_ptr() as *const i8,
+                            ),
+                            cfl.timebeendrawn,
+                        );
 
                     let error = gl::GetError();
                     if error != gl::NO_ERROR {

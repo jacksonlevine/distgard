@@ -42,7 +42,7 @@ use crate::cube::CubeSide;
 #[cfg(feature = "audio")]
 use crate::game::AUDIOPLAYER;
 
-use crate::game::CHUNKDRAWINGHERE;
+//use crate::game::CHUNKDRAWINGHERE;
 use crate::game::CURRSEED;
 
 use crate::packedvertex::PackedVertex;
@@ -1072,9 +1072,9 @@ unsafe {
                 tc.remove(&chunkgeoarc.pos.lock());
             }
 
-            unsafe {
-                CHUNKDRAWINGHERE.remove(&chunkgeoarc.pos.lock());
-            }
+            // unsafe {
+            //     CHUNKDRAWINGHERE.remove(&chunkgeoarc.pos.lock());
+            // }
 
             // let mut chunkgeolock = chunkgeoarc.geos[num as usize].lock();
             // chunkgeolock.pos = cpos;
