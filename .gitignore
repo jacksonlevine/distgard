@@ -1,0 +1,16 @@
+/target
+.vscode/
+/world
+/mp
+/rel
+
+/mp
+/rel
+misc
+mmu
+
+chestdb
+db
+lesa
+app.log
+*.exe
