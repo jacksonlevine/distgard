@@ -24,7 +24,12 @@ pub struct MiscellaneousSettingsData {
     pub keybinds: HashMap<i32, String>,
     #[serde(with = "vectorize")]
     pub mousebinds: HashMap<String, String>,
+    #[serde(default = "contsuppdefault")]
+    pub controllersupport: bool
+}
 
+pub fn contsuppdefault() -> bool {
+    true
 }
 
 pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| MiscellaneousSettingsData {
@@ -51,7 +56,8 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
         ("Button2".into(), "Place/Use".into()),
         ("Button1".into(), "Break/Attack".into()),
 
-    ])
+    ]),
+    controllersupport: true
 } );
 
 pub fn SAVE_MISC() {
@@ -72,6 +78,7 @@ pub fn LOAD_MISC() {
         if !loaded_settings.keybinds.contains_key(&glfw::Key::B.get_scancode().unwrap()) {
             loaded_settings.keybinds.insert(glfw::Key::B.get_scancode().unwrap(), "Build Mode Toggle".into());
         }
+
         unsafe {
             *MISCSETTINGS = loaded_settings;
             SAVE_MISC();

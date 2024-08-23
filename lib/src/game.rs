@@ -1584,6 +1584,7 @@ impl Game {
                         "escapemenu".to_string(),
                     ),
                     ("Key Bindings".to_string(), "bindingsmenu".to_string()),
+                    ("SwitchJoystick".to_string(), "joystick".to_string()),
                     ("SliderMouse Sensitivity".to_string(), "test".to_string()),
                     ("SliderMusic Volume".to_string(), "music".to_string()),
                     ("SliderSounds Volume".to_string(), "sounds".to_string()),

@@ -444,28 +444,31 @@ impl WindowAndKeyContext {
                                 if g.loadedworld.load(std::sync::atomic::Ordering::Relaxed) {
                                     g.update();
 
-                                    let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
+                                    if unsafe {MISCSETTINGS.controllersupport == true} {
+                                        let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
 
-                                    static mut lastx: f64 = 0.0;
-                                    static mut lasty: f64 = 0.0;
+                                        static mut lastx: f64 = 0.0;
+                                        static mut lasty: f64 = 0.0;
 
-                                    static mut x: f64 = 0.0;
-                                    static mut y: f64 = 0.0;
+                                        static mut x: f64 = 0.0;
+                                        static mut y: f64 = 0.0;
 
-                                    let axes = state.get_axes();
+                                        let axes = state.get_axes();
 
-                                    if axes.len() >= 2 {
-                                        unsafe {
-                                            x += axes[0] as f64;
-                                            y += axes[1] as f64;
+                                        if axes.len() >= 2 {
+                                            unsafe {
+                                                x += axes[0] as f64;
+                                                y += axes[1] as f64;
 
-                                            if lastx != x || lasty != y {
-                                                lastx = x;
-                                                lasty = y;
-                                                g.cursor_pos(x, y);
+                                                if lastx != x || lasty != y {
+                                                    lastx = x;
+                                                    lasty = y;
+                                                    g.cursor_pos(x, y);
+                                                }
                                             }
                                         }
                                     }
+                                    
                                 }
 
                                 self.imgui
@@ -685,6 +688,14 @@ impl WindowAndKeyContext {
                                                                     //g.button_command(command);
                                                                 }
                                                             }
+                                                        } else if buttonname.starts_with("Switch") {
+
+                                                            if buttonname == "SwitchJoystick" {
+                                                                if ui.checkbox("Enable Joystick Support (Beta)", &mut MISCSETTINGS.controllersupport) {
+
+                                                                }
+                                                            }
+
                                                         } else {
                                                             if ui.button_with_size(buttonname, [button_width, button_height]) {
                                                                 g.button_command(command);
@@ -982,7 +993,7 @@ impl WindowAndKeyContext {
                                                     && MISCSETTINGS
                                                         .keybinds
                                                         .get(&key.get_scancode().unwrap())
-                                                        .unwrap()
+                                                        .unwrap_or(&"Blah".to_string())
                                                         == "Craft"
                                                 {
                                                     //println!("SHould close craft");
@@ -1006,7 +1017,7 @@ impl WindowAndKeyContext {
                                                         && MISCSETTINGS
                                                             .keybinds
                                                             .get(&key.get_scancode().unwrap())
-                                                            .unwrap()
+                                                            .unwrap_or(&"Blah".to_string())
                                                             == "Exit/Menu"
                                                     {
                                                         g.vars.menu_open = false;
