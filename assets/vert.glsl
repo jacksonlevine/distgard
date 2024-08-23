@@ -1,4 +1,7 @@
 #version 450 core
+
+precision highp float;
+
 layout (location = 0) in uint u32;
 layout (location = 1) in uint eightbit;
 layout (location = 2) in uint rgb;
@@ -12,6 +15,7 @@ uniform vec3 camPos;
 uniform float ambientBrightMult;
 uniform float viewDistance;
 uniform float planet_y;
+
 
 uniform float walkbob;
 

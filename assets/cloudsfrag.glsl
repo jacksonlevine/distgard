@@ -1,6 +1,6 @@
 #version 330 core
 
-
+precision highp float;
 out vec4 FragColor;
 in vec2 TexCoord;
 uniform sampler2D ourTexture;
@@ -18,6 +18,8 @@ uniform float opacity;
 uniform float ambientBrightMult;
 
 uniform float time;
+
+uniform vec3 camPos;
 
 float similarity(vec3 dir1, vec3 dir2) {
     return (dot(normalize(dir1), normalize(dir2)) + 1.0) * 0.5;
@@ -75,13 +77,15 @@ void main() {
 
 
 
- 
+	float cloudwidth = 200.0;
+
+
 
 
 
     FragColor = vec4(FragColor.xyz, FragColor.w*opacity);
 
-    float pn = pNoise(TexCoord + (vec2(0.0005, 0.0005) * time), 10) * 25.0;
+    float pn = pNoise((vec2(camPos.x, -camPos.z) / cloudwidth) + TexCoord + (vec2(0.0005, 0.0005) * time), 10) * 25.0;
     FragColor = vec4(ambientBrightMult, ambientBrightMult, ambientBrightMult, min(pn * 0.3, 0.6));
 
 

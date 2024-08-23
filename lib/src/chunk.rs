@@ -1427,6 +1427,8 @@ unsafe {
 
         let chunklock = chunklock.clone();
 
+        static mut rng: Lazy<StdRng> = Lazy::new(|| StdRng::from_entropy() );
+
         if light {
             self.lightpass_on_chunk(chunklock.pos);
         }
@@ -2078,14 +2080,11 @@ unsafe {
                     }
                 };
                 
-                if ((i * ChW) + k) % 17 == 0 && topy < 115 {
+                if unsafe {rng.gen_range(0..=10) > 9} && topy < 115 {
                     
 
-                    let mut rng = StdRng::from_entropy();
-                    
-                    let xzoff = Vec2::new(rng.gen_range(0.0..1.7), rng.gen_range(0.0..1.7));
-
-
+                    //let mut rng = StdRng::from_entropy();
+           
 
                     //spot xz top
                     let spoint: IVec3 = vec::IVec3 {
@@ -2096,9 +2095,9 @@ unsafe {
 
                     //spot xz top
                     let spo = Vec3 {
-                        x: (chunklock.pos.x * ChW) as f32 + i as f32+ xzoff.x,
+                        x: (chunklock.pos.x * ChW) as f32 + i as f32,
                         y: topy as f32,
-                        z: (chunklock.pos.y * ChW) as f32 + k as f32 + xzoff.y,
+                        z: (chunklock.pos.y * ChW) as f32 + k as f32 
                     };
 
 
@@ -2175,7 +2174,7 @@ unsafe {
 
                     ]);
 
-                    let randyoffset = rng.gen_range(0.0..1.0);
+                    let randyoffset = unsafe { rng.gen_range(0.0..1.0) };
 
                     
                     wuvdata.extend_from_slice(&[

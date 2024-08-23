@@ -1,4 +1,5 @@
 #version 450 core
+precision highp float;
 in vec3 vertexColor;
 in vec2 TexCoord;
 in vec3 pos;

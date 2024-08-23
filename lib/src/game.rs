@@ -29,6 +29,8 @@ use parking_lot::{Mutex, RwLock};
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
 
+pub static mut HIDEHUD: bool = false;
+
 //pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new());
 
 pub static mut SELECTCUBESPOT: IVec3 = IVec3 { x: 0, y: 0, z: 0 };
@@ -53,7 +55,7 @@ pub static mut SELECTED_BUILD: usize = 0;
 
 pub static mut BUILD_VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
 
-pub static mut BUILD_MODEL_OFFSET: IVec2 = IVec2::new(0, 0);
+pub static mut BUILD_MODEL_OFFSET: IVec3 = IVec3::new(0, 0, 0);
 
 use crate::camera::Camera;
 use crate::collisioncage::*;
@@ -3663,7 +3665,10 @@ impl Game {
             self.drops.update_and_draw_drops(&self.delta_time, &mvp);
 
             self.hud.update();
-            self.hud.draw();
+            if unsafe {!HIDEHUD} {
+                self.hud.draw();
+            }
+            
 
             self.tex.update_texture(self.delta_time);
 
@@ -4417,7 +4422,7 @@ impl Game {
                         SELECTCUBESPOT = hit;
 
                         if SELECTCUBESPOT != LASTSPOT {
-                            BUILD_MODEL_OFFSET = IVec2::new(0, 0);
+                            BUILD_MODEL_OFFSET = IVec3::new(0, 0, 0);
 
                             LASTSPOT = SELECTCUBESPOT;
                         }
@@ -4525,6 +4530,7 @@ impl Game {
                     cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                     cmemlock.memories[ready.geo_index].pos = ready.newpos;
                     cmemlock.memories[ready.geo_index].used = true;
+                    //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                     //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                     //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -5190,8 +5196,8 @@ impl Game {
         }
         #[cfg(feature = "glfw")]
         self.draw_stars();
-        // #[cfg(feature = "glfw")]
-        // self.draw_clouds();
+        #[cfg(feature = "glfw")]
+        self.draw_clouds();
     }
 
     pub fn start_world(&mut self) {
@@ -6495,8 +6501,8 @@ impl Game {
                     b"transformpos\0".as_ptr() as *const i8,
                 ),
                 spot.x as f32 + BUILD_MODEL_OFFSET.x as f32,
-                spot.y as f32,
-                spot.z as f32 + BUILD_MODEL_OFFSET.y as f32,
+                spot.y as f32 + BUILD_MODEL_OFFSET.y as f32,
+                spot.z as f32 + BUILD_MODEL_OFFSET.z as f32,
             );
 
             //println!("UVDATALEN: {}", UBP_VDATA.len() as f32 / 5.0);
@@ -7318,8 +7324,8 @@ impl Game {
                                                 + SELECTCUBESPOT
                                                 + IVec3::new(
                                                     BUILD_MODEL_OFFSET.x,
-                                                    0,
                                                     BUILD_MODEL_OFFSET.y,
+                                                    BUILD_MODEL_OFFSET.z,
                                                 );
                                             let chunkspot = ChunkSystem::spot_to_chunk_pos(&spot);
                                             implic.insert(chunkspot);
@@ -7408,12 +7414,26 @@ impl Game {
                             BUILD_MODEL_OFFSET.x += 1;
                         }
                         Key::Up => {
-                            BUILD_MODEL_OFFSET.y += 1;
+                            BUILD_MODEL_OFFSET.z += 1;
                         }
                         Key::Down => {
+                            BUILD_MODEL_OFFSET.z -= 1;
+                        }
+                        Key::PageUp => {
+                            BUILD_MODEL_OFFSET.y += 1;
+                        }
+                        Key::PageDown => {
                             BUILD_MODEL_OFFSET.y -= 1;
                         }
                         _ => {}
+                    }
+                }
+            }
+
+            if key == Key::F1 {
+                if action == Action::Press {
+                    unsafe {
+                        HIDEHUD = !HIDEHUD
                     }
                 }
             }
