@@ -985,7 +985,7 @@ impl WindowAndKeyContext {
                                                         .unwrap()
                                                         == "Craft"
                                                 {
-                                                    println!("SHould close craft");
+                                                    //println!("SHould close craft");
                                                     // g.crafting_open = false;
                                                     // self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
                                                     // g.set_mouse_focused(true);
