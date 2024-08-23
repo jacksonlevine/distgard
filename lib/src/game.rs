@@ -1134,13 +1134,30 @@ impl Game {
                 AUDIOPLAYER.preload_series(
                     "bubbles",
                     vec![
-                        path!("assets/sfx/bubble1.mp3"),
-                        path!("assets/sfx/bubble2.mp3"),
-                        path!("assets/sfx/bubble3.mp3"),
+                        path!("assets/sfx/bubble-01.mp3"),
+                        path!("assets/sfx/bubble-02.mp3"),
+                        path!("assets/sfx/bubble-03.mp3"),
+                        path!("assets/sfx/bubble-04.mp3"),
+                        path!("assets/sfx/bubble-05.mp3"),
+                        path!("assets/sfx/bubble-06.mp3"),
+                        path!("assets/sfx/bubble-07.mp3"),
+                        path!("assets/sfx/bubble-08.mp3"),
+                        path!("assets/sfx/bubble-09.mp3"),
+                        path!("assets/sfx/bubble-10.mp3"),
+                        path!("assets/sfx/bubble-11.mp3"),
+                        path!("assets/sfx/bubble-12.mp3"),
                     ],
                 );
 
-                AUDIOPLAYER.preload(path!("assets/sfx/slide.mp3"), path!("assets/sfx/slide.mp3"));
+                AUDIOPLAYER.preload_series(
+                    "slides",
+                    vec![
+                        path!("assets/sfx/slide.mp3"),
+                        path!("assets/sfx/slide.mp3"),
+                        path!("assets/sfx/slide.mp3"),
+                        path!("assets/sfx/slide.mp3"),
+                    ],
+                );
 
                 AUDIOPLAYER.preload_series(
                     "woodstepseries",
@@ -4872,14 +4889,14 @@ impl Game {
                                 );
                                 let s = Vec3::new(
                                     (cfl.pos.x * ChW) as f32,
-                                    playerpos.y,
+                                    playerpos.y + 5.0,
                                     (cfl.pos.y * ChW) as f32,
                                 );
 
                                 if s
                                 .distance(
                                     playerpos
-                                ) < 30.0
+                                ) < 50.0
                                 {
                                     let _ = AUDIOPLAYER.play_next_in_series(
                                         "bubbles",
@@ -4887,6 +4904,15 @@ impl Game {
                                         &Vec3::ZERO,
                                         1.0,
                                     );
+
+                                    //if cfl.tlength > 0 {
+                                        // let _ = AUDIOPLAYER.play_next_in_series(
+                                        //     "slides",
+                                        //     &s,
+                                        //     &Vec3::ZERO,
+                                        //     1.0,
+                                        // );
+                                    //}
                                 }
                             }
                             cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
