@@ -10,6 +10,10 @@ use tracing::info;
 use crate::game::{AUDIOPLAYER, SHOULDRUN};
 use crate::statics::MISCSETTINGS;
 
+
+
+pub const POSFACTOR: f32 = 0.5; //Used for increasing the spread range of spatial sounds by scaling down the positions of everything.
+
 pub static mut FUNC_QUEUE: Lazy<Queue<FuncQueue>> = Lazy::new(|| Queue::new());
 
 enum FuncQueue {
@@ -243,11 +247,14 @@ impl AudioPlayer {
     }
 
     pub fn play(&mut self, id: &'static str, pos: &Vec3, vel: &Vec3, vol: f32) {
-        unsafe { FUNC_QUEUE.push(FuncQueue::play(id.to_string(), *pos, *vel, vol)) };
+        unsafe { FUNC_QUEUE.push(FuncQueue::play(id.to_string(), *pos , *vel, vol)) };
     }
 
     pub fn _play(&mut self, id: String, pos: &Vec3, vel: &Vec3, vol: f32) {
+
         let vol = vol * 5.0;
+
+        let pos = *pos * POSFACTOR;
 
         let vol = vol * unsafe { MISCSETTINGS.sound_vol };
         let mut needtopreload = false;
@@ -267,7 +274,7 @@ impl AudioPlayer {
                         //sink.stop();
         
                         sink.append(source);
-                        sink.set_emitter_position((*pos).into());
+                        sink.set_emitter_position((pos).into());
                         sink.set_volume(vol);
                     },
                     None => {
@@ -286,7 +293,7 @@ impl AudioPlayer {
         if needtopreload {
             match self._preload(id.clone(), id.clone()) {
                 Ok(_) => {
-                    self._play(id, pos, vel, vol);
+                    self._play(id, &pos, vel, vol);
                 }
                 Err(e) => {
                     println!("Couldn't play or preload {}", id);
@@ -306,6 +313,7 @@ impl AudioPlayer {
         position: glam::Vec3,
         right: glam::Vec3
     ) {
+        let position = position * POSFACTOR;
         for entry in &self.sinks {
             let sink = entry.1;
             sink.sink.set_left_ear_position((position - right).into());
