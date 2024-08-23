@@ -18,7 +18,7 @@ uniform float walkbob;
 
 out vec3 grassColor;
 
-
+uniform float elapsedFade;
 
 float rand(vec2 c){
 	return fract(sin(dot(c.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -111,7 +111,12 @@ void main()
 
     float distance = pow(distance(position, camPos)/(5), 2)/5.0f;
     vec3 bob = vec3(0.0, ((sin(walkbob) )/20.0), 0.0) + vec3(0.0, 0.3, 0.0);
-    gl_Position = mvp * (vec4(position - bob , 1.0) );
+
+
+    float poschange = 1.0 - min(elapsedFade, 1.0);
+    vec3 pc = vec3(0.0, 2.0, 0.0);
+
+    gl_Position = mvp * (vec4((position - bob) + (pc * poschange) , 1.0) );
 
     float bright = min(16.0f,ambBright);
 
