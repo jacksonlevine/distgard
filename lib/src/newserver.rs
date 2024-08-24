@@ -34,9 +34,9 @@ pub fn handle_client_messages(
 ) {
     let mut endpoint = server.endpoint_mut();
     for client_id in endpoint.clients() {
-        while let Some(message) = endpoint.try_receive_message_from::<JMessage>(client_id) {
+        while let Some(message) = endpoint.try_receive_message_from::<NewMessage>(client_id) {
             match message {
-                (channelid, JMessage::PlayerUpdate(uuid, trans, rot, scale, moving)) => {
+                (channelid, NewMessage::PlayerUpdate(uuid, pos, rot, scale, moving)) => {
                     println!("Received {} {}", uuid, trans);
                     // Send a message to a group of clients
                     // if let Err(e) = endpoint.broadcast_message_on(1, message.1.clone()) {

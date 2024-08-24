@@ -20,7 +20,7 @@ use crate::chunk::ChunkSystem;
 use crate::game::{Game, CURRSEED, PLAYERPOS, PLAYERSCALE};
 use crate::inventory::ChestInventory;
 use crate::modelentity::{direction_to_euler, ModelEntity};
-use crate::server_types::{self, Message, MessageType, MOB_BATCH_SIZE};
+use crate::server_types::{self, MOB_BATCH_SIZE};
 use crate::statics::MY_MULTIPLAYER_UUID;
 use crate::vec;
 
