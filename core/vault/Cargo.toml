@@ -1,0 +1,8 @@
+[package]
+name = "vault"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+borsh = "1.5.1"
+smallvec = { version = "1.13.2", features = ["write"] }

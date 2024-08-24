@@ -2,7 +2,10 @@
 members = [
     "lib",
     "binaries/server",
-    "binaries/client"
+    "binaries/client",
+    "core/vault",
+    "core/talk",
+    "core/enum-fmt",
 ]
 
 [profile.release]
