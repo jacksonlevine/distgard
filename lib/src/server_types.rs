@@ -1,18 +1,140 @@
-use serde::{Serialize, Deserialize};
+//use serde::{Serialize, Deserialize};
 
 use std::fmt::{self, Display, Formatter};
 
-
-
+use borsh::*;
 
 use uuid::Uuid;
-use glam::Vec3;
+use bevy::prelude::*;
 
 
 use crate::vec;
 
 
 pub const MOB_BATCH_SIZE: usize = 16;
+#[derive(Clone, Debug)]
+pub struct SerVec3(Vec3);
+#[derive(Clone, Debug)]
+pub struct SerIVec3(IVec3);
+
+impl BorshSerialize for SerVec3 {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        self.0.x.serialize(writer)?;
+        self.0.y.serialize(writer)?;
+        self.0.z.serialize(writer)?;
+        Ok(())
+    }
+}
+
+impl BorshDeserialize for SerVec3 {
+    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+        Ok(SerVec3(Vec3 {
+            x: BorshDeserialize::deserialize(buf)?,
+            y: BorshDeserialize::deserialize(buf)?,
+            z: BorshDeserialize::deserialize(buf)?,
+        }))
+    }
+    
+    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+        Ok(SerVec3(Vec3 {
+            x: BorshDeserialize::deserialize_reader(reader)?,
+            y: BorshDeserialize::deserialize_reader(reader)?,
+            z: BorshDeserialize::deserialize_reader(reader)?,
+        }))
+    }
+}
+
+impl BorshSerialize for SerIVec3 {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        self.0.x.serialize(writer)?;
+        self.0.y.serialize(writer)?;
+        self.0.z.serialize(writer)?;
+        Ok(())
+    }
+}
+
+impl BorshDeserialize for SerIVec3 {
+    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+        Ok(SerIVec3(IVec3 {
+            x: BorshDeserialize::deserialize(buf)?,
+            y: BorshDeserialize::deserialize(buf)?,
+            z: BorshDeserialize::deserialize(buf)?,
+        }))
+    }
+    
+    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+        Ok(SerIVec3(IVec3 {
+            x: BorshDeserialize::deserialize_reader(reader)?,
+            y: BorshDeserialize::deserialize_reader(reader)?,
+            z: BorshDeserialize::deserialize_reader(reader)?,
+        }))
+    }
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub enum NewMessage {
+    None,
+
+
+    // RequestUdm,
+    // RequestSeed,
+    // RequestPt,
+    // ReqChestReg,
+    RequestWorldInfo,
+    // ChestReg(Vec<u8>), //If somethings a Vec<u8> its a db file
+    // Pt(u8),
+    // Udm(Vec<u8>),
+    // Seed(u32),
+    WorldInfo(Vec<u8>, u8, Vec<u8>, u32),
+
+
+    TimeUpdate(f32),
+    PlayerUpdate((u64, u64), Vec3, Vec3),
+    BlockSet(SerIVec3, u32),
+    MultiBlockSet(Vec<(SerIVec3, u32)>),
+    
+
+    YourId(u64, u64),
+    TellYouMyID(u64, u64),
+
+    ChestUpdate(SerIVec3, usize, (u32, u32)),
+
+    InvUpdate(usize, (u32, u32)),
+    ItemToYourMouse((u32, u32)),
+
+    Disconnect,
+    
+
+
+    //TODO: These
+    MobUpdate,
+    MobUpdateBatch,
+    //RequestTakeoff,
+
+    
+    
+
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub message_type: MessageType,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub rot: f32,
+    pub info: u32,
+    pub info2: u32,
+    pub infof: f32,
+    pub goose: (u64, u64),
+    pub otherpos: vec::IVec3,
+    pub bo: bool,
+    pub hostile: bool,
+
+
+    pub count: u8,
+    pub msgs: [MobMessage; MOB_BATCH_SIZE]
+}
 
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -252,25 +374,7 @@ impl MobMessage {
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Message {
-    pub message_type: MessageType,
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub rot: f32,
-    pub info: u32,
-    pub info2: u32,
-    pub infof: f32,
-    pub goose: (u64, u64),
-    pub otherpos: vec::IVec3,
-    pub bo: bool,
-    pub hostile: bool,
 
-
-    pub count: u8,
-    pub msgs: [MobMessage; MOB_BATCH_SIZE]
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Entry {

@@ -1,4 +1,4 @@
-use glam::IVec4;
+use bevy::prelude::*;
 use image::{self, GenericImageView};
 use noise::{NoiseFn, Perlin};
 use once_cell::sync::Lazy;
@@ -82,7 +82,7 @@ impl Texture {
     
             // Water
             let base_color = IVec4::new(0, 45, 100, 140);
-            let mut coord = glam::IVec2::new(0, 0);
+            let mut coord = IVec2::new(0, 0);
     
             let start_y = 256 + 270;
             let start_x = 36;

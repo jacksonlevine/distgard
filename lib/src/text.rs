@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use gl::types::{GLuint, GLvoid};
-use glam::Vec2;
+use bevy::prelude::*;
 use glfw::PWindow;
 
 use crate::glyphface::GlyphFace;

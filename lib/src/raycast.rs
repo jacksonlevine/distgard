@@ -3,7 +3,7 @@
 
 
 use parking_lot::{Mutex, RwLock};
-use glam::{Vec3};
+use bevy::prelude::*;
 
 use crate::chunk::ChunkSystem;
 use crate::vec::IVec3;

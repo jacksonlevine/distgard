@@ -1,5 +1,5 @@
 use crate::game::{ControlsState, MOVING, SPRINTING};
-use glam::{Mat4, Vec3};
+use bevy::prelude::*;
 
 #[derive(Clone, Default)]
 pub struct Camera {

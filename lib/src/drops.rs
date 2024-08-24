@@ -2,7 +2,7 @@ use std::{sync::*};
 use parking_lot::{Mutex, RwLock};
 
 use gl::types::{GLuint, GLvoid};
-use glam::{Mat4, Vec3};
+use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use lockfree::queue::Queue;
 use rand::{rngs::StdRng, Rng, SeedableRng};

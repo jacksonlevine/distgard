@@ -1,5 +1,5 @@
 use gl::types::{GLsizeiptr, GLuint, GLvoid};
-use glam::{Mat4, Vec3};
+use bevy::prelude::*;
 
 use crate::shader::Shader;
 

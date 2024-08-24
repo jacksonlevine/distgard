@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use bincode;
 use dashmap::DashMap;
-use glam::Vec3;
+use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use lockfree::queue::Queue;
 
@@ -179,7 +179,7 @@ impl NetworkConnector {
                                 
                                 
                                 let dir = direction_to_euler(c.dir.into());
-                                let mut message = Message::new(MessageType::PlayerUpdate, Into::<glam::Vec3>::into(c.pos) - Vec3::new(0.0, 1.25, 0.0), dir.y, 0);
+                                let mut message = Message::new(MessageType::PlayerUpdate, Into::<Vec3>::into(c.pos) - Vec3::new(0.0, 1.25, 0.0), dir.y, 0);
                                 
                                 message.infof = c.pitch;
                                 message.info2 = c.yaw as u32;

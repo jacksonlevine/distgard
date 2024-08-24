@@ -21,6 +21,7 @@ crossbeam = "0.8.4"
 tracing = "0.1.40"
 parking_lot = "0.12.3"
 vectorize = "0.2.0"
+bevy = "0.14.1"
 
 [dependencies.rusqlite]
 version = "0.31.0"

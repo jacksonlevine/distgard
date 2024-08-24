@@ -1,7 +1,7 @@
 use std::sync::{Arc};
 use parking_lot::{Mutex, RwLock};
 
-use glam::Vec2;
+use bevy::prelude::*;
 use glfw::PWindow;
 
 use crate::{shader::Shader, text::Text, texture::Texture};

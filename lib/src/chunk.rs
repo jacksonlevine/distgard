@@ -9,14 +9,14 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
+use bevy::math::U16Vec3;
 use dashmap::DashMap;
 
 
 pub static CHUNKPOSDEFAULT: i32 = 999999;
 
 use gl::types::GLuint;
-use glam::Vec2;
-use glam::Vec3;
+use bevy::prelude::*;
 use lockfree::queue::Queue;
 use num_enum::FromPrimitive;
 use once_cell::sync::Lazy;
@@ -68,7 +68,7 @@ use crate::voxmodel::JVoxModel;
 
 use std::io::Write;
 
-pub type LightColor = glam::U16Vec3;
+pub type LightColor = U16Vec3;
 
 
 

@@ -1,4 +1,4 @@
-use glam::{Vec3};
+use bevy::prelude::*;
 
 use crate::vec;
 use num_enum::FromPrimitive;
@@ -53,11 +53,11 @@ pub struct CollCage {
     pub num_boxes: i32,
     pub colliding: Vec<Side>,
     pub solid: Vec<Side>,
-    pub position: glam::IVec3,
+    pub position: IVec3,
     pub boxes: Vec<BoundBox>,
     pub penetrations: Vec<f32>,
     pub normals: Vec<Vec3>,
-    pub positions: Vec<glam::IVec3>,
+    pub positions: Vec<IVec3>,
     pub solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync>,
     pub smoothed_y_offset: f32,
 }
@@ -115,7 +115,7 @@ impl CollCage {
         let num_boxes = 19;
         let colliding: Vec<Side> = Vec::new();
         let solid: Vec<Side> = Vec::new();
-        let position = glam::IVec3::new(0, 0, 0);
+        let position = IVec3::new(0, 0, 0);
 
         let penetrations: Vec<f32> = vec![
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -148,30 +148,30 @@ impl CollCage {
             Vec3::new(0.0, 0.0, 1.0),
         ];
         let positions = vec![
-            glam::IVec3::new(0, 2, 0),   // TOp/roof
-            glam::IVec3::new(0, -1, 0),  // BOTTOM/floor
-            glam::IVec3::new(-1, 1, 0),  // LEFTTOP
-            glam::IVec3::new(-1, 0, 0),  // LEFTBOTTOM
-            glam::IVec3::new(1, 1, 0),   // RIGHTTOP
-            glam::IVec3::new(1, 0, 0),   // RIGHTBOTTOM
-            glam::IVec3::new(0, 1, 1),   // FRONTTOP
-            glam::IVec3::new(0, 0, 1),   // FRONTBOTTOM
-            glam::IVec3::new(0, 1, -1),  // BACKTOP
-            glam::IVec3::new(0, 0, -1),  // BACKBOTTOM
-            glam::IVec3::new(1, 1, -1),  //BACKRIGHTTOP,
-            glam::IVec3::new(1, 0, -1),  //BACKRIGHTBOTTOM,
-            glam::IVec3::new(-1, 1, -1), //BACKLEFTTOP,
-            glam::IVec3::new(-1, 0, -1), //BACKLEFTBOTTOM,
-            glam::IVec3::new(1, 1, 1),   //FRONTRIGHTTOP,
-            glam::IVec3::new(1, 0, 1),   //FRONTRIGHTBOTTOM,
-            glam::IVec3::new(-1, 1, 1),  //FRONTLEFTTOP,
-            glam::IVec3::new(-1, 0, 1),  //FRONTLEFTBOTTOM
-            glam::IVec3::new(0, 0, 0),   //inbottom
-            glam::IVec3::new(0, 1, 0),   //intop
-            glam::IVec3::new(0, -1, 1),
-            glam::IVec3::new(-1, -1, 0),
-            glam::IVec3::new(1, -1, 0),
-            glam::IVec3::new(0, -1, -1),
+            IVec3::new(0, 2, 0),   // TOp/roof
+            IVec3::new(0, -1, 0),  // BOTTOM/floor
+            IVec3::new(-1, 1, 0),  // LEFTTOP
+            IVec3::new(-1, 0, 0),  // LEFTBOTTOM
+            IVec3::new(1, 1, 0),   // RIGHTTOP
+            IVec3::new(1, 0, 0),   // RIGHTBOTTOM
+            IVec3::new(0, 1, 1),   // FRONTTOP
+            IVec3::new(0, 0, 1),   // FRONTBOTTOM
+            IVec3::new(0, 1, -1),  // BACKTOP
+            IVec3::new(0, 0, -1),  // BACKBOTTOM
+            IVec3::new(1, 1, -1),  //BACKRIGHTTOP,
+            IVec3::new(1, 0, -1),  //BACKRIGHTBOTTOM,
+            IVec3::new(-1, 1, -1), //BACKLEFTTOP,
+            IVec3::new(-1, 0, -1), //BACKLEFTBOTTOM,
+            IVec3::new(1, 1, 1),   //FRONTRIGHTTOP,
+            IVec3::new(1, 0, 1),   //FRONTRIGHTBOTTOM,
+            IVec3::new(-1, 1, 1),  //FRONTLEFTTOP,
+            IVec3::new(-1, 0, 1),  //FRONTLEFTBOTTOM
+            IVec3::new(0, 0, 0),   //inbottom
+            IVec3::new(0, 1, 0),   //intop
+            IVec3::new(0, -1, 1),
+            IVec3::new(-1, -1, 0),
+            IVec3::new(1, -1, 0),
+            IVec3::new(0, -1, -1),
         ];
         let boxes: Vec<BoundBox> = vec![
             BoundBox::new(positions[0].as_vec3()),
@@ -286,7 +286,7 @@ impl CollCage {
         }
     }
     pub fn update_position(&mut self, pos: Vec3) {
-        self.position = glam::IVec3::new(
+        self.position = IVec3::new(
             pos.x.floor() as i32,
             pos.y.floor() as i32,
             pos.z.floor() as i32,

@@ -4,7 +4,7 @@ use std::{fs, path::Path, sync::Arc};
 use tracing::info;
 use dashmap::DashMap;
 use gl::types::{GLsizeiptr, GLuint, GLvoid};
-use glam::{Mat4, Vec3, Vec4};
+use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use gltf::{accessor::{Dimensions}, image::Source, mesh::util::ReadIndices};
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -847,7 +847,7 @@ impl Game {
         }
 
         for node in document.nodes() {
-            self.nodes[nodeindex].push(Node {
+            self.nodes[nodeindex].push(JGltfNode {
                 transform: Mat4::from_cols_array_2d(&node.transform().matrix()),
                 children: node.children().map(|child| child.index()).collect(),
             });

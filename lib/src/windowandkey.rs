@@ -1,3 +1,5 @@
+use bevy::prelude::*;
+
 use crate::{
     blockinfo::Blocks,
     game::{
@@ -31,6 +33,8 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+
+use imgui::{Condition};
 
 pub static mut WINDOWWIDTH: i32 = 0;
 pub static mut WINDOWHEIGHT: i32 = 0;
@@ -229,6 +233,10 @@ impl WindowAndKeyContext {
             wak.serveraddrbuffer = (*LAST_ENTERED_SERVERADDRESS).clone();
             wak.serveraddrbuffer.reserve(100);
         }
+
+        
+   
+            
 
         wak
     }

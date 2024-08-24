@@ -43,3 +43,4 @@ pub mod statics;
 pub mod playerposition;
 pub mod tools;
 pub mod keybinds;
+pub mod newserver;

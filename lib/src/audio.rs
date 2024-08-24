@@ -1,5 +1,5 @@
 use std::{collections::HashMap, fs::File, io::{BufReader, Cursor, Read}, thread};
-use glam::Vec3;
+use bevy::prelude::*;
 use lockfree::queue::Queue;
 use once_cell::sync::Lazy;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, SpatialSink};
@@ -310,8 +310,8 @@ impl AudioPlayer {
 
     pub fn set_listener_attributes(
         &mut self,
-        position: glam::Vec3,
-        right: glam::Vec3
+        position: Vec3,
+        right: Vec3
     ) {
         let position = position * POSFACTOR;
         for entry in &self.sinks {

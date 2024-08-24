@@ -17,7 +17,7 @@ use parking_lot::{Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
-use glam::Vec3;
+use bevy::prelude::*;
 use voxelland::chunk::ChunkSystem;
 use voxelland::game::{Game, CURRSEED, ROWLENGTH, SONGINDEX, STARTINGITEMS, WEATHERTYPE};
 use voxelland::vec::{self, IVec3};

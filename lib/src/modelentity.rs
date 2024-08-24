@@ -5,7 +5,7 @@ use std::{sync::{Arc}};
 use parking_lot::{Mutex, RwLock};
 
 use dashmap::DashMap;
-use glam::*;
+use bevy::prelude::*;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use uuid::Uuid;
@@ -56,7 +56,7 @@ pub fn euler_to_direction(euler_angles: Vec3) -> Vec3 {
 }
 
 
-use crate::{blockinfo::Blocks, camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage}, game::{Animation, ControlsState, Node, AMBIENTBRIGHTNESS}, planetinfo::Planets, raycast::{raycast_voxel}, vec::{self, IVec3}};
+use crate::{blockinfo::Blocks, camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage}, game::{Animation, ControlsState, JGltfNode, AMBIENTBRIGHTNESS}, planetinfo::Planets, raycast::raycast_voxel, vec::{self, IVec3}};
 
 static mut CURRENT_ID: u32 = 0;
 
@@ -90,7 +90,7 @@ pub struct ModelEntity {
     pub current_animation: Option<usize>,
     pub animation_time: f32,
     pub animations: Vec<Animation>,
-    pub nodes: Vec<Node>,
+    pub nodes: Vec<JGltfNode>,
     pub time_stamp: f64,
     pub hostile: bool,
     pub lastrot: Vec3,

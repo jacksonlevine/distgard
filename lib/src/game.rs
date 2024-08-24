@@ -10,7 +10,7 @@ use tracing::info;
 
 use dashmap::DashMap;
 use gl::types::{GLenum, GLsizei, GLsizeiptr, GLuint, GLvoid};
-use glam::{Mat4, Vec2, Vec3, Vec4};
+use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use glfw::{Action, Key, MouseButton, PWindow};
 use std::time::{Duration, Instant};
@@ -25,6 +25,9 @@ use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI8, AtomicU32, Ordering};
 use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
+use bevy_quinnet::client::QuinnetClientPlugin;
+use bevy_quinnet::server::QuinnetServerPlugin;
+
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
@@ -219,7 +222,7 @@ pub struct Skin {
     pub joints: Vec<Joint>,
 }
 #[derive(Clone)]
-pub struct Node {
+pub struct JGltfNode {
     pub transform: Mat4,
     pub children: Vec<usize>,
 }
@@ -405,7 +408,7 @@ pub struct Game {
     pub inventory: Arc<RwLock<Inventory>>,
     pub animations: Vec<Vec<Animation>>,
     pub skins: Vec<Skin>,
-    pub nodes: Vec<Vec<Node>>,
+    pub nodes: Vec<Vec<JGltfNode>>,
     pub current_time: f32,
     pub netconn: NetworkConnector,
     pub server_command_queue: Arc<lockfree::queue::Queue<Message>>,
@@ -458,6 +461,7 @@ impl Game {
         addressentered: &Arc<AtomicBool>,
         address: &Arc<Mutex<Option<String>>>,
     ) -> JoinHandle<Game> {
+
         Self::newold(
             &Some(window.clone()),
             connectonstart,
@@ -500,6 +504,32 @@ impl Game {
                 connectonstart = false;
             }
         }
+
+        thread::spawn(move || {
+            let mut app = App::new();
+            app
+            .add_plugins(MinimalPlugins)
+            .add_systems(Update, || println!("Testeroonie"));
+            
+
+            if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Multiplayer client
+                app.add_plugins(QuinnetClientPlugin::default());
+            } else
+            if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
+
+            } else 
+            if unsafe {HEADLESS} { //Headless server
+                app.add_plugins(QuinnetServerPlugin::default());
+                app.add_systems(Startup, start_listening);
+                app.add_systems(Update, handle_client_messages);
+            
+            }
+            
+            
+            
+            
+            app.run();
+        });
 
         let oldshader = Shader::new(path!("assets/oldvert.glsl"), path!("assets/oldfrag.glsl"));
         let shader0 = Shader::new(path!("assets/vert.glsl"), path!("assets/frag.glsl"));
@@ -5937,6 +5967,8 @@ impl Game {
         walkbobt: f32,
         texture: &Texture,
     ) -> Vec<(IVec3, u32)> {
+        use bevy::math::U16Vec3;
+
         use crate::{
             chunk::ChW,
             specialblocks::{
@@ -5948,7 +5980,7 @@ impl Game {
         static mut vec: Vec<(IVec3, u32)> = Vec::new();
 
         unsafe {
-            use glam::{I16Vec3, U16Vec3};
+            //use {I16Vec3, U16Vec3};
 
             use crate::{
                 cube::CubeSide, packedvertex::PackedVertex,

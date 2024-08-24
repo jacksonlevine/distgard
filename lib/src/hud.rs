@@ -3,7 +3,7 @@ use std::sync::*;
 use parking_lot::{Mutex, RwLock};
 use atomic::{AtomicI32, AtomicI8};
 use gl::types::{GLuint, GLvoid};
-use glam::Vec2;
+use bevy::prelude::*;
 use glfw::PWindow;
 
 use crate::game::ROWLENGTH;
