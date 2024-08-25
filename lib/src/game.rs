@@ -5585,7 +5585,7 @@ impl Game {
 
             let delta_time = current_time - last_time;
 
-            static mut time_since_last_check: f32 = 1.0;
+            static mut time_since_last_check: f32 = 2.0;
 
             let user_c_pos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
                 vec3.x.floor() as i32,
@@ -5595,7 +5595,7 @@ impl Game {
 
             if
             /*user_c_pos != *last_user_c_pos &&*/
-            time_since_last_check >= 5.0 {
+            time_since_last_check >= 2.0 {
                 *last_user_c_pos = user_c_pos;
 
                 time_since_last_check = 0.0;
