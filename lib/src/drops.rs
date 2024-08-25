@@ -69,6 +69,7 @@ impl Drops {
 
     pub fn new(texture: GLuint, cam: &Arc<Mutex<Camera>>, csys: &Arc<RwLock<ChunkSystem>>, inv: &Arc<RwLock<Inventory>>, in_m: bool, needtosend: &Arc<Queue<Message>>) -> Drops {
 
+
         let shader = Shader::new(path!("assets/dropvert.glsl"), path!("assets/dropfrag.glsl"));
         let mut vbo: GLuint = 0;
         #[cfg(feature = "glfw")]

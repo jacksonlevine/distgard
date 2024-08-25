@@ -52,6 +52,7 @@ one_chunk = []
 audio = []
 glfw = []
 steam = []
+localpath = []
 
 [dependencies.rusqlite]
 version = "0.31.0"

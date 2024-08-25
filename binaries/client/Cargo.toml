@@ -6,6 +6,7 @@ resolver = "2"
 
 [features]
 steam = ["voxelland/steam"]
+localpath = ["voxelland/localpath"]
 
 [dependencies]
 voxelland = { path = "../../lib", features = ["audio", "glfw"] }

@@ -115,8 +115,8 @@ impl WindowAndKeyContext {
 
         #[cfg(feature = "steam")]
         let (client, single) = Client::init().unwrap();
-        #[cfg(feature = "steam")]
-        restart_app_if_necessary(AppId::from(3114230));
+        // #[cfg(feature = "steam")]
+        // restart_app_if_necessary(AppId::from(3114230));
 
         unsafe {
             WINDOWHEIGHT = height as i32;
@@ -209,14 +209,15 @@ impl WindowAndKeyContext {
             addressentered: Arc::new(AtomicBool::new(false)),
             serveraddress: Arc::new(Mutex::new(None)),
             serveraddrbuffer: String::with_capacity(128),
-            logo: Texture::new(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../assets/Untitled3.png"
+            logo: Texture::new(path!(
+                "assets/Untitled3.png"
             ))
             .unwrap_or_else(|err| {
                 eprintln!(
                     "Error: {err:?}, path: {}",
-                    concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/Untitled3.png")
+                    path!(
+                        "assets/Untitled3.png"
+                    )
                 );
                 panic!("Error!!!!!!!!1111, {err:?}");
             }),
@@ -283,7 +284,7 @@ impl WindowAndKeyContext {
                         | WindowFlags::NO_TITLE_BAR
                         | WindowFlags::NO_BACKGROUND;
 
-                    let window_size = (950.0, 700.0);
+                    let window_size = (950.0, 750.0);
                     let window_pos = [
                         width as f32 / 2.0 - (window_size.0 / 2.0),
                         (height as f32 / 2.0 - (window_size.1 / 2.0)) + 75.0,
