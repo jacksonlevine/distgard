@@ -71,13 +71,13 @@ use crate::hud::{Hud, HudElement, SlotIndexType};
 use crate::inventory::*;
 
 use crate::modelentity::ModelEntity;
-use crate::network::NetworkConnector;
+//use crate::network::NetworkConnector;
 use crate::planetinfo::Planets;
 use crate::playerposition::PlayerPosition;
 use crate::raycast::*;
 use crate::recipes::{Recipe, RecipeEntry, RECIPES};
 use crate::selectcube::SelectCube;
-use crate::server_types::{Message, MessageType};
+//use crate::server_types::{Message, MessageType};
 use crate::shader::Shader;
 use crate::specialblocks::door::{self, DoorInfo};
 use crate::statics::{MISCSETTINGS, MY_MULTIPLAYER_UUID, SAVE_MISC};
@@ -92,6 +92,9 @@ use crate::worldgeometry::WorldGeometry;
 static mut CONVEYOR_SOUND_TIMER: f32 = 0.0;
 
 pub static TRAMPOLINE_VELOCITY_FIGURE: f32 = 10.0;
+
+pub static RECEIVED_WORLD: AtomicBool = AtomicBool::new(false);
+
 
 pub static mut MOUSEX: f64 = 0.0;
 pub static mut MOUSEY: f64 = 0.0;
@@ -410,9 +413,9 @@ pub struct Game {
     pub skins: Vec<Skin>,
     pub nodes: Vec<Vec<JGltfNode>>,
     pub current_time: f32,
-    pub netconn: NetworkConnector,
-    pub server_command_queue: Arc<lockfree::queue::Queue<Message>>,
-    pub hp_server_command_queue: Arc<lockfree::queue::Queue<Message>>,
+    //pub netconn: NetworkConnector,
+    // pub server_command_queue: Arc<lockfree::queue::Queue<Message>>,
+    // pub hp_server_command_queue: Arc<lockfree::queue::Queue<Message>>,
     pub headless: bool,
     pub known_cameras: Arc<DashMap<Uuid, Vec3>>,
     pub my_uuid: Arc<RwLock<Option<Uuid>>>,
@@ -436,7 +439,7 @@ pub struct Game {
     pub player_model_entities: Arc<DashMap<Uuid, ModelEntity>>,
 
     pub mouse_slot: (u32, u32),
-    pub needtosend: Arc<Queue<Message>>,
+    //pub needtosend: Arc<Queue<Message>>,
 
     pub health: Arc<AtomicI8>,
     pub crafting_open: bool,
@@ -954,8 +957,8 @@ impl Game {
         //let mut rng = StdRng::from_entropy();
         //let seed = rng.gen_range(0..229232);
 
-        let server_command_queue = Arc::new(Queue::<Message>::new());
-        let server_command_hp_queue = Arc::new(Queue::<Message>::new());
+       // let server_command_queue = Arc::new(Queue::<Message>::new());
+        //let server_command_hp_queue = Arc::new(Queue::<Message>::new());
 
         let kc = Arc::new(DashMap::new());
 
@@ -1069,27 +1072,27 @@ impl Game {
                 &chunksys,
                 &inv,
                 connectonstart,
-                &needtosend.clone(),
+               // &needtosend.clone(),
             ),
             inventory: inv,
             animations: Vec::new(),
             skins: Vec::new(),
             nodes: Vec::new(),
             current_time: 0.0,
-            netconn: NetworkConnector::new(
-                &chunksys,
-                &server_command_queue,
-                &server_command_hp_queue,
-                &kc,
-                &my_uuid.clone(),
-                &nsme,
-                &cam.clone(),
-                &pme.clone(),
-                &chest_registry,
-                &needtosend,
-            ),
-            server_command_queue: server_command_queue.clone(),
-            hp_server_command_queue: server_command_hp_queue.clone(),
+            // netconn: NetworkConnector::new(
+            //     &chunksys,
+            //     &server_command_queue,
+            //     &server_command_hp_queue,
+            //     &kc,
+            //     &my_uuid.clone(),
+            //     &nsme,
+            //     &cam.clone(),
+            //     &pme.clone(),
+            //     &chest_registry,
+            //     &needtosend,
+            // ),
+            //server_command_queue: server_command_queue.clone(),
+            //hp_server_command_queue: server_command_hp_queue.clone(),
             headless,
             known_cameras: kc,
             my_uuid,
@@ -1114,7 +1117,7 @@ impl Game {
             address: address.clone(),
             player_model_entities: pme,
             mouse_slot: (0, 0),
-            needtosend,
+            //needtosend,
             health,
             crafting_open: false,
             stamina,
@@ -1575,7 +1578,7 @@ impl Game {
 
             let address = self.address.lock().as_ref().unwrap().trim().to_string(); // Remove any trailing newline characters
 
-            self.netconn.connect(address); // Connect to the provided address
+            //self.netconn.connect(address); // Connect to the provided address
             info!("Connected to the server!");
         }
     }
@@ -1584,8 +1587,8 @@ impl Game {
             "quittomainmenu" => {
                 //self.exit();
                 if self.vars.in_multiplayer {
-                    self.netconn
-                        .send(&Message::new(MessageType::Disconnect, Vec3::ZERO, 0.0, 0))
+                    // self.netconn
+                    //     .send(&Message::new(MessageType::Disconnect, Vec3::ZERO, 0.0, 0))
                 }
                 #[cfg(feature = "glfw")]
                 self.window.write().set_should_close(true);
@@ -1798,7 +1801,7 @@ impl Game {
     pub fn initialize_being_in_world(&mut self) -> JoinHandle<()> {
         if self.vars.in_multiplayer {
             //ChunkSystem::initial_rebuild_on_main_thread(&self.chunksys.clone(), &self.shader0, &self.camera.lock().position);
-            while !self.netconn.received_world.load(Ordering::Relaxed) {
+            while !RECEIVED_WORLD.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
             }
         }
@@ -2430,14 +2433,14 @@ impl Game {
         newid: u32,
         newcount: u32,
         in_m: bool,
-        needtosend: &Arc<Queue<Message>>,
+        //needtosend: &Arc<Queue<Message>>,
     ) -> Result<bool, bool> {
         let mut updaterecipes = false;
         let result;
 
         if in_m {
-            let n = needtosend.clone();
-            n.push(Message::invupdate(slot, newid, newcount));
+            //let n = needtosend.clone();
+           // n.push(Message::invupdate(slot, newid, newcount));
             result = Ok(true);
         } else {
             let mut inventory = inv.write();
@@ -2463,13 +2466,13 @@ impl Game {
         id: u32,
         count: u32,
         in_m: bool,
-        needtosend: &Arc<Queue<Message>>,
+        //needtosend: &Arc<Queue<Message>>,
     ) -> Result<bool, bool> {
         let mut updaterecipes = false;
         let result;
 
         if in_m {
-            let n = needtosend.clone();
+           // let n = needtosend.clone();
 
             let inventory = inv.read();
 
@@ -2480,16 +2483,16 @@ impl Game {
                 .enumerate()
                 .find(|(_index, item)| item.0 == id)
             {
-                let mut msg = Message::new(
-                    MessageType::ChestInvUpdate,
-                    Vec3::ZERO,
-                    id as f32,
-                    index as u32,
-                );
-                msg.infof = item.1 as f32 + 1.0;
-                msg.info2 = 1;
+                // let mut msg = Message::new(
+                //     MessageType::ChestInvUpdate,
+                //     Vec3::ZERO,
+                //     id as f32,
+                //     index as u32,
+                // );
+                // msg.infof = item.1 as f32 + 1.0;
+                // msg.info2 = 1;
 
-                n.push(msg);
+                // n.push(msg);
                 // item.1 += count;
                 // inventory.dirty = true;
                 updaterecipes = true;
@@ -2502,16 +2505,16 @@ impl Game {
                 .enumerate()
                 .find(|(_index, item)| item.0 == 0)
             {
-                let mut msg = Message::new(
-                    MessageType::ChestInvUpdate,
-                    Vec3::ZERO,
-                    id as f32,
-                    index as u32,
-                );
-                msg.infof = 1.0;
-                msg.info2 = 1;
+                // let mut msg = Message::new(
+                //     MessageType::ChestInvUpdate,
+                //     Vec3::ZERO,
+                //     id as f32,
+                //     index as u32,
+                // );
+                // msg.infof = 1.0;
+                // msg.info2 = 1;
 
-                n.push(msg);
+                // n.push(msg);
                 // item.0 = id;
                 // item.1 = count;
                 // inventory.dirty = true;
@@ -2657,7 +2660,7 @@ impl Game {
                                 newinv.inv[i].0,
                                 newinv.inv[i].1,
                                 self.vars.in_multiplayer,
-                                &self.needtosend,
+                                //&self.needtosend,
                             );
                         }
                     }
@@ -2742,7 +2745,7 @@ impl Game {
                                         invclone[i].0,
                                         invclone[i].1,
                                         self.vars.in_multiplayer,
-                                        &self.needtosend,
+                                       // &self.needtosend,
                                     );
                                 }
                             }
@@ -2754,7 +2757,7 @@ impl Game {
                                 recipe.1 .0,
                                 invclone[slot].1 + recipe.1 .1,
                                 self.vars.in_multiplayer,
-                                &self.needtosend,
+                                //&self.needtosend,
                             );
                         }
                     }
@@ -2834,15 +2837,15 @@ impl Game {
                         .read()
                         .set_block_and_queue_rerender_no_sound(spot, 41, false, true, true);
                 } else {
-                    let mut message = Message::new(
-                        MessageType::BlockSet,
-                        Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
-                        0.0,
-                        41,
-                    );
-                    message.infof = 0.0;
+                    // let mut message = Message::new(
+                    //     MessageType::BlockSet,
+                    //     Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
+                    //     0.0,
+                    //     41,
+                    // );
+                    // message.infof = 0.0;
 
-                    self.netconn.sendqueue.push(message);
+                    // self.netconn.sendqueue.push(message);
                 }
 
                 #[cfg(feature = "audio")]
@@ -2861,15 +2864,15 @@ impl Game {
                         .read()
                         .set_block_and_queue_rerender_no_sound(spot, 40, false, true, true);
                 } else {
-                    let mut message = Message::new(
-                        MessageType::BlockSet,
-                        Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
-                        0.0,
-                        40,
-                    );
-                    message.infof = 0.0;
+                    // let mut message = Message::new(
+                    //     MessageType::BlockSet,
+                    //     Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
+                    //     0.0,
+                    //     40,
+                    // );
+                    // message.infof = 0.0;
 
-                    self.netconn.sendqueue.push(message);
+                    // self.netconn.sendqueue.push(message);
                 }
                 #[cfg(feature = "audio")]
                 unsafe {
@@ -3302,312 +3305,313 @@ impl Game {
             // }
 
             let mut morestuff = true;
-            for _ in 0..5 {
-                match self.hp_server_command_queue.pop() {
-                    Some(comm) => {
-                        match comm.message_type {
-                            MessageType::BlockSet => {
-                                if comm.infof == 1.0 {
-                                    if comm.info == 0 {
-                                        self.chunksys.read().set_block_and_queue_rerender(
-                                            IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                            comm.info,
-                                            true,
-                                            true,
-                                            false,
-                                        );
-                                    } else {
-                                        self.chunksys.read().set_block_and_queue_rerender(
-                                            IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                            comm.info,
-                                            false,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                } else {
-                                    if comm.info == 0 {
-                                        self.chunksys.read().set_block_and_queue_rerender_no_sound(
-                                            IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                            comm.info,
-                                            true,
-                                            true,
-                                            false,
-                                        );
-                                    } else {
-                                        self.chunksys.read().set_block_and_queue_rerender_no_sound(
-                                            IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                            comm.info,
-                                            false,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                }
+            
+            // for _ in 0..5 {
+            //     match self.hp_server_command_queue.pop() {
+            //         Some(comm) => {
+            //             match comm.message_type {
+            //                 MessageType::BlockSet => {
+            //                     if comm.infof == 1.0 {
+            //                         if comm.info == 0 {
+            //                             self.chunksys.read().set_block_and_queue_rerender(
+            //                                 IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                                 comm.info,
+            //                                 true,
+            //                                 true,
+            //                                 false,
+            //                             );
+            //                         } else {
+            //                             self.chunksys.read().set_block_and_queue_rerender(
+            //                                 IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                                 comm.info,
+            //                                 false,
+            //                                 true,
+            //                                 false,
+            //                             );
+            //                         }
+            //                     } else {
+            //                         if comm.info == 0 {
+            //                             self.chunksys.read().set_block_and_queue_rerender_no_sound(
+            //                                 IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                                 comm.info,
+            //                                 true,
+            //                                 true,
+            //                                 false,
+            //                             );
+            //                         } else {
+            //                             self.chunksys.read().set_block_and_queue_rerender_no_sound(
+            //                                 IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                                 comm.info,
+            //                                 false,
+            //                                 true,
+            //                                 false,
+            //                             );
+            //                         }
+            //                     }
 
-                                unsafe {
-                                    UPDATE_THE_BLOCK_OVERLAY = true;
-                                }
-                            }
-                            MessageType::MultiBlockSet => {
-                                let cread = self.chunksys.read();
+            //                     unsafe {
+            //                         UPDATE_THE_BLOCK_OVERLAY = true;
+            //                     }
+            //                 }
+            //                 MessageType::MultiBlockSet => {
+            //                     let cread = self.chunksys.read();
 
-                                cread.set_block_no_sound(
-                                    IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                    comm.info,
-                                    true,
-                                );
+            //                     cread.set_block_no_sound(
+            //                         IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                         comm.info,
+            //                         true,
+            //                     );
 
-                                cread.set_block_and_queue_rerender(
-                                    comm.otherpos,
-                                    comm.info2,
-                                    true,
-                                    true,
-                                    false,
-                                );
-                                unsafe {
-                                    UPDATE_THE_BLOCK_OVERLAY = true;
-                                }
-                            }
-                            MessageType::ChestReg => {
-                                self.load_my_inv_from_file();
-                                self.load_my_pos_from_file();
-                            }
-                            MessageType::ChestInvUpdate => {
-                                let currchest = comm.otherpos;
+            //                     cread.set_block_and_queue_rerender(
+            //                         comm.otherpos,
+            //                         comm.info2,
+            //                         true,
+            //                         true,
+            //                         false,
+            //                     );
+            //                     unsafe {
+            //                         UPDATE_THE_BLOCK_OVERLAY = true;
+            //                     }
+            //                 }
+            //                 MessageType::ChestReg => {
+            //                     self.load_my_inv_from_file();
+            //                     self.load_my_pos_from_file();
+            //                 }
+            //                 MessageType::ChestInvUpdate => {
+            //                     let currchest = comm.otherpos;
 
-                                let destslot = comm.info;
+            //                     let destslot = comm.info;
 
-                                let slotindextype = match comm.info2 {
-                                    0 => SlotIndexType::ChestSlot(destslot as i32),
-                                    1 => SlotIndexType::InvSlot(destslot as i32),
-                                    _ => SlotIndexType::None,
-                                };
+            //                     let slotindextype = match comm.info2 {
+            //                         0 => SlotIndexType::ChestSlot(destslot as i32),
+            //                         1 => SlotIndexType::InvSlot(destslot as i32),
+            //                         _ => SlotIndexType::None,
+            //                     };
 
-                                let uuid = Uuid::from_u64_pair(comm.goose.0, comm.goose.1);
+            //                     let uuid = Uuid::from_u64_pair(comm.goose.0, comm.goose.1);
 
-                                let mut updateinv = false;
+            //                     let mut updateinv = false;
 
-                                match *self.my_uuid.read() {
-                                    Some(ud) => {
-                                        if uuid == ud && comm.z == 1.0 {
-                                            //this message is intended for my inv and it is to replace my mouse_slot
-                                            self.mouse_slot.0 = comm.x as u32;
-                                            self.mouse_slot.1 = comm.y as u32;
-                                            updateinv = true;
-                                        }
-                                    }
-                                    None => {}
-                                }
+            //                     match *self.my_uuid.read() {
+            //                         Some(ud) => {
+            //                             if uuid == ud && comm.z == 1.0 {
+            //                                 //this message is intended for my inv and it is to replace my mouse_slot
+            //                                 self.mouse_slot.0 = comm.x as u32;
+            //                                 self.mouse_slot.1 = comm.y as u32;
+            //                                 updateinv = true;
+            //                             }
+            //                         }
+            //                         None => {}
+            //                     }
 
-                                match slotindextype {
-                                    SlotIndexType::ChestSlot(e) => {
-                                        //let csys = self.chunksys.write();
-                                        let mut chestinv = self
-                                            .chest_registry
-                                            .entry(currchest)
-                                            .or_insert(ChestInventory {
-                                                dirty: false,
-                                                inv: [(0, 0); ROWLENGTH as usize * 4],
-                                            });
+            //                     match slotindextype {
+            //                         SlotIndexType::ChestSlot(e) => {
+            //                             //let csys = self.chunksys.write();
+            //                             let mut chestinv = self
+            //                                 .chest_registry
+            //                                 .entry(currchest)
+            //                                 .or_insert(ChestInventory {
+            //                                     dirty: false,
+            //                                     inv: [(0, 0); ROWLENGTH as usize * 4],
+            //                                 });
 
-                                        let slot = &mut chestinv.inv[e as usize];
+            //                             let slot = &mut chestinv.inv[e as usize];
 
-                                        // let wasthere = slot.clone();
+            //                             // let wasthere = slot.clone();
 
-                                        slot.0 = comm.rot as u32;
-                                        slot.1 = comm.infof as u32;
-                                        updateinv = true;
-                                        //comm.x = wasthere.0 as f32; comm.y = wasthere.1 as f32;
-                                    }
-                                    SlotIndexType::InvSlot(e) => {
-                                        let ud = match *self.my_uuid.read() {
-                                            Some(ud) => Some(ud.clone()),
-                                            None => None,
-                                        };
+            //                             slot.0 = comm.rot as u32;
+            //                             slot.1 = comm.infof as u32;
+            //                             updateinv = true;
+            //                             //comm.x = wasthere.0 as f32; comm.y = wasthere.1 as f32;
+            //                         }
+            //                         SlotIndexType::InvSlot(e) => {
+            //                             let ud = match *self.my_uuid.read() {
+            //                                 Some(ud) => Some(ud.clone()),
+            //                                 None => None,
+            //                             };
 
-                                        match ud {
-                                            Some(ud) => {
-                                                if uuid == ud {
-                                                    let playerinv = &mut self.inventory.write();
-                                                    let slot = &mut playerinv.inv[e as usize];
+            //                             match ud {
+            //                                 Some(ud) => {
+            //                                     if uuid == ud {
+            //                                         let playerinv = &mut self.inventory.write();
+            //                                         let slot = &mut playerinv.inv[e as usize];
 
-                                                    // let wasthere = slot.clone();
+            //                                         // let wasthere = slot.clone();
 
-                                                    slot.0 = comm.rot as u32;
-                                                    slot.1 = comm.infof as u32;
+            //                                         slot.0 = comm.rot as u32;
+            //                                         slot.1 = comm.infof as u32;
 
-                                                    updateinv = true;
-                                                }
-                                            }
-                                            None => todo!(),
-                                        }
+            //                                         updateinv = true;
+            //                                     }
+            //                                 }
+            //                                 None => todo!(),
+            //                             }
 
-                                        //comm.x = wasthere.0 as f32; comm.y = wasthere.1 as f32;
-                                    }
-                                    SlotIndexType::None => {}
-                                }
+            //                             //comm.x = wasthere.0 as f32; comm.y = wasthere.1 as f32;
+            //                         }
+            //                         SlotIndexType::None => {}
+            //                     }
 
-                                if updateinv {
-                                    self.update_inventory();
-                                }
-                            }
+            //                     if updateinv {
+            //                         self.update_inventory();
+            //                     }
+            //                 }
 
-                            _ => {}
-                        }
-                    }
-                    None => {
-                        morestuff = false;
-                    }
-                }
-            }
+            //                 _ => {}
+            //             }
+            //         }
+            //         None => {
+            //             morestuff = false;
+            //         }
+            //     }
+            // }
             let morestuff = true;
             //while morestuff {
 
-            for _ in 0..5 {
-                match self.server_command_queue.pop() {
-                    Some(comm) => {
-                        match comm.message_type {
-                            MessageType::RequestTakeoff => {
-                                self.takeoff_ship();
-                            }
-                            MessageType::TimeUpdate => {
-                                //println!("Songindex: {}", unsafe { SONGINDEX });
-                                let mut todlock = self.timeofday.lock();
-                                *todlock = comm.infof;
-                                unsafe {
-                                    WEATHERTYPE = comm.rot;
-                                }
-                                unsafe {
-                                    let newsongindex = comm.info;
+            // for _ in 0..5 {
+            //     match self.server_command_queue.pop() {
+            //         Some(comm) => {
+            //             match comm.message_type {
+            //                 MessageType::RequestTakeoff => {
+            //                     self.takeoff_ship();
+            //                 }
+            //                 MessageType::TimeUpdate => {
+            //                     //println!("Songindex: {}", unsafe { SONGINDEX });
+            //                     let mut todlock = self.timeofday.lock();
+            //                     *todlock = comm.infof;
+            //                     unsafe {
+            //                         WEATHERTYPE = comm.rot;
+            //                     }
+            //                     unsafe {
+            //                         let newsongindex = comm.info;
 
-                                    if SONGINDEX as u32 != newsongindex {
-                                        SONGINDEX = newsongindex as usize;
+            //                         if SONGINDEX as u32 != newsongindex {
+            //                             SONGINDEX = newsongindex as usize;
 
-                                        #[cfg(feature = "audio")]
-                                        for (name, sink) in &AUDIOPLAYER.headsinks {
-                                            sink.stop();
-                                        }
+            //                             #[cfg(feature = "audio")]
+            //                             for (name, sink) in &AUDIOPLAYER.headsinks {
+            //                                 sink.stop();
+            //                             }
 
-                                        #[cfg(feature = "audio")]
-                                        AUDIOPLAYER.play_in_head(SONGS[SONGINDEX]);
-                                    }
-                                }
-                            }
-                            MessageType::BlockSet => {
-                                if comm.info == 0 {
-                                    self.chunksys.read().set_block_and_queue_rerender(
-                                        IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                        comm.info,
-                                        true,
-                                        true,
-                                        false,
-                                    );
-                                } else {
-                                    self.chunksys.read().set_block_and_queue_rerender(
-                                        IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
-                                        comm.info,
-                                        false,
-                                        true,
-                                        false,
-                                    );
-                                }
-                            }
-                            MessageType::MobUpdate => {
-                                //println!("Got mobupdate");
-                                // println!("MobUpdate: {}", comm);
-                                let newpos = Vec3::new(comm.x, comm.y, comm.z);
-                                let id = comm.info;
-                                let modind = comm.info2;
-                                let rot = comm.rot;
-                                let scale = comm.infof;
-                                let sounding = comm.bo;
-                                let hostile = comm.hostile;
-                                // if sounding {
-                                //     info!("We got a sounding message");
-                                // }
+            //                             #[cfg(feature = "audio")]
+            //                             AUDIOPLAYER.play_in_head(SONGS[SONGINDEX]);
+            //                         }
+            //                     }
+            //                 }
+            //                 MessageType::BlockSet => {
+            //                     if comm.info == 0 {
+            //                         self.chunksys.read().set_block_and_queue_rerender(
+            //                             IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                             comm.info,
+            //                             true,
+            //                             true,
+            //                             false,
+            //                         );
+            //                     } else {
+            //                         self.chunksys.read().set_block_and_queue_rerender(
+            //                             IVec3::new(comm.x as i32, comm.y as i32, comm.z as i32),
+            //                             comm.info,
+            //                             false,
+            //                             true,
+            //                             false,
+            //                         );
+            //                     }
+            //                 }
+            //                 MessageType::MobUpdate => {
+            //                     //println!("Got mobupdate");
+            //                     // println!("MobUpdate: {}", comm);
+            //                     let newpos = Vec3::new(comm.x, comm.y, comm.z);
+            //                     let id = comm.info;
+            //                     let modind = comm.info2;
+            //                     let rot = comm.rot;
+            //                     let scale = comm.infof;
+            //                     let sounding = comm.bo;
+            //                     let hostile = comm.hostile;
+            //                     // if sounding {
+            //                     //     info!("We got a sounding message");
+            //                     // }
 
-                                let nsme = self.non_static_model_entities.clone();
-                                //info!("Mob update. NSME Length: {}", nsme.len());
-                                match nsme.get_mut(&id) {
-                                    Some(mut me) => {
-                                        let modent = me.value_mut();
-                                        (*modent).lastpos = (*modent).position.clone();
-                                        (*modent).position = newpos;
-                                        (*modent).scale = scale;
-                                        (*modent).lastrot = (*modent).rot.clone();
-                                        (*modent).rot = Vec3::new(0.0, rot, 0.0);
-                                        (*modent).sounding = sounding;
-                                        (*modent).hostile = hostile;
-                                        unsafe {
-                                            (*modent).time_stamp = glfwGetTime();
-                                        }
-                                    }
-                                    None => {
-                                        //info!("Received an update for a mob {} that doesn't exist. Creating it...", id);
-                                        self.insert_static_model_entity(
-                                            id,
-                                            modind as usize,
-                                            newpos,
-                                            scale,
-                                            Vec3::new(0.0, rot, 0.0),
-                                            5.0,
-                                            hostile,
-                                        );
-                                    }
-                                };
-                            }
-                            MessageType::PlayerUpdate => {
-                                let newpos = Vec3::new(comm.x, comm.y, comm.z);
-                                //let id = comm.info;
-                                let modind = 0;
-                                let rot = comm.rot;
-                                let scale = PLAYERSCALE;
-                                //let sounding  = comm.bo;
+            //                     let nsme = self.non_static_model_entities.clone();
+            //                     //info!("Mob update. NSME Length: {}", nsme.len());
+            //                     match nsme.get_mut(&id) {
+            //                         Some(mut me) => {
+            //                             let modent = me.value_mut();
+            //                             (*modent).lastpos = (*modent).position.clone();
+            //                             (*modent).position = newpos;
+            //                             (*modent).scale = scale;
+            //                             (*modent).lastrot = (*modent).rot.clone();
+            //                             (*modent).rot = Vec3::new(0.0, rot, 0.0);
+            //                             (*modent).sounding = sounding;
+            //                             (*modent).hostile = hostile;
+            //                             unsafe {
+            //                                 (*modent).time_stamp = glfwGetTime();
+            //                             }
+            //                         }
+            //                         None => {
+            //                             //info!("Received an update for a mob {} that doesn't exist. Creating it...", id);
+            //                             self.insert_static_model_entity(
+            //                                 id,
+            //                                 modind as usize,
+            //                                 newpos,
+            //                                 scale,
+            //                                 Vec3::new(0.0, rot, 0.0),
+            //                                 5.0,
+            //                                 hostile,
+            //                             );
+            //                         }
+            //                     };
+            //                 }
+            //                 MessageType::PlayerUpdate => {
+            //                     let newpos = Vec3::new(comm.x, comm.y, comm.z);
+            //                     //let id = comm.info;
+            //                     let modind = 0;
+            //                     let rot = comm.rot;
+            //                     let scale = PLAYERSCALE;
+            //                     //let sounding  = comm.bo;
 
-                                let pme: Arc<DashMap<Uuid, ModelEntity>> =
-                                    self.player_model_entities.clone();
+            //                     let pme: Arc<DashMap<Uuid, ModelEntity>> =
+            //                         self.player_model_entities.clone();
 
-                                let uuid = Uuid::from_u64_pair(comm.goose.0, comm.goose.1);
-                                //info!("NSME Length: {}", nsme.len());
-                                match pme.get_mut(&uuid) {
-                                    Some(mut me) => {
-                                        let modent = me.value_mut();
-                                        (*modent).lastpos = (*modent).position.clone();
-                                        (*modent).position = newpos;
-                                        (*modent).scale = scale;
-                                        (*modent).lastrot = (*modent).rot.clone();
-                                        (*modent).rot = Vec3::new(0.0, rot, 0.0);
-                                        //(*modent).sounding = sounding;
-                                        unsafe {
-                                            (*modent).time_stamp = glfwGetTime();
-                                        }
-                                    }
-                                    None => {
-                                        info!("Received an update for a player {} that doesn't exist. Creating it...", uuid);
-                                        self.insert_player_model_entity(
-                                            uuid,
-                                            0, //0 for player
-                                            newpos,
-                                            scale,
-                                            Vec3::new(0.0, rot, 0.0),
-                                            5.0,
-                                        );
-                                    }
-                                };
-                            }
-                            MessageType::Seed => {
-                                //Means we're going to a new world
-                                self.non_static_model_entities.clear();
-                            }
-                            _ => {}
-                        }
-                    }
-                    None => {
-                        break;
-                    }
-                }
-            }
+            //                     let uuid = Uuid::from_u64_pair(comm.goose.0, comm.goose.1);
+            //                     //info!("NSME Length: {}", nsme.len());
+            //                     match pme.get_mut(&uuid) {
+            //                         Some(mut me) => {
+            //                             let modent = me.value_mut();
+            //                             (*modent).lastpos = (*modent).position.clone();
+            //                             (*modent).position = newpos;
+            //                             (*modent).scale = scale;
+            //                             (*modent).lastrot = (*modent).rot.clone();
+            //                             (*modent).rot = Vec3::new(0.0, rot, 0.0);
+            //                             //(*modent).sounding = sounding;
+            //                             unsafe {
+            //                                 (*modent).time_stamp = glfwGetTime();
+            //                             }
+            //                         }
+            //                         None => {
+            //                             info!("Received an update for a player {} that doesn't exist. Creating it...", uuid);
+            //                             self.insert_player_model_entity(
+            //                                 uuid,
+            //                                 0, //0 for player
+            //                                 newpos,
+            //                                 scale,
+            //                                 Vec3::new(0.0, rot, 0.0),
+            //                                 5.0,
+            //                             );
+            //                         }
+            //                     };
+            //                 }
+            //                 MessageType::Seed => {
+            //                     //Means we're going to a new world
+            //                     self.non_static_model_entities.clear();
+            //                 }
+            //                 _ => {}
+            //             }
+            //         }
+            //         None => {
+            //             break;
+            //         }
+            //     }
+            // }
 
             //}
 
@@ -5887,16 +5891,16 @@ impl Game {
                     }
 
                     if self.vars.in_multiplayer {
-                        let mut message = Message::new(
-                            MessageType::MultiBlockSet,
-                            Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
-                            0.0,
-                            0,
-                        );
-                        message.info2 = 0;
-                        message.otherpos = other_half;
+                        // let mut message = Message::new(
+                        //     MessageType::MultiBlockSet,
+                        //     Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
+                        //     0.0,
+                        //     0,
+                        // );
+                        // message.info2 = 0;
+                        // message.otherpos = other_half;
 
-                        self.netconn.send(&message);
+                        // self.netconn.send(&message);
                     } else {
                         self.chunksys.read().set_block(block_hit, 0, true);
                         self.chunksys
@@ -5911,13 +5915,13 @@ impl Game {
 
                     //TODO: PROBLEM HERE THAT WILL ALLOW USERS TO KEEP DUPING A BLOCK AS LONG AS THE SERVER DOESNT RESPOND
                     if self.vars.in_multiplayer {
-                        let message = Message::new(
-                            MessageType::BlockSet,
-                            Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
-                            0.0,
-                            0,
-                        );
-                        self.netconn.send(&message);
+                        // let message = Message::new(
+                        //     MessageType::BlockSet,
+                        //     Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
+                        //     0.0,
+                        //     0,
+                        // );
+                        // self.netconn.send(&message);
                     } else {
                         self.chunksys
                             .read()
@@ -6585,19 +6589,19 @@ impl Game {
                         DoorInfo::toggle_door_open_bit(&mut otherhalfbits);
 
                         if self.vars.in_multiplayer {
-                            let mut message = Message::new(
-                                MessageType::MultiBlockSet,
-                                Vec3::new(
-                                    block_hit.x as f32,
-                                    block_hit.y as f32,
-                                    block_hit.z as f32,
-                                ),
-                                0.0,
-                                blockbitshere,
-                            );
-                            message.info2 = otherhalfbits;
-                            message.otherpos = otherhalf;
-                            self.netconn.send(&message);
+                            // let mut message = Message::new(
+                            //     MessageType::MultiBlockSet,
+                            //     Vec3::new(
+                            //         block_hit.x as f32,
+                            //         block_hit.y as f32,
+                            //         block_hit.z as f32,
+                            //     ),
+                            //     0.0,
+                            //     blockbitshere,
+                            // );
+                            // message.info2 = otherhalfbits;
+                            // message.otherpos = otherhalf;
+                            // self.netconn.send(&message);
                         } else {
                             self.chunksys
                                 .write()
@@ -6759,21 +6763,21 @@ impl Game {
                                         let _chunktoreb = ChunkSystem::spot_to_chunk_pos(&right);
 
                                         if self.vars.in_multiplayer {
-                                            let mut message = Message::new(
-                                                MessageType::MultiBlockSet,
-                                                Vec3::new(
-                                                    right.x as f32,
-                                                    right.y as f32,
-                                                    right.z as f32,
-                                                ),
-                                                0.0,
-                                                blockbitsright,
-                                            );
+                                            // let mut message = Message::new(
+                                            //     MessageType::MultiBlockSet,
+                                            //     Vec3::new(
+                                            //         right.x as f32,
+                                            //         right.y as f32,
+                                            //         right.z as f32,
+                                            //     ),
+                                            //     0.0,
+                                            //     blockbitsright,
+                                            // );
 
-                                            message.info2 = neightopbits;
-                                            message.otherpos = rightup;
+                                            // message.info2 = neightopbits;
+                                            // message.otherpos = rightup;
 
-                                            self.netconn.send(&message);
+                                            // self.netconn.send(&message);
                                         } else {
                                             self.chunksys.read().set_block_and_queue_rerender(
                                                 right,
@@ -6813,21 +6817,21 @@ impl Game {
                                         let _chunktoreb = ChunkSystem::spot_to_chunk_pos(&left);
 
                                         if self.vars.in_multiplayer {
-                                            let mut message = Message::new(
-                                                MessageType::MultiBlockSet,
-                                                Vec3::new(
-                                                    left.x as f32,
-                                                    left.y as f32,
-                                                    left.z as f32,
-                                                ),
-                                                0.0,
-                                                blockbitsleft,
-                                            );
+                                            // let mut message = Message::new(
+                                            //     MessageType::MultiBlockSet,
+                                            //     Vec3::new(
+                                            //         left.x as f32,
+                                            //         left.y as f32,
+                                            //         left.z as f32,
+                                            //     ),
+                                            //     0.0,
+                                            //     blockbitsleft,
+                                            // );
 
-                                            message.info2 = neightopbits;
-                                            message.otherpos = leftup;
+                                            // message.info2 = neightopbits;
+                                            // message.otherpos = leftup;
 
-                                            self.netconn.send(&message);
+                                            // self.netconn.send(&message);
                                         } else {
                                             self.chunksys.read().set_block_and_queue_rerender(
                                                 left,
@@ -6848,21 +6852,21 @@ impl Game {
                                 }
 
                                 if self.vars.in_multiplayer {
-                                    let mut message = Message::new(
-                                        MessageType::MultiBlockSet,
-                                        Vec3::new(
-                                            place_point.x as f32,
-                                            place_point.y as f32,
-                                            place_point.z as f32,
-                                        ),
-                                        0.0,
-                                        bottom_id,
-                                    );
+                                    // let mut message = Message::new(
+                                    //     MessageType::MultiBlockSet,
+                                    //     Vec3::new(
+                                    //         place_point.x as f32,
+                                    //         place_point.y as f32,
+                                    //         place_point.z as f32,
+                                    //     ),
+                                    //     0.0,
+                                    //     bottom_id,
+                                    // );
 
-                                    message.info2 = top_id;
-                                    message.otherpos = place_above;
+                                    // message.info2 = top_id;
+                                    // message.otherpos = place_above;
 
-                                    self.netconn.send(&message);
+                                    // self.netconn.send(&message);
                                 } else {
                                     self.chunksys.read().set_block_and_queue_rerender(
                                         place_point,
@@ -6899,18 +6903,18 @@ impl Game {
                             Blocks::set_direction_bits(&mut conveyor_id, direction);
 
                             if self.vars.in_multiplayer {
-                                let message = Message::new(
-                                    MessageType::BlockSet,
-                                    Vec3::new(
-                                        place_point.x as f32,
-                                        place_point.y as f32,
-                                        place_point.z as f32,
-                                    ),
-                                    0.0,
-                                    conveyor_id,
-                                );
+                                // let message = Message::new(
+                                //     MessageType::BlockSet,
+                                //     Vec3::new(
+                                //         place_point.x as f32,
+                                //         place_point.y as f32,
+                                //         place_point.z as f32,
+                                //     ),
+                                //     0.0,
+                                //     conveyor_id,
+                                // );
 
-                                self.netconn.send(&message);
+                                // self.netconn.send(&message);
                             } else {
                                 self.chunksys.read().set_block_and_queue_rerender(
                                     place_point,
@@ -6939,18 +6943,18 @@ impl Game {
                             Blocks::set_direction_bits(&mut ladder_id, direction);
 
                             if self.vars.in_multiplayer {
-                                let message = Message::new(
-                                    MessageType::BlockSet,
-                                    Vec3::new(
-                                        place_point.x as f32,
-                                        place_point.y as f32,
-                                        place_point.z as f32,
-                                    ),
-                                    0.0,
-                                    ladder_id,
-                                );
+                                // let message = Message::new(
+                                //     MessageType::BlockSet,
+                                //     Vec3::new(
+                                //         place_point.x as f32,
+                                //         place_point.y as f32,
+                                //         place_point.z as f32,
+                                //     ),
+                                //     0.0,
+                                //     ladder_id,
+                                // );
 
-                                self.netconn.send(&message);
+                                // self.netconn.send(&message);
                             } else {
                                 self.chunksys.read().set_block_and_queue_rerender(
                                     place_point,
@@ -6979,18 +6983,18 @@ impl Game {
                             Blocks::set_direction_bits(&mut chest_id, direction);
 
                             if self.vars.in_multiplayer {
-                                let message = Message::new(
-                                    MessageType::BlockSet,
-                                    Vec3::new(
-                                        place_point.x as f32,
-                                        place_point.y as f32,
-                                        place_point.z as f32,
-                                    ),
-                                    0.0,
-                                    chest_id,
-                                );
+                                // let message = Message::new(
+                                //     MessageType::BlockSet,
+                                //     Vec3::new(
+                                //         place_point.x as f32,
+                                //         place_point.y as f32,
+                                //         place_point.z as f32,
+                                //     ),
+                                //     0.0,
+                                //     chest_id,
+                                // );
 
-                                self.netconn.send(&message);
+                                // self.netconn.send(&message);
                             } else {
                                 self.chunksys.read().set_block_and_queue_rerender(
                                     place_point,
@@ -7003,17 +7007,17 @@ impl Game {
                         } else {
                             if !Blocks::is_non_placeable(slot.0) {
                                 if self.vars.in_multiplayer {
-                                    let message = Message::new(
-                                        MessageType::BlockSet,
-                                        Vec3::new(
-                                            place_point.x as f32,
-                                            place_point.y as f32,
-                                            place_point.z as f32,
-                                        ),
-                                        0.0,
-                                        id,
-                                    );
-                                    self.netconn.send(&message);
+                                    // let message = Message::new(
+                                    //     MessageType::BlockSet,
+                                    //     Vec3::new(
+                                    //         place_point.x as f32,
+                                    //         place_point.y as f32,
+                                    //         place_point.z as f32,
+                                    //     ),
+                                    //     0.0,
+                                    //     id,
+                                    // );
+                                    // self.netconn.send(&message);
                                 } else {
                                     self.chunksys.read().set_block_and_queue_rerender(
                                         place_point,
@@ -7032,29 +7036,29 @@ impl Game {
                                     mutslot.1 = 0;
                                     mutslot.0 = 0;
 
-                                    let mut msg = Message::new(
-                                        MessageType::ChestInvUpdate,
-                                        Vec3::ZERO,
-                                        0.0,
-                                        slot_selected as u32,
-                                    );
-                                    msg.infof = 0.0;
-                                    msg.info2 = 1;
+                                    // let mut msg = Message::new(
+                                    //     MessageType::ChestInvUpdate,
+                                    //     Vec3::ZERO,
+                                    //     0.0,
+                                    //     slot_selected as u32,
+                                    // );
+                                    // msg.infof = 0.0;
+                                    // msg.info2 = 1;
 
-                                    self.netconn.send(&msg);
+                                    // self.netconn.send(&msg);
                                 } else {
                                     let slot = &self.inventory.read().inv[slot_selected];
 
-                                    let mut msg = Message::new(
-                                        MessageType::ChestInvUpdate,
-                                        Vec3::ZERO,
-                                        slot.0 as f32,
-                                        slot_selected as u32,
-                                    );
-                                    msg.infof = slot.1 as f32 - 1.0;
-                                    msg.info2 = 1;
+                                    // let mut msg = Message::new(
+                                    //     MessageType::ChestInvUpdate,
+                                    //     Vec3::ZERO,
+                                    //     slot.0 as f32,
+                                    //     slot_selected as u32,
+                                    // );
+                                    // msg.infof = slot.1 as f32 - 1.0;
+                                    // msg.info2 = 1;
 
-                                    self.netconn.send(&msg);
+                                    // self.netconn.send(&msg);
                                 }
                             } else {
                                 if slot.1 == 1 {
@@ -7096,29 +7100,29 @@ impl Game {
                         mutslot.1 = 0;
                         mutslot.0 = 0;
 
-                        let mut msg = Message::new(
-                            MessageType::ChestInvUpdate,
-                            Vec3::ZERO,
-                            0.0,
-                            slot_selected as u32,
-                        );
-                        msg.infof = 0.0;
-                        msg.info2 = 1;
+                        // let mut msg = Message::new(
+                        //     MessageType::ChestInvUpdate,
+                        //     Vec3::ZERO,
+                        //     0.0,
+                        //     slot_selected as u32,
+                        // );
+                        // msg.infof = 0.0;
+                        // msg.info2 = 1;
 
-                        self.netconn.send(&msg);
+                        // self.netconn.send(&msg);
                     } else {
                         let slot = &self.inventory.read().inv[slot_selected];
 
-                        let mut msg = Message::new(
-                            MessageType::ChestInvUpdate,
-                            Vec3::ZERO,
-                            slot.0 as f32,
-                            slot_selected as u32,
-                        );
-                        msg.infof = slot.1 as f32 - 1.0;
-                        msg.info2 = 1;
+                        // let mut msg = Message::new(
+                        //     MessageType::ChestInvUpdate,
+                        //     Vec3::ZERO,
+                        //     slot.0 as f32,
+                        //     slot_selected as u32,
+                        // );
+                        // msg.infof = slot.1 as f32 - 1.0;
+                        // msg.info2 = 1;
 
-                        self.netconn.send(&msg);
+                        // self.netconn.send(&msg);
                     }
                 } else {
                     if slot.1 == 1 {
@@ -7183,18 +7187,18 @@ impl Game {
                                                         /*X, Y:   SLOT MOVED TO MOUSE OF <GOOSE> PLAYER */
                                                         /*Z: IF MOUSE_SLOT IS REPLACED */
                                                         /*BO: IF WE WANT SERVER-SIDE CHEST-TO-MOUSE DISPLACEMENT (NO if this is adding to a stack, it will put the previous stack in our hand) */
-                                                        let mut msg = Message::new(
-                                                            MessageType::ChestInvUpdate,
-                                                            Vec3::new(0 as f32, 0 as f32, 1.0),
-                                                            slot.0 as f32,
-                                                            e as u32,
-                                                        );
-                                                        msg.otherpos = self.hud.current_chest;
-                                                        msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */0;
-                                                        msg.infof =
-                                                            (slot.1 + self.mouse_slot.1) as f32;
-                                                        msg.bo = false;
-                                                        self.netconn.send(&msg);
+                                                        // let mut msg = Message::new(
+                                                        //     MessageType::ChestInvUpdate,
+                                                        //     Vec3::new(0 as f32, 0 as f32, 1.0),
+                                                        //     slot.0 as f32,
+                                                        //     e as u32,
+                                                        // );
+                                                        // msg.otherpos = self.hud.current_chest;
+                                                        // msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */0;
+                                                        // msg.infof =
+                                                        //     (slot.1 + self.mouse_slot.1) as f32;
+                                                        // msg.bo = false;
+                                                        // self.netconn.send(&msg);
                                                     } else {
                                                         slot.1 = slot.1 + self.mouse_slot.1;
 
@@ -7213,21 +7217,21 @@ impl Game {
                                                         /*X, Y:   SLOT MOVED TO MOUSE OF <GOOSE> PLAYER */
                                                         /*Z: IF MOUSE_SLOT IS REPLACED */
                                                         /*BO: IF WE WANT SERVER-SIDE CHEST-TO-MOUSE DISPLACEMENT (NO if this is adding to a stack, it will put the previous stack in our hand) */
-                                                        let mut msg = Message::new(
-                                                            MessageType::ChestInvUpdate,
-                                                            Vec3::new(
-                                                                buff.0 as f32,
-                                                                buff.1 as f32,
-                                                                1.0,
-                                                            ),
-                                                            self.mouse_slot.0 as f32,
-                                                            e as u32,
-                                                        );
-                                                        msg.otherpos = self.hud.current_chest;
-                                                        msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */0;
-                                                        msg.infof = self.mouse_slot.1 as f32;
-                                                        msg.bo = true;
-                                                        self.netconn.send(&msg);
+                                                        // let mut msg = Message::new(
+                                                        //     MessageType::ChestInvUpdate,
+                                                        //     Vec3::new(
+                                                        //         buff.0 as f32,
+                                                        //         buff.1 as f32,
+                                                        //         1.0,
+                                                        //     ),
+                                                        //     self.mouse_slot.0 as f32,
+                                                        //     e as u32,
+                                                        // );
+                                                        // msg.otherpos = self.hud.current_chest;
+                                                        // msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */0;
+                                                        // msg.infof = self.mouse_slot.1 as f32;
+                                                        // msg.bo = true;
+                                                        // self.netconn.send(&msg);
                                                     } else {
                                                         slot.0 = self.mouse_slot.0;
                                                         slot.1 = self.mouse_slot.1;
@@ -7255,17 +7259,17 @@ impl Game {
                                                 /*X, Y:   SLOT MOVED TO MOUSE OF <GOOSE> PLAYER */
                                                 /*Z: IF MOUSE_SLOT IS REPLACED */
                                                 /*BO: IF WE WANT SERVER-SIDE CHEST-TO-MOUSE DISPLACEMENT (NO if this is adding to a stack, it will put the previous stack in our hand) */
-                                                let mut msg = Message::new(
-                                                    MessageType::ChestInvUpdate,
-                                                    Vec3::new(0 as f32, 0 as f32, 1.0),
-                                                    slot.0 as f32,
-                                                    e as u32,
-                                                );
-                                                msg.otherpos = self.hud.current_chest;
-                                                msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */1;
-                                                msg.infof = (slot.1 + self.mouse_slot.1) as f32;
-                                                msg.bo = false;
-                                                self.netconn.send(&msg);
+                                                // let mut msg = Message::new(
+                                                //     MessageType::ChestInvUpdate,
+                                                //     Vec3::new(0 as f32, 0 as f32, 1.0),
+                                                //     slot.0 as f32,
+                                                //     e as u32,
+                                                // );
+                                                // msg.otherpos = self.hud.current_chest;
+                                                // msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */1;
+                                                // msg.infof = (slot.1 + self.mouse_slot.1) as f32;
+                                                // msg.bo = false;
+                                                // self.netconn.send(&msg);
                                             } else {
                                                 slot.1 = slot.1 + self.mouse_slot.1;
 
@@ -7285,17 +7289,17 @@ impl Game {
                                                 /*X, Y:   SLOT MOVED TO MOUSE OF <GOOSE> PLAYER */
                                                 /*Z: IF MOUSE_SLOT IS REPLACED */
                                                 /*BO: IF WE WANT SERVER-SIDE CHEST-TO-MOUSE DISPLACEMENT (NO if this is adding to a stack, it will put the previous stack in our hand) */
-                                                let mut msg = Message::new(
-                                                    MessageType::ChestInvUpdate,
-                                                    Vec3::new(buff.0 as f32, buff.1 as f32, 1.0),
-                                                    self.mouse_slot.0 as f32,
-                                                    e as u32,
-                                                );
-                                                msg.otherpos = self.hud.current_chest;
-                                                msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */ 1;
-                                                msg.infof = self.mouse_slot.1 as f32;
-                                                msg.bo = true;
-                                                self.netconn.send(&msg);
+                                                // let mut msg = Message::new(
+                                                //     MessageType::ChestInvUpdate,
+                                                //     Vec3::new(buff.0 as f32, buff.1 as f32, 1.0),
+                                                //     self.mouse_slot.0 as f32,
+                                                //     e as u32,
+                                                // );
+                                                // msg.otherpos = self.hud.current_chest;
+                                                // msg.info2 = /*0 = CHEST, 1 = INV, 2 = NONE */ 1;
+                                                // msg.infof = self.mouse_slot.1 as f32;
+                                                // msg.bo = true;
+                                                // self.netconn.send(&msg);
                                             } else {
                                                 slot.0 = self.mouse_slot.0;
                                                 slot.1 = self.mouse_slot.1;
@@ -7391,12 +7395,12 @@ impl Game {
             //let msg = Message::new(MessageType::ShutUpMobMsgs, Vec3::ZERO, 0.0, 0);
             //self.netconn.send(&msg);
 
-            self.netconn.received_world.store(false, Ordering::Relaxed);
+            RECEIVED_WORLD.store(false, Ordering::Relaxed);
 
-            let msg = Message::new(MessageType::RequestUdm, Vec3::ZERO, 0.0, 0);
-            self.netconn.send(&msg);
+            // let msg = Message::new(MessageType::RequestUdm, Vec3::ZERO, 0.0, 0);
+            // self.netconn.send(&msg);
 
-            while !self.netconn.received_world.load(Ordering::Relaxed) {
+            while !RECEIVED_WORLD.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
             }
 

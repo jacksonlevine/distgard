@@ -8,7 +8,7 @@ use lockfree::queue::Queue;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use tracing::info;
-use crate::{camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage, Side}, game::Game, server_types::Message, shader::Shader, vec};
+use crate::{camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage, Side}, game::Game, shader::Shader, vec};
 
 use crate::inventory::Inventory;
 
@@ -62,12 +62,12 @@ pub struct Drops {
     pub inv: Arc<RwLock<Inventory>>,
 
     pub in_multiplayer: bool,
-    pub needtosend: Arc<Queue<Message>>
+    //pub needtosend: Arc<Queue<Message>>
 }
 
 impl Drops {
 
-    pub fn new(texture: GLuint, cam: &Arc<Mutex<Camera>>, csys: &Arc<RwLock<ChunkSystem>>, inv: &Arc<RwLock<Inventory>>, in_m: bool, needtosend: &Arc<Queue<Message>>) -> Drops {
+    pub fn new(texture: GLuint, cam: &Arc<Mutex<Camera>>, csys: &Arc<RwLock<ChunkSystem>>, inv: &Arc<RwLock<Inventory>>, in_m: bool) -> Drops {
 
 
         let shader = Shader::new(path!("assets/dropvert.glsl"), path!("assets/dropfrag.glsl"));
@@ -150,7 +150,7 @@ impl Drops {
             csys: csys.clone(),
             inv: inv.clone(),
             in_multiplayer: in_m,
-            needtosend: needtosend.clone()
+            //needtosend: needtosend.clone()
         }
     }
 
@@ -237,7 +237,7 @@ impl Drops {
             }
 
             if (drop.position).distance(campos) < 1.0 {
-                match Game::add_to_inventory(&self.inv, drop.block_id, drop.amount, self.in_multiplayer, &self.needtosend) {
+                match Game::add_to_inventory(&self.inv, drop.block_id, drop.amount, self.in_multiplayer) {
                     Ok(_t) => {
                         to_remove_indices.push(index);
                         info!("Picked up {} {}", drop.block_id, drop.amount);
