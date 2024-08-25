@@ -205,14 +205,15 @@ impl WindowAndKeyContext {
             addressentered: Arc::new(AtomicBool::new(false)),
             serveraddress: Arc::new(Mutex::new(None)),
             serveraddrbuffer: String::with_capacity(128),
-            logo: Texture::new(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../assets/Untitled3.png"
+            logo: Texture::new(path!(
+                "assets/Untitled3.png"
             ))
             .unwrap_or_else(|err| {
                 eprintln!(
                     "Error: {err:?}, path: {}",
-                    concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/Untitled3.png")
+                    path!(
+                        "assets/Untitled3.png"
+                    )
                 );
                 panic!("Error!!!!!!!!1111, {err:?}");
             }),
