@@ -111,8 +111,8 @@ impl WindowAndKeyContext {
 
         #[cfg(feature = "steam")]
         let (client, single) = Client::init().unwrap();
-        #[cfg(feature = "steam")]
-        restart_app_if_necessary(AppId::from(3114230));
+        // #[cfg(feature = "steam")]
+        // restart_app_if_necessary(AppId::from(3114230));
 
         unsafe {
             WINDOWHEIGHT = height as i32;

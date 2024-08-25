@@ -61,10 +61,10 @@ macro_rules! cfg_glfw {
 #[macro_export]
 macro_rules! path {
     ($path:literal) => {{
-        #[cfg(not(feature = "steam"))] {
+        #[cfg(not(feature = "localpath"))] {
             concat!(env!("CARGO_MANIFEST_DIR"), "/../", $path)
         }
-        #[cfg(feature = "steam")] {
+        #[cfg(feature = "localpath")] {
             $path
         }
     }}
