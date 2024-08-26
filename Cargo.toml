@@ -6,6 +6,8 @@ members = [
     "core/vault",
     "core/talk",
     "core/enum-fmt",
+    "core/jeffy_quintet",
+    "core/bevy_replicon_quintet",
 ]
 
 [profile.release]

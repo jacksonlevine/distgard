@@ -13,9 +13,9 @@ use crate::vec;
 
 pub const MOB_BATCH_SIZE: usize = 16;
 #[derive(Clone, Debug)]
-pub struct SerVec3(Vec3);
+pub struct SerVec3(pub Vec3);
 #[derive(Clone, Debug)]
-pub struct SerIVec3(IVec3);
+pub struct SerIVec3(pub IVec3);
 
 impl BorshSerialize for SerVec3 {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
@@ -72,7 +72,7 @@ impl BorshDeserialize for SerIVec3 {
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
-pub enum NewMessage {
+pub enum Message {
     None,
     // RequestUdm,
     // RequestSeed,

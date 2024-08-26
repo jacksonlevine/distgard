@@ -41,7 +41,9 @@ vectorize = "0.2.0"
 clipboard = "0.5.0"
 borsh = { version = "1.5.1", features = ["derive"] }
 bevy = "0.14.1"
-bevy_quinnet = "0.9.0"
+
+
+jeffy_quintet = { path = "../core/jeffy_quintet" }
 lib = "0.0.0"
 
 

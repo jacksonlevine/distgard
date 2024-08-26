@@ -1,0 +1,69 @@
+[package]
+name = "jeffy_quintet"
+version = "0.10.0"
+description = "Bevy plugin for Client/Server multiplayer games using QUIC"
+
+
+documentation = "https://docs.rs/jeffy_quintet"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["gamedev", "networking", "quic", "bevy", "plugin"]
+categories = ["game-development", "network-programming"]
+readme = "README.md"
+exclude = ["assets/"]
+
+[dependencies]
+bevy = { version = "0.14", default-features = false, features = [] }
+rustls = { version = "0.21.0", default-features = false, features = [
+	"quic",
+	"dangerous_configuration",
+] }
+rustls-pemfile = "1.0.1"
+ring = "0.17.7"
+tokio = { version = "1.36.0", features = ["sync", "rt-multi-thread", "macros"] }
+tokio-util = { version = "0.7.4", features = ["codec"] }
+rcgen = "0.12.1"
+quinn = "0.10.1"
+quinn-proto = "0.10.1"
+futures-util = "0.3.24"
+futures = "0.3.24"
+
+
+
+bytes = "1.5.0"
+base64 = "0.13.1"
+thiserror = "1.0.37"
+borsh = { version = "1.5.1", features = ["derive"] }
+
+[features]
+default = ["shared-client-id", "client", "server"]
+# Server sends the client id to the client, client wait for it before being “connected”
+shared-client-id = []
+# Enables client features
+client = []
+# Enables server features
+server = []
+
+[dev-dependencies]
+bevy = { version = "0.14", default-features = false, features = [
+	"bevy_asset",         # Provides asset functionality
+	"bevy_audio",         # Provides audio functionality
+	"vorbis",             # OGG/VORBIS audio format support
+	"bevy_winit",         # winit window and input backend
+	"bevy_render",        # Provides rendering functionality
+	"bevy_sprite",        # Provides sprite functionality
+	"bevy_ui",            # A custom ECS-driven UI framework
+	"bevy_text",          # Provides text functionality
+	"bevy_core_pipeline", # Provides cameras and other basic render pipeline features
+	"x11",                # X11 display server support
+
+	# Can be removed later, temporary fixes for a bug in "0.14.0-rc.2"
+	"bevy_state",
+	"serialize",
+	"bevy_scene",
+	"bevy_pbr",
+	"ktx2",
+	"zstd",
+] }
+rand = "0.8.5"
+

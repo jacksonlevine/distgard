@@ -1,0 +1,58 @@
+[package]
+name = "bevy_replicon_quintet"
+version = "0.5.0"
+description = "Integration with jeffy_quintet for bevy_replicon"
+repository = "https://github.com/Henauxg/jeffy_quintet"
+documentation = "https://docs.rs/bevy_replicon_quintet"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["gamedev", "networking", "quic", "bevy", "plugin"]
+categories = ["game-development", "network-programming"]
+readme = "README.md"
+exclude = ["assets/"]
+
+[dependencies]
+bevy_replicon = { version = "0.27", default-features = false }
+jeffy_quintet = { version = "0.10.0", path = "../jeffy_quintet", default-features = false }
+bevy = { version = "0.14", default-features = false }
+
+[features]
+default = ["client", "server", "shared-client-id"]
+
+# Enables client features
+client = ["bevy_replicon/client", "jeffy_quintet/client"]
+# Enables server features
+server = ["bevy_replicon/server", "jeffy_quintet/server"]
+
+# Re-exports jeffy_quintet features
+shared-client-id = ["jeffy_quintet/shared-client-id"]
+
+[dev-dependencies]
+serde = "1.0"
+clap = { version = "4.1", features = ["derive"] }
+bevy = { version = "0.14", default-features = false, features = [
+    "bevy_text",
+    "bevy_ui",
+    "bevy_state",
+    "bevy_gizmos",
+    "x11",
+    "default_font",
+
+
+    # Can be removed later, temporary fixes for a bug in "0.14.0-rc.2"
+    "bevy_scene",
+    "bevy_pbr",
+    "ktx2",
+    "zstd",
+] }
+
+[[example]]
+name = "simple_box"
+path = "examples/simple_box.rs"
+
+[[example]]
+name = "tic_tac_toe"
+path = "examples/tic_tac_toe.rs"
+
+[[test]]
+name = "transport"

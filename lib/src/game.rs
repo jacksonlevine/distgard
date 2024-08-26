@@ -25,8 +25,8 @@ use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI8, AtomicU32, Ordering};
 use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
-use bevy_quinnet::client::QuinnetClientPlugin;
-use bevy_quinnet::server::QuinnetServerPlugin;
+use jeffy_quintet::client::QuintetClientPlugin;
+use jeffy_quintet::server::QuintetServerPlugin;
 
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
@@ -516,13 +516,13 @@ impl Game {
             
 
             if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Multiplayer client
-                app.add_plugins(QuinnetClientPlugin::default());
+                app.add_plugins(QuintetClientPlugin::default());
             } else
             if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
 
             } else 
             if unsafe {HEADLESS} { //Headless server
-                app.add_plugins(QuinnetServerPlugin::default());
+                app.add_plugins(QuintetServerPlugin::default());
                 app.add_systems(Startup, start_listening);
                 app.add_systems(Update, handle_client_messages);
             

@@ -1,16 +1,17 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use bevy::prelude::*;
-use bevy_quinnet::client::certificate::CertificateVerificationMode;
-use bevy_quinnet::shared::channels::ChannelType;
-use bevy_quinnet::{client::*, server::*, shared::channels::ChannelsConfiguration};
+use jeffy_quintet::client::certificate::CertificateVerificationMode;
+use jeffy_quintet::shared::channels::ChannelType;
+use jeffy_quintet::{client::*, server::*, shared::channels::ChannelsConfiguration};
 
-use bevy_quinnet::server::certificate::CertificateRetrievalMode;
+use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use connection::ClientEndpointConfiguration;
+use uuid::Uuid;
 
-use crate::server_types::NewMessage;
+use crate::server_types::*;
 
-pub fn start_listening(mut server: ResMut<QuinnetServer>) {
+pub fn start_listening(mut server: ResMut<QuintetServer>) {
     server
         .start_endpoint(
             ServerEndpointConfiguration::from_ip(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 6000),
@@ -29,15 +30,16 @@ pub fn start_listening(mut server: ResMut<QuinnetServer>) {
 }
 
 pub fn handle_client_messages(
-    mut server: ResMut<QuinnetServer>,
+    mut server: ResMut<QuintetServer>,
     /*...*/
 ) {
     let mut endpoint = server.endpoint_mut();
     for client_id in endpoint.clients() {
-        while let Some(message) = endpoint.try_receive_message_from::<NewMessage>(client_id) {
+        while let Some(message) = endpoint.try_receive_message_from::<Message>(client_id) {
             match message {
-                (channelid, NewMessage::PlayerUpdate(uuid, pos, rot, scale, moving)) => {
-                    println!("Received {} {}", uuid, trans);
+                (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
+                    let uuid = Uuid::from_u64_pair(uuid.0, uuid.1);
+                    println!("Received {} {} {} {}", uuid, pos.0.x, pos.0.y, pos.0.z);
                     // Send a message to a group of clients
                     // if let Err(e) = endpoint.broadcast_message_on(1, message.1.clone()) {
                     //     println!("Error broadcasting message: {:?}", e);
