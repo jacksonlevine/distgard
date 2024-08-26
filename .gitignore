@@ -14,3 +14,4 @@ db
 lesa
 app.log
 *.exe
+**/target/
