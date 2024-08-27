@@ -12,9 +12,9 @@ use crate::vec;
 
 
 pub const MOB_BATCH_SIZE: usize = 16;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct SerVec3(pub Vec3);
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct SerIVec3(pub IVec3);
 
 impl BorshSerialize for SerVec3 {
@@ -84,6 +84,8 @@ pub enum Message {
     // Pt(u8),
     // Udm(Vec<u8>),
     // Seed(u32),
+
+    //ChestReg, Pt, Udm, Seed
     WorldInfo(Vec<u8>, u8, Vec<u8>, u32),
 
     TimeUpdate(f32),

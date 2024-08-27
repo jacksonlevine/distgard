@@ -71,6 +71,7 @@ use crate::hud::{Hud, HudElement, SlotIndexType};
 use crate::inventory::*;
 
 use crate::modelentity::ModelEntity;
+use crate::newserver::{handle_client_messages, start_listening};
 //use crate::network::NetworkConnector;
 use crate::planetinfo::Planets;
 use crate::playerposition::PlayerPosition;
@@ -977,7 +978,7 @@ impl Game {
 
         let pme = Arc::new(DashMap::new());
 
-        let needtosend = Arc::new(Queue::new());
+        //let needtosend = Arc::new(Queue::new());
 
         unsafe {
             let mut rng = StdRng::from_entropy();

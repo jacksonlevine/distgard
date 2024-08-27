@@ -37,6 +37,48 @@ pub fn handle_client_messages(
     for client_id in endpoint.clients() {
         while let Some(message) = endpoint.try_receive_message_from::<Message>(client_id) {
             match message {
+                _ => {
+
+                }
+                (channelid, Message::Disconnect) => {
+
+                },
+                (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
+
+                },
+                (channelid, Message::BlockSet(servec3, blockid)) => {
+
+                },
+                (channelid, Message::InvUpdate(slotindex, slot)) => {
+
+                },
+                (channelid, Message::ItemToYourMouse(slot)) => {
+
+                },
+                (channelid, Message::MobUpdate) => {
+
+                },
+                (channelid, Message::MobUpdateBatch) => {
+
+                },
+                (channelid, Message::MultiBlockSet(blocks)) => {
+
+                },
+                (channelid, Message::RequestWorldInfo) => {
+
+                },
+                (channelid, Message::TellYouMyID(id1, id2)) => {
+
+                },
+                (channelid, Message::YourId(id1, id2)) => {
+
+                },
+                (channelid, Message::TimeUpdate(newtime)) => {
+
+                },
+                (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
+                    //ChestReg, Pt, Udm, Seed
+                },
                 (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
                     let uuid = Uuid::from_u64_pair(uuid.0, uuid.1);
                     println!("Received {} {} {} {}", uuid, pos.0.x, pos.0.y, pos.0.z);
@@ -54,7 +96,8 @@ pub fn handle_client_messages(
                     );
 
                     /*...*/
-                } // // Match on your own message types ...
+                }
+                  // // Match on your own message types ...
                   //You can also use endpoint.broadcast_message, which will send a message to all connected clients.
                   // ClientMessage::Join { username} => {
                   //     // Send a messsage to 1 client
