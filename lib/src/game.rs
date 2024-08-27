@@ -71,6 +71,7 @@ use crate::hud::{Hud, HudElement, SlotIndexType};
 use crate::inventory::*;
 
 use crate::modelentity::ModelEntity;
+use crate::newclient::{handle_server_messages, start_connection, PlayerUpdateTimer};
 use crate::newserver::{handle_client_messages, start_listening};
 //use crate::network::NetworkConnector;
 use crate::planetinfo::Planets;
@@ -513,11 +514,16 @@ impl Game {
             let mut app = App::new();
             app
             .add_plugins(MinimalPlugins)
-            .add_systems(Update, || println!("Testeroonie"));
+            ;
+            
+            //.add_systems(Update, || println!("Testeroonie"));
             
 
             if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Multiplayer client
+                app.init_resource::<PlayerUpdateTimer>();
                 app.add_plugins(QuintetClientPlugin::default());
+                app.add_systems(Startup, start_connection);
+                app.add_systems(Update, handle_server_messages);
             } else
             if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
 
