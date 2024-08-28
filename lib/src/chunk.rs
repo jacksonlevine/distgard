@@ -45,6 +45,8 @@ use crate::game::AUDIOPLAYER;
 //use crate::game::CHUNKDRAWINGHERE;
 use crate::game::CURRSEED;
 
+use crate::game::PLAYERCHUNKPOS;
+use crate::game::PLAYERPOS;
 use crate::packedvertex::PackedVertex;
 use crate::planetinfo::Planets;
 use crate::shader::Shader;
@@ -277,7 +279,8 @@ impl AutomataChange {
 }
 
 
-pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<Queue<AutomataChange>> = Lazy::new(|| Queue::new());
+pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new( || DashMap::new() );
+pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<Queue<Vec<AutomataChange>>> = Lazy::new(|| Queue::new());
 
 
 
@@ -505,12 +508,14 @@ impl ChunkSystem {
 
 
     pub fn do_automata(&mut self, cam: &Arc<Mutex<Camera>>) {
+
+        pub const ODDBIT: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
         let chunkslist = self.chunks.clone();
 
         let udm = self.userdatamap.clone();
         let nudm = self.nonuserdatamap.clone();
         let per = self.perlin.clone();
-        let cam = cam.clone();
+        //let cam = cam.clone();
 
         
 
@@ -518,26 +523,24 @@ impl ChunkSystem {
 
             let mut rng = StdRng::from_entropy();
 
+            let mut ODDFRAME: u32 = 0;
+
             loop {
                 
-                // let camposx = unsafe { PLAYERCHUNKPOS.0.load(std::sync::atomic::Ordering::Relaxed) };
-                // let camposz = unsafe { PLAYERCHUNKPOS.1.load(std::sync::atomic::Ordering::Relaxed) };
+                
+                let psnap = unsafe { PLAYERPOS.snapshot() };
 
+                let pcpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(psnap.pos.0 as i32, 0, psnap.pos.2 as i32));
 
-    
+                let camposx = pcpos.x;
+                let camposz = pcpos.y;
+
                 for chunk in &chunkslist {
-                    let cclone = match chunk.try_lock() {
-                        Some(c) => {
-                            Some(c.clone())
-                        },
-                        None => {
-                            None
-                        },
-                    };
-
+                    let cclone = Some(chunk.lock());
                     match cclone {
                         Some(c) => {
-                            if c.pos.x != CHUNKPOSDEFAULT {
+                            
+                            if c.pos.x != CHUNKPOSDEFAULT && bevy::math::IVec2::new(camposx,camposz).distance_squared(bevy::math::IVec2::new(c.pos.x, c.pos.y)) < 16 {
                                 //println!("Chunk at {}, {}", c.pos.x, c.pos.y);
 
 
@@ -560,17 +563,70 @@ impl ChunkSystem {
                                             unsafe {
                                                 //println!("weathertype: {}", WEATHERTYPE);
                                                 if true { //WEATHERTYPE == 1.0 {
-                                                    if block == 3 {
-                                                        if rng.gen_range(0..100) == 9 {
-                                                            //println!("Pushin one");
-                                                            AUTOMATA_QUEUED_CHANGES.push(AutomataChange::new(
-                                                                block, spot, 48
-                                                            ));
+
+                                                    match block {
+                                                        3 => {
+                                                            if rng.gen_range(0..100) == 9 {
+                                                                //println!("Pushin one");
+                                                                AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                    block, spot, 48
+                                                                )]);
+                                                            }
+    
+                                                            break;
                                                         }
+                                                        2 => {
 
-                                                        break;
+                                                            if combined == (2u32 | (ODDBIT * ODDFRAME)) {
+                                                                let belowspot = spot + IVec3::new(0, -1, 0);
+                                                                let belowcombined = Self::_blockat(&nudm, &udm, &per.read(), belowspot);
+                                                                let belowblock = belowcombined & Blocks::block_id_bits();
 
+                                                                if belowblock == 0 {
+                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![
+                                                                        AutomataChange::new(
+                                                                            (2 | (ODDBIT * (ODDFRAME))), spot, 0
+                                                                        ),
+                                                                        AutomataChange::new(
+                                                                            0, belowspot, (2 | (ODDBIT * (1-ODDFRAME)))
+                                                                        ),
+                                                                    ]
+                                                                );
+                                                                    
+                                                                }
+                                                            }
+
+                                                            
+                                                        }
+                                                        7 => {
+                                                            let abovespot = spot + IVec3::new(0, 1, 0);
+                                                            let abovecombined = Self::_blockat(&nudm, &udm, &per.read(), abovespot);
+                                                            let aboveblock = abovecombined & Blocks::block_id_bits();
+
+                                                            if aboveblock == 0 {
+                                                                if rng.gen_range(0..100) == 9 {
+                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                        7, spot, 50
+                                                                    )]);
+                                                                }
+                                                            }
+                                                        }
+                                                        22 => {
+                                                            let abovespot = spot + IVec3::new(0, 1, 0);
+                                                            let abovecombined = Self::_blockat(&nudm, &udm, &per.read(), abovespot);
+                                                            let aboveblock = abovecombined & Blocks::block_id_bits();
+
+                                                            if aboveblock == 0 {
+                                                                if rng.gen_range(0..10) == 9 {
+                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                        0, abovespot, 22
+                                                                    )]);
+                                                                }
+                                                            }
+                                                        }
+                                                        _ => {}
                                                     }
+                                                    
                                                 }
                                             }
                                             
@@ -588,7 +644,8 @@ impl ChunkSystem {
                     }
                 }
     
-                thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs_f32(0.5));
+                ODDFRAME = 1 - ODDFRAME;
             }
         });
         
@@ -1341,7 +1398,7 @@ unsafe {
     }
 
     pub fn lightpass_on_chunk(&self, pos: vec::IVec2) {
-        //info!("Doing lightpass on chunk!");
+        //println!("Doing lightpass on chunk! {} {}", pos.x, pos.y);
 
         let hashadarc = self.hashadinitiallightpass.clone();
         let mut hashadlock = hashadarc.lock();

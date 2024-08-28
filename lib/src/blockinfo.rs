@@ -4,7 +4,7 @@ pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
 pub struct Blocks {}
 
 
-static BREAKTIMES: [f32; 50] = [
+static BREAKTIMES: [f32; 51] = [
     0.1,
     0.5,
     0.7,
@@ -57,10 +57,11 @@ static BREAKTIMES: [f32; 50] = [
     0.5,
     1.0,
     1.0,
-    0.3
+    0.3,
+    0.7
 ];
 
-static TEXS: [[(u8, u8); 3]; 50] = [
+static TEXS: [[(u8, u8); 3]; 51] = [
             //sides   //bot   //top
             [(0, 0), (0, 0), (0, 0)],  // 0
             [(1, 0), (1, 0), (1, 0)],  // 1 sand
@@ -124,6 +125,7 @@ static TEXS: [[(u8, u8); 3]; 50] = [
 
             [(8,4),(4,0),(8,5)], // 48, snowy grass
             [(9,4),(9,4),(9,4)], // 49, torch
+            [(7, 5), (7, 0), (8, 5)],  // 50 snow leaves   
         ];
 
 
@@ -184,6 +186,7 @@ impl Blocks {
             47 => {"Metal Plate Block"}
             48 => {"Snowy Grass Block"}
             49 => {"Torch"}
+            50 => {"Snowy Leaves"}
             _ => {
                 "Unknown Item"
             }
@@ -267,8 +270,8 @@ impl Blocks {
         return CLIMBABLES.contains(&id);
     }
     pub fn is_semi_transparent(id: u32) -> bool {
-        static SEMI_TRANSPARENTS: [u32; 9] = [
-            7, 11, 19, 20, 21, 22, 23, 31, 44
+        static SEMI_TRANSPARENTS: [u32; 10] = [
+            7, 11, 19, 20, 21, 22, 23, 31, 44, 50
         ];
         return SEMI_TRANSPARENTS.contains(&id);
     }
