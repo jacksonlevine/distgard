@@ -1,17 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    blockinfo::Blocks,
-    game::{
+    blockinfo::Blocks, game::{
         Game, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP,
         SINGLEPLAYER, TOOLTIPNAME,
-    },
-    keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND},
-    recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER},
-    statics::{
+    }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         LAST_ENTERED_SERVERADDRESS, LOAD_MISC, LOAD_OR_INITIALIZE_STATICS, MISCSETTINGS, SAVE_LESA,
-    },
-    texture::Texture,
+    }, texture::Texture
 };
 
 use clipboard::ClipboardProvider;
@@ -454,28 +449,28 @@ impl WindowAndKeyContext {
                                     g.update();
 
                                     if unsafe {MISCSETTINGS.controllersupport == true} {
-                                        let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
+                                        // let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
 
-                                        static mut lastx: f64 = 0.0;
-                                        static mut lasty: f64 = 0.0;
+                                        // static mut lastx: f64 = 0.0;
+                                        // static mut lasty: f64 = 0.0;
 
-                                        static mut x: f64 = 0.0;
-                                        static mut y: f64 = 0.0;
+                                        // static mut x: f64 = 0.0;
+                                        // static mut y: f64 = 0.0;
 
-                                        let axes = state.get_axes();
+                                        // let axes = state.get_axes();
 
-                                        if axes.len() >= 2 {
-                                            unsafe {
-                                                x += axes[0] as f64;
-                                                y += axes[1] as f64;
+                                        // if axes.len() >= 2 {
+                                        //     unsafe {
+                                        //         x += axes[0] as f64;
+                                        //         y += axes[1] as f64;
 
-                                                if lastx != x || lasty != y {
-                                                    lastx = x;
-                                                    lasty = y;
-                                                    g.cursor_pos(x, y);
-                                                }
-                                            }
-                                        }
+                                        //         if lastx != x || lasty != y {
+                                        //             lastx = x;
+                                        //             lasty = y;
+                                        //             g.cursor_pos(x, y);
+                                        //         }
+                                        //     }
+                                        // }
                                     }
                                     
                                 }
@@ -1168,6 +1163,12 @@ impl WindowAndKeyContext {
                                     }
                                     unsafe {
                                         *LAST_ENTERED_SERVERADDRESS = self.serveraddrbuffer.clone();
+                                    }
+                                    unsafe {
+                                        THEENTEREDADDRESS = self.serveraddrbuffer.clone();
+                                    }
+                                    unsafe {
+                                        ADDRESSENTERED.store(true, std::sync::atomic::Ordering::Relaxed);
                                     }
                                     SAVE_LESA();
                                     *(self.serveraddress.lock()) =

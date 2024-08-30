@@ -24,6 +24,27 @@ pub struct Camera {
 }
 
 impl Camera {
+    pub const fn newconst() -> Self {
+        Self {
+            yaw: 0.0,
+            pitch: 0.0,
+            fov: 0.0,
+            direction: Vec3::X,
+            position: Vec3::ZERO,
+            right: Vec3::NEG_X,
+            up: Vec3::Y,
+            model: Mat4::IDENTITY,
+            projection: Mat4::IDENTITY,
+            view: Mat4::IDENTITY,
+            mvp: Mat4::IDENTITY,
+            velocity: Vec3::ZERO,
+            far: 250.0,
+            near: 0.1,
+        }
+    }
+}
+
+impl Camera {
     pub fn new() -> Camera {
         let direction = Vec3::new(0.0, 0.0, 1.0);
         let position = Vec3::new(0.0, 100.0, 0.0);
@@ -71,31 +92,38 @@ impl Camera {
         delta: &f32,
         speed_mult: f32,
     ) -> Vec3 {
-
         let mut xz_speed_mult = 2.2;
         unsafe {
-            if SPRINTING  {
+            if SPRINTING {
                 xz_speed_mult = 2.74;
             }
         }
-        
+
         let mut moving = false;
 
         if cs.forward {
             moving = true;
-            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize() * xz_speed_mult * *delta * speed_mult;
+            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize()
+                * xz_speed_mult
+                * *delta
+                * speed_mult;
         }
         if cs.left {
             moving = true;
-            self.velocity += (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * *delta * speed_mult;
+            self.velocity +=
+                (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * *delta * speed_mult;
         }
         if cs.back {
             moving = true;
-            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize() * xz_speed_mult * -*delta * speed_mult;
+            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize()
+                * xz_speed_mult
+                * -*delta
+                * speed_mult;
         }
         if cs.right {
             moving = true;
-            self.velocity += (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * -*delta * speed_mult;
+            self.velocity +=
+                (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * -*delta * speed_mult;
         }
         unsafe {
             MOVING = moving;

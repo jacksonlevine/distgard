@@ -493,6 +493,7 @@ impl Game {
         addressentered: &Arc<AtomicBool>,
         address: &Arc<Mutex<Option<String>>>,
     ) -> JoinHandle<Game> {
+
         unsafe {
             if headless {
                 HEADLESS = true;
@@ -4361,7 +4362,17 @@ impl Game {
                 );
             }
 
-            let camlock = self.camera.lock();
+            static mut lastcam: Camera = Camera::newconst();
+
+            let camlock = match self.camera.try_lock() {
+                Some(cam) => {
+                    lastcam = cam.clone();
+                    &lastcam
+                },
+                None => {
+                    &lastcam
+                },
+            };
             let c = camlock.clone();
             drop(camlock);
             let cam_clone = c;
@@ -4372,7 +4383,7 @@ impl Game {
                 cam_clone.direction.y,
                 cam_clone.direction.z,
             );
-            drop(cam_clone);
+
 
             gl::Uniform4f(T_C_LOC, top.x, top.y, top.z, top.w);
             gl::Uniform4f(B_C_LOC, bot.x, bot.y, bot.z, bot.w);

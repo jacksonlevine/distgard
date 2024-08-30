@@ -1,4 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
+use std::time::Duration;
 
 use bevy::math::VectorSpace;
 use bevy::prelude::*;
@@ -65,15 +69,22 @@ pub struct PlayerUpdateTimer(pub Timer);
         
 //     }
 // }
+pub static mut THEENTEREDADDRESS: String = String::new();
+pub static mut ADDRESSENTERED: AtomicBool = AtomicBool::new(false);
 
 pub fn start_connection(mut client: ResMut<QuintetClient>) {
+
+    while !unsafe { ADDRESSENTERED.load(Ordering::Relaxed) } {
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    let address = unsafe { THEENTEREDADDRESS.clone() }; // Remove any trailing newline characters
+
     client.open_connection(
-        ClientEndpointConfiguration::from_ips(
-            IpAddr::V4(Ipv4Addr::new(69, 62, 174, 8)),
-            6000,
-            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            0,
-        ),
+        ClientEndpointConfiguration::from_strings(
+                             &address,
+                             "0.0.0.0:0"
+                         ).unwrap(),
         CertificateVerificationMode::SkipVerification,
         ChannelsConfiguration::from_types(vec![
             ChannelType::Unreliable,

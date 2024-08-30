@@ -972,7 +972,8 @@ impl Game {
                         mesh_vaos.push(vao);
                     //}
                 }
-                self.gltf_vbos[index].push(mesh_vbos);
+                self.gltf_vbos[index].push(mesh_vbos.clone());
+                println!("Adding {} length vbo list to gltfvbos", mesh_vbos.len());
                 self.gltf_vaos[index].push(mesh_vaos);
                 self.gltf_counts[index].push(mesh_counts);
                 self.gltf_drawmodes[index].push(mesh_drawmodes);
