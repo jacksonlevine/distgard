@@ -247,6 +247,8 @@ impl Blocks {
     }
     pub fn get_tex_coords(id: u32, side: CubeSide) -> &'static (u8, u8) {
         static SIDES: [usize; 6] = [0, 0, 1, 2, 0, 0];
+
+        let id = (id & Blocks::block_id_bits()).clamp(0, TEXS.len() as u32 - 1);
         
         return &TEXS[id as usize][SIDES[side as usize]];
     }

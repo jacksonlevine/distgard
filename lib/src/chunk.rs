@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
 use std::io::BufRead;
@@ -230,7 +231,7 @@ pub struct ChunkFacade {
 }
 
 pub static ChW: i32 = 15;
-pub static ChH: i32 = 255;
+pub static ChH: i32 = 30;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -280,7 +281,7 @@ impl AutomataChange {
 
 
 pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new( || DashMap::new() );
-pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<Queue<Vec<AutomataChange>>> = Lazy::new(|| Queue::new());
+pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<Vec<AutomataChange>>> = Lazy::new(|| VecDeque::new());
 
 
 
@@ -568,7 +569,7 @@ impl ChunkSystem {
                                                         3 => {
                                                             if rng.gen_range(0..100) == 9 {
                                                                 //println!("Pushin one");
-                                                                AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
                                                                     block, spot, 48
                                                                 )]);
                                                             }
@@ -583,7 +584,7 @@ impl ChunkSystem {
                                                                 let belowblock = belowcombined & Blocks::block_id_bits();
 
                                                                 if belowblock == 0 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![
+                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![
                                                                         AutomataChange::new(
                                                                             (2 | (ODDBIT * (ODDFRAME))), spot, 0
                                                                         ),
@@ -605,7 +606,7 @@ impl ChunkSystem {
 
                                                             if aboveblock == 0 {
                                                                 if rng.gen_range(0..100) == 9 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
                                                                         7, spot, 50
                                                                     )]);
                                                                 }
@@ -618,7 +619,7 @@ impl ChunkSystem {
 
                                                             if aboveblock == 0 {
                                                                 if rng.gen_range(0..10) == 9 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push(vec![AutomataChange::new(
+                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
                                                                         0, abovespot, 22
                                                                     )]);
                                                                 }
@@ -2582,7 +2583,8 @@ unsafe {
 
         let per = perlin;
 
-        let spot = spot;
+        let mut spot = spot;
+        spot.y += 100;
         let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0) + Vec3::new(0.0, 10.0, 0.0);
         let xzdivisor1 = 600.35 * 4.0;
         let xzdivisor2 = 1000.35 * 4.0;
@@ -2801,7 +2803,7 @@ unsafe {
             //     }
             // }
             _ => {
-                static WL: f32 = 30.0;
+                static WL: f32 = 2.0;
 
                 let biomenum = Self::_biome_noise(per, IVec2 {
                     x: spot.x,

@@ -4663,7 +4663,7 @@ impl Game {
                     cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                     cmemlock.memories[ready.geo_index].pos = ready.newpos;
                     cmemlock.memories[ready.geo_index].used = true;
-                    cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                    //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                     //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                     //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -4740,7 +4740,7 @@ impl Game {
                                 cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                                 cmemlock.memories[ready.geo_index].pos = ready.newpos;
                                 cmemlock.memories[ready.geo_index].used = true;
-                                cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                                //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                                 //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                                 //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -4937,52 +4937,52 @@ impl Game {
                     unsafe {
                         
 
-                        if cfl.timebeendrawn < 1.0 {
-                            #[cfg(feature = "audio")]
-                            if cfl.timebeendrawn == 0.0 {
+                        // if cfl.timebeendrawn < 1.0 {
+                        //     #[cfg(feature = "audio")]
+                        //     if cfl.timebeendrawn == 0.0 {
 
-                                let playerpos = Vec3::new(
-                                    PLAYERPOS.pos.0.load(Ordering::Relaxed),
-                                    PLAYERPOS.pos.1.load(Ordering::Relaxed),
-                                    PLAYERPOS.pos.2.load(Ordering::Relaxed),
-                                );
-                                let s = Vec3::new(
-                                    (cfl.pos.x * ChW) as f32,
-                                    playerpos.y + 5.0,
-                                    (cfl.pos.y * ChW) as f32,
-                                );
+                        //         let playerpos = Vec3::new(
+                        //             PLAYERPOS.pos.0.load(Ordering::Relaxed),
+                        //             PLAYERPOS.pos.1.load(Ordering::Relaxed),
+                        //             PLAYERPOS.pos.2.load(Ordering::Relaxed),
+                        //         );
+                        //         let s = Vec3::new(
+                        //             (cfl.pos.x * ChW) as f32,
+                        //             playerpos.y + 5.0,
+                        //             (cfl.pos.y * ChW) as f32,
+                        //         );
 
-                                if s
-                                .distance(
-                                    playerpos
-                                ) < 50.0
-                                {
-                                    let _ = AUDIOPLAYER.play_next_in_series(
-                                        "bubbles",
-                                        &s,
-                                        &Vec3::ZERO,
-                                        1.0,
-                                    );
+                        //         if s
+                        //         .distance(
+                        //             playerpos
+                        //         ) < 50.0
+                        //         {
+                        //             let _ = AUDIOPLAYER.play_next_in_series(
+                        //                 "bubbles",
+                        //                 &s,
+                        //                 &Vec3::ZERO,
+                        //                 1.0,
+                        //             );
 
-                                    //if cfl.tlength > 0 {
-                                        // let _ = AUDIOPLAYER.play_next_in_series(
-                                        //     "slides",
-                                        //     &s,
-                                        //     &Vec3::ZERO,
-                                        //     1.0,
-                                        // );
-                                    //}
-                                }
-                            }
-                            cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
-                        }
+                        //             //if cfl.tlength > 0 {
+                        //                 // let _ = AUDIOPLAYER.play_next_in_series(
+                        //                 //     "slides",
+                        //                 //     &s,
+                        //                 //     &Vec3::ZERO,
+                        //                 //     1.0,
+                        //                 // );
+                        //             //}
+                        //         }
+                        //     }
+                        //     cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+                        // }
 
                         gl::Uniform1f(
                             gl::GetUniformLocation(
                                 self.shader0.shader_id,
                                 b"elapsedFade\0".as_ptr() as *const i8,
                             ),
-                            cfl.timebeendrawn,
+                            5.0,
                         );
 
                     }
@@ -5034,7 +5034,7 @@ impl Game {
                                 self.shader0.shader_id,
                                 b"elapsedFade\0".as_ptr() as *const i8,
                             ),
-                            cfl.timebeendrawn,
+                            5.0,
                         );
 
                     let error = gl::GetError();
@@ -5487,7 +5487,7 @@ impl Game {
             let csys_arc = csys_arc.read();
             while more {
                 
-                match AUTOMATA_QUEUED_CHANGES.pop() {
+                match AUTOMATA_QUEUED_CHANGES.pop_front() {
                     Some(comm) => {
                         //println!("Poppin one");
                         for comm in comm {
@@ -5551,7 +5551,7 @@ impl Game {
                        // let csys_arc = csys_arc.read();
                         while more {
                             
-                            match AUTOMATA_QUEUED_CHANGES.pop() {
+                            match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                 Some(comm) => {
                                     //println!("Poppin one");
                                     for comm in comm {
@@ -5627,7 +5627,7 @@ impl Game {
                                 //let csys_arc = csys_arc.read();
                                 while more {
                                     
-                                    match AUTOMATA_QUEUED_CHANGES.pop() {
+                                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
                                             for comm in comm {
@@ -5711,7 +5711,7 @@ impl Game {
                                 //let csys_arc = csys_arc.read();
                                 while more {
                                     
-                                    match AUTOMATA_QUEUED_CHANGES.pop() {
+                                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
                                             for comm in comm {
@@ -5800,7 +5800,7 @@ impl Game {
                                 //let csys_arc = csys_arc.read();
                                 while more {
                                     
-                                    match AUTOMATA_QUEUED_CHANGES.pop() {
+                                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
                                             for comm in comm {
@@ -5972,9 +5972,9 @@ impl Game {
                 for (index, ns) in neededspots.iter().enumerate() {
                     let csys_arc = csys_arc.read();
                     csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
-                    match AUTOMATA_QUEUED_CHANGES.pop() {
+                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
                         Some(comm) => {
-                            AUTOMATA_QUEUED_CHANGES.push(comm);
+                            AUTOMATA_QUEUED_CHANGES.push_back(comm);
                             break;
                         }
                         None => {
