@@ -1,4 +1,4 @@
-#version 450 core
+#version 430 core
 out vec2 v_uv;
 uniform float cpitch;
 void main()
