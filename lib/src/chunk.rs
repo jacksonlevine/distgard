@@ -228,7 +228,7 @@ pub struct ChunkFacade {
 }
 
 pub static ChW: i32 = 15;
-pub static ChH: i32 = 255;
+pub static ChH: i32 = 85;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -2526,7 +2526,9 @@ unsafe {
         let per = perlin;
 
         let spot = spot;
-        let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0) + Vec3::new(0.0, 10.0, 0.0);
+        let mut spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0) + Vec3::new(0.0, 10.0, 0.0);
+
+        spot.y = spot.y * 3.0;
         let xzdivisor1 = 600.35 * 4.0;
         let xzdivisor2 = 1000.35 * 4.0;
 
@@ -2744,7 +2746,7 @@ unsafe {
             //     }
             // }
             _ => {
-                static WL: f32 = 30.0;
+                static WL: f32 = 15.0;
 
                 let biomenum = Self::_biome_noise(per, IVec2 {
                     x: spot.x,
