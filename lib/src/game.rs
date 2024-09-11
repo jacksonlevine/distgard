@@ -361,7 +361,14 @@ pub static mut PLAYERPOS: Lazy<PlayerCam> = Lazy::new(|| PlayerCam {
 pub static mut CHUNKSYS: Option<Arc<RwLock<ChunkSystem>>> = None;
 
 pub struct Game {
-    pub chunksys: Arc<RwLock<ChunkSystem>>,
+    
+    // Removal alert below this very line:
+    // This line marks the declaration of the `chunksys` variable, an `Arc<RwLock<ChunkSystem>>`, which has been a cornerstone of our chunk data management.
+    // Its removal signifies a major shift in our approach to handling this data, potentially introducing a new system or methodology.
+    // This change might bring about significant challenges or complications, as indicated by the phrase "the act that started the war." This metaphorically highlights the possible upheaval or issues caused by the presence of this variable in our codebase.
+    // We now hope that by removing `chunksys`, we are bringing an end to the war of development struggles and complications it may have caused. Pray for this war to now end as we remove this from the babels of history.
+    // This marks a new chapter in our project's history.
+
     pub shader0: Shader,
     pub oldshader: Shader,
     pub skyshader: Shader,
