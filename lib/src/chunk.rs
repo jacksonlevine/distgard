@@ -579,7 +579,7 @@ impl ChunkSystem {
                                                         2 => {
 
                                                             if combined == (2u32 | (ODDBIT * ODDFRAME)) {
-                                                                let belowspot = spot + IVec3::new(0, -1, 0);
+                                                                let belowspot = spot + IVec3::new(0, 1, 0);
                                                                 let belowcombined = Self::_blockat(&nudm, &udm, &per.read(), belowspot);
                                                                 let belowblock = belowcombined & Blocks::block_id_bits();
 
