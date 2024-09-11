@@ -13,11 +13,10 @@ use std::time::Duration;
 use bevy::math::U16Vec3;
 use dashmap::DashMap;
 
-
 pub static CHUNKPOSDEFAULT: i32 = 999999;
 
-use gl::types::GLuint;
 use bevy::prelude::*;
+use gl::types::GLuint;
 use lockfree::queue::Queue;
 use num_enum::FromPrimitive;
 use once_cell::sync::Lazy;
@@ -27,12 +26,11 @@ use rand::SeedableRng;
 use rusqlite::params;
 use rusqlite::Connection;
 
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
 use noise::{NoiseFn, Perlin};
-
 
 use crate::camera::Camera;
 use crate::chunkregistry::ChunkMemory;
@@ -72,8 +70,6 @@ use crate::voxmodel::JVoxModel;
 use std::io::Write;
 
 pub type LightColor = U16Vec3;
-
-
 
 //pub static check_for_intercepting: Lazy<Queue<vec::IVec3>> = Lazy::new(|| Queue::new());
 
@@ -168,10 +164,23 @@ impl ChunkGeo {
             }
         }
 
+        let data32 = Mutex::new(Vec::new());
+        let data8 = Mutex::new(Vec::new());
+        let data8rgb = Mutex::new(Vec::new());
+
+        let tdata32 = Mutex::new(Vec::new());
+        let tdata8 = Mutex::new(Vec::new());
+        let tdata8rgb = Mutex::new(Vec::new());
+        let vdata = Mutex::new(Vec::new());
+        let uvdata = Mutex::new(Vec::new());
+
+        let wvdata = Mutex::new(Vec::new());
+        let wuvdata = Mutex::new(Vec::new());
+
         ChunkGeo {
-            data32: Mutex::new(Vec::new()),
-            data8: Mutex::new(Vec::new()),
-            data8rgb: Mutex::new(Vec::new()),
+            data32,
+            data8,
+            data8rgb,
             pos: Mutex::new(IVec2 {
                 x: CHUNKPOSDEFAULT,
                 y: CHUNKPOSDEFAULT,
@@ -179,9 +188,9 @@ impl ChunkGeo {
             vbo32,
             vbo8,
             vbo8rgb,
-            tdata32: Mutex::new(Vec::new()),
-            tdata8: Mutex::new(Vec::new()),
-            tdata8rgb: Mutex::new(Vec::new()),
+            tdata32,
+            tdata8,
+            tdata8rgb,
             tvbo32,
             tvbo8,
             tvbo8rgb,
@@ -192,11 +201,11 @@ impl ChunkGeo {
             wvvbo,
             wuvvbo,
 
-            vdata: Mutex::new(Vec::new()),
-            uvdata: Mutex::new(Vec::new()),
+            vdata,
+            uvdata,
 
-            wvdata: Mutex::new(Vec::new()),
-            wuvdata: Mutex::new(Vec::new()),
+            wvdata,
+            wuvdata,
         }
     }
 
@@ -239,7 +248,7 @@ pub struct ReadyMesh {
     pub newlength: i32,
     pub newtlength: i32,
     pub newvlength: i32,
-    pub newwvlength: i32
+    pub newwvlength: i32,
 }
 
 impl ReadyMesh {
@@ -249,7 +258,7 @@ impl ReadyMesh {
         newlength: i32,
         newtlength: i32,
         newvlength: i32,
-        newwvlength: i32
+        newwvlength: i32,
     ) -> ReadyMesh {
         ReadyMesh {
             geo_index: index,
@@ -257,33 +266,40 @@ impl ReadyMesh {
             newlength,
             newtlength,
             newvlength,
-            newwvlength
+            newwvlength,
         }
     }
 }
 
-
 pub struct AutomataChange {
     pub expectedhere: u32,
     pub spot: IVec3,
-    pub changeto: u32
+    pub changeto: u32,
 }
 
 impl AutomataChange {
     pub fn new(expectedhere: u32, spot: IVec3, changeto: u32) -> Self {
         Self {
             expectedhere,
-            spot, 
-            changeto
+            spot,
+            changeto,
         }
     }
 }
 
+pub struct ACSet {
+    pub count: usize,
+    pub changes: [AutomataChange; 2],
+}
 
-pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new( || DashMap::new() );
-pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<Vec<AutomataChange>>> = Lazy::new(|| VecDeque::new());
+impl ACSet {
+    pub fn new(count: usize, changes: [AutomataChange; 2]) -> Self {
+        Self { changes, count }
+    }
+}
 
-
+pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new(|| DashMap::new());
+pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| VecDeque::new());
 
 pub struct ChunkSystem {
     pub chunks: Vec<Arc<Mutex<ChunkFacade>>>,
@@ -313,7 +329,7 @@ pub struct ChunkSystem {
 
 impl ChunkSystem {
     pub fn write_new_udm_entry(&self, spot: vec::IVec3, block: u32) {
-        let seed = unsafe {CURRSEED.load(std::sync::atomic::Ordering::Relaxed)};
+        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);
 
         let conn = Connection::open("db").unwrap();
@@ -331,7 +347,7 @@ impl ChunkSystem {
     }
 
     pub fn save_current_world_to_file(&self, path: String) {
-        let seed = unsafe {CURRSEED.load(std::sync::atomic::Ordering::Relaxed)};
+        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);
 
         let conn = Connection::open("db").unwrap();
@@ -376,14 +392,14 @@ impl ChunkSystem {
         // }
 
         let mut file = File::create(path.clone() + "/seed").unwrap();
-        writeln!(file, "{}", unsafe {CURRSEED.load(std::sync::atomic::Ordering::Relaxed)}).unwrap();
+        writeln!(file, "{}", unsafe {
+            CURRSEED.load(std::sync::atomic::Ordering::Relaxed)
+        })
+        .unwrap();
 
         let mut file = File::create(path.clone() + "/pt").unwrap();
         writeln!(file, "{}", self.planet_type).unwrap();
     }
-
-
-
 
     pub fn load_world_from_file(&mut self, path: String) {
         self.userdatamap.clear();
@@ -421,7 +437,6 @@ impl ChunkSystem {
         // }
         let pa = format!("{}/seed2", path);
 
-
         if Path::new(&pa).exists() {
             let file = File::open(pa).unwrap();
             let reader = BufReader::new(file);
@@ -434,15 +449,14 @@ impl ChunkSystem {
                     info!("Seed Is {}", s);
                     *(self.perlin.write()) = Perlin::new(s);
 
-                    unsafe {CURRSEED.store(s, std::sync::atomic::Ordering::Relaxed)}
-
+                    unsafe { CURRSEED.store(s, std::sync::atomic::Ordering::Relaxed) }
                 }
             }
         } else {
             info!("Seed2 doesnt exist");
         }
 
-        let seed = unsafe {CURRSEED.load(std::sync::atomic::Ordering::Relaxed)};
+        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);
         info!("LOADING FROM TABLENAME {}", table_name);
 
@@ -502,154 +516,180 @@ impl ChunkSystem {
 
     pub fn start_with_seed(_seed: u32) {}
 
-
-
-
-
-
-
     pub fn do_automata(&mut self, cam: &Arc<Mutex<Camera>>) {
-
         pub const ODDBIT: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
         let chunkslist = self.chunks.clone();
+
+        let takencare = self.takencare.clone();
 
         let udm = self.userdatamap.clone();
         let nudm = self.nonuserdatamap.clone();
         let per = self.perlin.clone();
         //let cam = cam.clone();
 
-        
-
         thread::spawn(move || {
-
             let mut rng = StdRng::from_entropy();
 
             let mut ODDFRAME: u32 = 0;
 
             loop {
-                
-                
                 let psnap = unsafe { PLAYERPOS.snapshot() };
 
-                let pcpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(psnap.pos.0 as i32, 0, psnap.pos.2 as i32));
+                let pcpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+                    psnap.pos.0 as i32,
+                    0,
+                    psnap.pos.2 as i32,
+                ));
 
-                let camposx = pcpos.x;
-                let camposz = pcpos.y;
+                //let camposx = pcpos.x;
+                //let camposz = pcpos.y;
 
-                for chunk in &chunkslist {
-                    let cclone = Some(chunk.lock());
-                    match cclone {
-                        Some(c) => {
-                            
-                            if c.pos.x != CHUNKPOSDEFAULT && bevy::math::IVec2::new(camposx,camposz).distance_squared(bevy::math::IVec2::new(c.pos.x, c.pos.y)) < 16 {
-                                //println!("Chunk at {}, {}", c.pos.x, c.pos.y);
-
-
-
+                for i in -4..4 {
+                    for j in -4..4 {
+                        let poshere = pcpos + IVec2::new(i, j);
+                        match takencare.get(&poshere) {
+                            Some(c) => {
+                                let c = c.value();
                                 for i in 0..ChW {
                                     for k in 0..ChW {
                                         let hit_block = false;
                                         for j in (0..ChH).rev() {
-
                                             let spot = vec::IVec3 {
-                                                x: ((c.pos.x)  * ChW) + i,
+                                                x: ((c.pos.x) * ChW) + i,
                                                 y: j,
                                                 z: (c.pos.y * ChW) + k,
                                             };
 
-
-                                            let combined = Self::_blockat(&nudm, &udm, &per.read(), spot);
+                                            let combined =
+                                                Self::_blockat(&nudm, &udm, &per.read(), spot);
                                             let block = combined & Blocks::block_id_bits();
                                             let flags = combined & Blocks::block_flag_bits();
                                             unsafe {
                                                 //println!("weathertype: {}", WEATHERTYPE);
-                                                if true { //WEATHERTYPE == 1.0 {
+                                                if true {
+                                                    //WEATHERTYPE == 1.0 {
 
                                                     match block {
                                                         3 => {
                                                             if rng.gen_range(0..100) == 9 {
                                                                 //println!("Pushin one");
-                                                                AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
-                                                                    block, spot, 48
-                                                                )]);
+                                                                AUTOMATA_QUEUED_CHANGES.push_back(
+                                                                    ACSet::new(1, [
+                                                                        AutomataChange::new(
+                                                                            block, spot, 48,
+                                                                        ),
+                                                                        AutomataChange::new(
+                                                                            block, spot, 48,
+                                                                        ),
+                                                                    ])
+                                                                );
                                                             }
-    
+
                                                             break;
                                                         }
                                                         2 => {
-
-                                                            if combined == (2u32 | (ODDBIT * ODDFRAME)) {
-                                                                let belowspot = spot + IVec3::new(0, 1, 0);
-                                                                let belowcombined = Self::_blockat(&nudm, &udm, &per.read(), belowspot);
-                                                                let belowblock = belowcombined & Blocks::block_id_bits();
+                                                            if combined
+                                                                == (2u32 | (ODDBIT * ODDFRAME))
+                                                            {
+                                                                let belowspot =
+                                                                    spot + IVec3::new(0, 1, 0);
+                                                                let belowcombined = Self::_blockat(
+                                                                    &nudm,
+                                                                    &udm,
+                                                                    &per.read(),
+                                                                    belowspot,
+                                                                );
+                                                                let belowblock = belowcombined
+                                                                    & Blocks::block_id_bits();
 
                                                                 if belowblock == 0 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![
+                                                                    AUTOMATA_QUEUED_CHANGES
+                                                                        .push_back(ACSet::new(2, [
                                                                         AutomataChange::new(
-                                                                            (2 | (ODDBIT * (ODDFRAME))), spot, 0
+                                                                            (2 | (ODDBIT
+                                                                                * (ODDFRAME))),
+                                                                            spot,
+                                                                            0,
                                                                         ),
                                                                         AutomataChange::new(
-                                                                            0, belowspot, (2 | (ODDBIT * (1-ODDFRAME)))
+                                                                            0,
+                                                                            belowspot,
+                                                                            (2 | (ODDBIT
+                                                                                * (1 - ODDFRAME))),
                                                                         ),
-                                                                    ]
-                                                                );
-                                                                    
+                                                                    ]));
                                                                 }
                                                             }
-
-                                                            
                                                         }
                                                         7 => {
-                                                            let abovespot = spot + IVec3::new(0, 1, 0);
-                                                            let abovecombined = Self::_blockat(&nudm, &udm, &per.read(), abovespot);
-                                                            let aboveblock = abovecombined & Blocks::block_id_bits();
+                                                            let abovespot =
+                                                                spot + IVec3::new(0, 1, 0);
+                                                            let abovecombined = Self::_blockat(
+                                                                &nudm,
+                                                                &udm,
+                                                                &per.read(),
+                                                                abovespot,
+                                                            );
+                                                            let aboveblock = abovecombined
+                                                                & Blocks::block_id_bits();
 
                                                             if aboveblock == 0 {
                                                                 if rng.gen_range(0..100) == 9 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
-                                                                        7, spot, 50
-                                                                    )]);
+                                                                    AUTOMATA_QUEUED_CHANGES
+                                                                        .push_back(ACSet::new(1, [
+                                                                            AutomataChange::new(
+                                                                                7, spot, 50,
+                                                                            ),
+                                                                            AutomataChange::new(
+                                                                                7, spot, 50,
+                                                                            ),
+                                                                        ]));
                                                                 }
                                                             }
                                                         }
                                                         22 => {
-                                                            let abovespot = spot + IVec3::new(0, 1, 0);
-                                                            let abovecombined = Self::_blockat(&nudm, &udm, &per.read(), abovespot);
-                                                            let aboveblock = abovecombined & Blocks::block_id_bits();
+                                                            let abovespot =
+                                                                spot + IVec3::new(0, 1, 0);
+                                                            let abovecombined = Self::_blockat(
+                                                                &nudm,
+                                                                &udm,
+                                                                &per.read(),
+                                                                abovespot,
+                                                            );
+                                                            let aboveblock = abovecombined
+                                                                & Blocks::block_id_bits();
 
                                                             if aboveblock == 0 {
                                                                 if rng.gen_range(0..10) == 9 {
-                                                                    AUTOMATA_QUEUED_CHANGES.push_back(vec![AutomataChange::new(
-                                                                        0, abovespot, 22
-                                                                    )]);
+                                                                    AUTOMATA_QUEUED_CHANGES
+                                                                        .push_back(ACSet::new(1, [
+                                                                            AutomataChange::new(
+                                                                                0, abovespot, 22,
+                                                                            ),
+                                                                            AutomataChange::new(
+                                                                                0, abovespot, 22,
+                                                                            ),
+                                                                        ]) );
                                                                 }
                                                             }
                                                         }
                                                         _ => {}
                                                     }
-                                                    
                                                 }
                                             }
-                                            
-                                            
                                         }
-
                                     }
                                 }
                             }
-                            
-                        }   
-                        None => {
-
+                            None => {}
                         }
                     }
                 }
-    
+
                 thread::sleep(Duration::from_secs_f32(0.5));
                 ODDFRAME = 1 - ODDFRAME;
             }
         });
-        
     }
 
     pub fn exit(&mut self) {
@@ -693,7 +733,7 @@ impl ChunkSystem {
         *(self.perlin.write()) = Perlin::new(seed);
         self.voxel_models = None;
         self.planet_type = noisetype as u8;
-        unsafe {CURRSEED.store(seed, std::sync::atomic::Ordering::Relaxed)};
+        unsafe { CURRSEED.store(seed, std::sync::atomic::Ordering::Relaxed) };
 
         info!("After setting currentseed");
 
@@ -712,7 +752,6 @@ impl ChunkSystem {
                     self.geobank.push(Arc::new(ChunkGeo::new()));
                     self.chunk_memories
                         .lock()
-                 
                         .memories
                         .push(ChunkMemory::new(&self.geobank[self.geobank.len() - 1]));
                 }
@@ -722,12 +761,7 @@ impl ChunkSystem {
         info!("After making new chunk stuff");
     }
 
-    pub fn new(
-        radius: u8,
-        seed: u32,
-        noisetype: usize,
-        headless: bool
-    ) -> ChunkSystem {
+    pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
         let mut cs = ChunkSystem {
             chunks: Vec::new(),
             geobank: Vec::new(),
@@ -778,10 +812,9 @@ impl ChunkSystem {
                     })));
 
                     cs.geobank.push(Arc::new(ChunkGeo::new()));
-                    
+
                     cs.chunk_memories
                         .lock()
-                     
                         .memories
                         .push(ChunkMemory::new(&cs.geobank[cs.geobank.len() - 1]));
                 }
@@ -793,6 +826,12 @@ impl ChunkSystem {
         cs
     }
     pub fn spot_to_chunk_pos(spot: &vec::IVec3) -> vec::IVec2 {
+        return vec::IVec2 {
+            x: (spot.x as f32 / ChW as f32).floor() as i32,
+            y: (spot.z as f32 / ChW as f32).floor() as i32,
+        };
+    }
+    pub fn spot_to_chunk_pos_bevyvec3(spot: &bevy::prelude::Vec3) -> vec::IVec2 {
         return vec::IVec2 {
             x: (spot.x as f32 / ChW as f32).floor() as i32,
             y: (spot.z as f32 / ChW as f32).floor() as i32,
@@ -927,7 +966,7 @@ impl ChunkSystem {
         block: u32,
         neighbors: bool,
         user_power: bool,
-        automata: bool
+        automata: bool,
     ) {
         let existingblock = self.blockat(spot);
 
@@ -987,19 +1026,13 @@ impl ChunkSystem {
         }
     }
 
-
-
-
-
-
-
     pub fn set_block_and_queue_rerender_no_sound(
         &self,
         spot: vec::IVec3,
         block: u32,
         neighbors: bool,
         user_power: bool,
-        automata: bool
+        automata: bool,
     ) {
         let existingblock = self.blockat(spot);
 
@@ -1059,10 +1092,6 @@ impl ChunkSystem {
         }
     }
 
-
-
-
-
     pub fn set_block(&self, spot: vec::IVec3, block: u32, user_power: bool) {
         match user_power {
             true => {
@@ -1078,30 +1107,24 @@ impl ChunkSystem {
             if block == 0 {
                 let wastherebits = self.blockat(spot) & Blocks::block_id_bits();
                 #[cfg(feature = "audio")]
-unsafe {
-    let _ = AUDIOPLAYER.play_next_in_series(
-                                Blocks::get_place_series(wastherebits),
-                                &Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
-                                &Vec3::ZERO,
-                                0.5,
-                            );
-}
-       
-                            
-
-
+                unsafe {
+                    let _ = AUDIOPLAYER.play_next_in_series(
+                        Blocks::get_place_series(wastherebits),
+                        &Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
+                        &Vec3::ZERO,
+                        0.5,
+                    );
+                }
             } else {
                 #[cfg(feature = "audio")]
-            unsafe {
-                 let _ = AUDIOPLAYER.play_next_in_series(
-                                Blocks::get_place_series(block & Blocks::block_id_bits()),
-                                &Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
-                                &Vec3::ZERO,
-                                0.5,
-                            );
-            }
-                           
-
+                unsafe {
+                    let _ = AUDIOPLAYER.play_next_in_series(
+                        Blocks::get_place_series(block & Blocks::block_id_bits()),
+                        &Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32),
+                        &Vec3::ZERO,
+                        0.5,
+                    );
+                }
             }
         }
     }
@@ -1120,7 +1143,6 @@ unsafe {
     }
     pub fn move_and_rebuild(&self, index: usize, cpos: vec::IVec2) {
         //info!("MBeing asked to move and rebuild to {} {}", cpos.x, cpos.y);
-
 
         let tc = self.takencare.clone();
 
@@ -1287,8 +1309,7 @@ unsafe {
                 };
                 drop(my_ray_here);
                 drop(inner_light_seg);
-            }
-            else {
+            } else {
                 let chunkcoordoforigin = Self::spot_to_chunk_pos(&origin);
                 let chunkcoordhere = Self::spot_to_chunk_pos(&n.1);
 
@@ -1417,7 +1438,6 @@ unsafe {
 
         let lmarc = self.lightmap.clone();
 
-
         for x in 0..ChW {
             for z in 0..ChW {
                 for y in 0..ChH {
@@ -1486,13 +1506,11 @@ unsafe {
 
         let chunklock = chunklock.clone();
 
-        static mut rng: Lazy<StdRng> = Lazy::new(|| StdRng::from_entropy() );
+        static mut rng: Lazy<StdRng> = Lazy::new(|| StdRng::from_entropy());
 
         if light {
             self.lightpass_on_chunk(chunklock.pos);
         }
-
-        
 
         let doorbottomuvs = DoorInfo::get_door_uvs(TextureFace::new(11, 0));
         let doortopuvs = DoorInfo::get_door_uvs(TextureFace::new(11, 1));
@@ -1511,7 +1529,6 @@ unsafe {
 
         let mut vdata = geobankarc.vdata.lock();
         let mut uvdata = geobankarc.uvdata.lock();
-
 
         let mut wvdata = geobankarc.wvdata.lock();
         let mut wuvdata = geobankarc.wuvdata.lock();
@@ -1582,27 +1599,11 @@ unsafe {
                     //     }
                     // }
                     if block != 0 {
+                        let isgrass = if block == 3 { 1u8 } else { 0u8 };
 
-
-                        let isgrass = if block == 3 {
-                            1u8
-                        } else {
-                            0u8
-                        };
-
-                        if !weatherstoptops.contains_key(&vec::IVec2 {
-                            x: i,
-                            y: k,
-                        }) {
-                            weatherstoptops.insert(
-                                vec::IVec2 {
-                                    x: i,
-                                    y: k,
-                                },
-                                spot.y,
-                            );
+                        if !weatherstoptops.contains_key(&vec::IVec2 { x: i, y: k }) {
+                            weatherstoptops.insert(vec::IVec2 { x: i, y: k }, spot.y);
                         }
-                        
 
                         if block == 19 {
                             let direction = Blocks::get_direction_bits(flags);
@@ -1692,7 +1693,7 @@ unsafe {
                             }
 
                             uvdata.extend_from_slice(&LadderInfo::get_ladder_uvs());
-                        } else if block == 45 { 
+                        } else if block == 45 {
                             let direction = Blocks::get_direction_bits(flags);
 
                             let modelindex: i32 = direction as i32;
@@ -1715,8 +1716,8 @@ unsafe {
                                 0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
                             drop(lmlock);
 
-                            for vert in
-                                ConveyorInfo::conveyor_model_from_index(modelindex as usize).chunks(5)
+                            for vert in ConveyorInfo::conveyor_model_from_index(modelindex as usize)
+                                .chunks(5)
                             {
                                 vdata.extend_from_slice(&[
                                     vert[0] + spot.x as f32,
@@ -1728,7 +1729,7 @@ unsafe {
                             }
 
                             uvdata.extend_from_slice(&ConveyorInfo::get_conveyor_uvs());
-                        } else if block == 49 { 
+                        } else if block == 49 {
                             let direction = Blocks::get_direction_bits(flags);
 
                             let modelindex: i32 = direction as i32;
@@ -1958,15 +1959,11 @@ unsafe {
                                             packed8rgb[ind] = packedcolor;
                                         }
 
-
-
                                         if block == 2 && cubeside == CubeSide::TOP {
-                                           
                                             let texcoord = Blocks::get_tex_coords(block, cubeside);
                                             for (ind, v) in side.chunks(4).enumerate().rev() {
                                                 static AMB_CHANGES: [u8; 4] = [0, 3, 6, 10];
 
-                                            
                                                 let amb_change = 0;
 
                                                 let base_light: i32 =
@@ -1996,7 +1993,6 @@ unsafe {
                                                     blocklighthere.z,
                                                 );
 
-           
                                                 tdata32.push(pack.0);
                                                 tdata8.push(pack.1);
                                                 tdata8rgb.push(packedcolor);
@@ -2126,24 +2122,16 @@ unsafe {
 
                 //BEGIN ADD WEATHER PANES FOR RAIN/SNOW/ETC, nOT EVERY BLOCK
 
-                let topy = match weatherstoptops.get(&vec::IVec2 {
-                    x: i,
-                    y: k,
-                }) {
+                let topy = match weatherstoptops.get(&vec::IVec2 { x: i, y: k }) {
                     Some(top) => {
                         //println!("Found top {}", *top);
                         *top
                     }
-                    None => {
-                        0
-                    }
+                    None => 0,
                 };
-                
-                if unsafe {rng.gen_range(0..=10) > 9} && topy < 115 {
-                    
 
+                if unsafe { rng.gen_range(0..=10) > 9 } && topy < 115 {
                     //let mut rng = StdRng::from_entropy();
-           
 
                     //spot xz top
                     let spoint: IVec3 = vec::IVec3 {
@@ -2156,16 +2144,12 @@ unsafe {
                     let spo = Vec3 {
                         x: (chunklock.pos.x * ChW) as f32 + i as f32,
                         y: topy as f32,
-                        z: (chunklock.pos.y * ChW) as f32 + k as f32 
+                        z: (chunklock.pos.y * ChW) as f32 + k as f32,
                     };
 
-
-
-                    //LET BLOCKLIGHT AT TOP 
-                    //FADE BLOCKLIGHT WITH HIGHER Y IN SHADER 
+                    //LET BLOCKLIGHT AT TOP
+                    //FADE BLOCKLIGHT WITH HIGHER Y IN SHADER
                     //OR JUST SET TO <AMB> AT TOP SO IT FADES UP NATURALLY FROM VERTEX SHADING
-
-
 
                     let lmlock = self.lightmap.lock();
                     let blocklighthere = match lmlock.get(&(spoint + IVec3::new(0, 1, 0))) {
@@ -2179,91 +2163,235 @@ unsafe {
                         blocklighthere.z,
                     );
 
-                    let prgb: u32 =
-                        0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
+                    let prgb: u32 = 0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
                     drop(lmlock);
 
-                  
-                    let lightf32 =  f32::from_bits(prgb);
-                   
-
-                    
+                    let lightf32 = f32::from_bits(prgb);
 
                     let face = TextureFace::new(15, 0);
 
-                    
-
                     wvdata.extend_from_slice(&[
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32 + 2.0,   lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32 + 2.0,   0.0 /*BLOCKLIGHT */, 14.0,
-
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32 + 2.0,   0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32,   0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-
-
-
-
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32 + 2.0,   lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32,   0.0 /*BLOCKLIGHT */, 14.0,
-
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32,   0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32 + 2.0,   0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32 + 2.0,   lightf32 /*BLOCKLIGHT */, 14.0,
-
-
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32 + 2.0,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32,              0.0 /*BLOCKLIGHT */, 14.0,
-
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32,              0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32 + 2.0,              0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32 + 2.0,              lightf32 /*BLOCKLIGHT */, 14.0,
-
-
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, spo.y as f32, spo.z as f32 + 2.0,              lightf32 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32 + 2.0,              0.0 /*BLOCKLIGHT */, 14.0,
-
-                        spo.x as f32 - 1.0, 115.0, spo.z as f32 + 2.0,              0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, 115.0, spo.z as f32,              0.0 /*BLOCKLIGHT */, 14.0,
-                        spo.x as f32 + 2.0, spo.y as f32, spo.z as f32,              lightf32 /*BLOCKLIGHT */, 14.0,
-
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        spo.y as f32,
+                        spo.z as f32 + 2.0,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 - 1.0,
+                        115.0,
+                        spo.z as f32 + 2.0,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        115.0,
+                        spo.z as f32,
+                        0.0, /*BLOCKLIGHT */
+                        14.0,
+                        spo.x as f32 + 2.0,
+                        spo.y as f32,
+                        spo.z as f32,
+                        lightf32, /*BLOCKLIGHT */
+                        14.0,
                     ]);
 
                     let randyoffset = unsafe { rng.gen_range(0.0..1.0) };
 
-                    
                     wuvdata.extend_from_slice(&[
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bry + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly  - TEXTURE_WIDTH * (115.0 - spo.y as f32)   + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)   + randyoffset, 0.0, 0.0,
-                        face.blx, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)   + randyoffset, 0.0, 0.0,
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bry + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly  - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bry + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly  - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bry + randyoffset, 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly  - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.brx + ONE_OVER_16 * 2.0, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly   - TEXTURE_WIDTH * (115.0 - spo.y as f32)  + randyoffset , 0.0, 0.0,
-                        face.blx, face.bly + randyoffset, 0.0, 0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bry + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bry + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bry + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bry + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.brx + ONE_OVER_16 * 2.0,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly - TEXTURE_WIDTH * (115.0 - spo.y as f32) + randyoffset,
+                        0.0,
+                        0.0,
+                        face.blx,
+                        face.bly + randyoffset,
+                        0.0,
+                        0.0,
                     ]);
 
                     //println!("{}", face.blx);
@@ -2308,7 +2436,7 @@ unsafe {
             data32.len() as i32,
             tdata32.len() as i32,
             vdata.len() as i32,
-            wvdata.len() as i32
+            wvdata.len() as i32,
         );
         let ugqarc = self.finished_user_geo_queue.clone();
         let gqarc = self.finished_geo_queue.clone();
@@ -2581,12 +2709,12 @@ unsafe {
     }
 
     pub fn _noise_func(perlin: &Perlin, spot: vec::IVec3) -> f64 {
-
         let per = perlin;
 
         let mut spot = spot;
         spot.y += 100;
-        let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0) + Vec3::new(0.0, 10.0, 0.0);
+        let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0)
+            + Vec3::new(0.0, 10.0, 0.0);
         let xzdivisor1 = 600.35 * 4.0;
         let xzdivisor2 = 1000.35 * 4.0;
 
@@ -2600,10 +2728,7 @@ unsafe {
                 spot.z as f64 / xzdivisor2,
             ]) * 5.0
                 - f64::max(
-                    y as f64 / 1.7
-                        + per
-                            .get([spot.x as f64 / 65.0, spot.z as f64 / 65.0])
-                            * 10.0,
+                    y as f64 / 1.7 + per.get([spot.x as f64 / 65.0, spot.z as f64 / 65.0]) * 10.0,
                     0.0,
                 ),
         ) * 2.0;
@@ -2625,9 +2750,7 @@ unsafe {
                 - f64::max(y as f64 / 3.0, 0.0),
         );
 
-        let mut p = per
-            .get([spot.x as f64 / 500.0, spot.z as f64 / 500.0])
-            * 2.0;
+        let mut p = per.get([spot.x as f64 / 500.0, spot.z as f64 / 500.0]) * 2.0;
 
         p = f64::max(p, 0.0);
         p = f64::min(p, 1.0);
@@ -2657,18 +2780,18 @@ unsafe {
                 - f64::max(y as f64 / 3.0, 0.0),
         );
 
-        let mut p2 = 0.5 + per.get([
-            (spot.x as f64 + 4500.0) / 150.0,
-            (spot.y as f64 + 5000.0) / 150.0,
-            (spot.z as f64 - 5000.0) / 150.0,
-        ]) * 1.0;
+        let mut p2 = 0.5
+            + per.get([
+                (spot.x as f64 + 4500.0) / 150.0,
+                (spot.y as f64 + 5000.0) / 150.0,
+                (spot.z as f64 - 5000.0) / 150.0,
+            ]) * 1.0;
 
         let p3 = (per.get([
             (spot.x as f64 - 1500.0) / 3500.0,
             (spot.z as f64 + 1000.0) / 3500.0,
-        ]) * 10.0).min(9.0);
-
-    
+        ]) * 10.0)
+            .min(9.0);
 
         p2 = f64::max(p2, 0.0);
         p2 = f64::min(p2, 1.0);
@@ -2677,7 +2800,6 @@ unsafe {
     }
 
     pub fn noise_func2(&self, spot: vec::IVec3) -> f64 {
-
         let p2 = self.perlin.read();
         let mut y = spot.y - 20;
 
@@ -2689,10 +2811,7 @@ unsafe {
                 spot.z as f64 / 25.35,
             ]) * 5.0
                 - f64::max(
-                    y as f64 / 2.0
-                        + p2
-                            .get([spot.x as f64 / 65.0, spot.z as f64 / 65.0])
-                            * 10.0,
+                    y as f64 / 2.0 + p2.get([spot.x as f64 / 65.0, spot.z as f64 / 65.0]) * 10.0,
                     0.0,
                 ),
         );
@@ -2714,9 +2833,7 @@ unsafe {
                 - f64::max(y as f64 * 3.0, 0.0),
         );
 
-        let mut p = p2
-            .get([spot.x as f64 / 500.0, spot.z as f64 / 500.0])
-            * 5.0;
+        let mut p = p2.get([spot.x as f64 / 500.0, spot.z as f64 / 500.0]) * 5.0;
 
         p = f64::max(p, 0.0);
         p = f64::min(p, 1.0);
@@ -2751,9 +2868,19 @@ unsafe {
         // }
     }
     pub fn blockat(&self, spot: vec::IVec3) -> u32 {
-        Self::_blockat(&self.nonuserdatamap.clone(), &self.userdatamap.clone(), &self.perlin.read(), spot)
+        Self::_blockat(
+            &self.nonuserdatamap.clone(),
+            &self.userdatamap.clone(),
+            &self.perlin.read(),
+            spot,
+        )
     }
-    pub fn _blockat(nonuserdatamap: &Arc<DashMap<IVec3, u32>>, userdatamap: &Arc<DashMap<IVec3, u32>>, perlin: &Perlin, spot: vec::IVec3) -> u32 {
+    pub fn _blockat(
+        nonuserdatamap: &Arc<DashMap<IVec3, u32>>,
+        userdatamap: &Arc<DashMap<IVec3, u32>>,
+        perlin: &Perlin,
+        spot: vec::IVec3,
+    ) -> u32 {
         // if self.headless {
         //     if self.generated_chunks.contains_key(&ChunkSystem::spot_to_chunk_pos(&spot)) {
 
@@ -2782,14 +2909,11 @@ unsafe {
     }
 
     pub fn _natural_blockat(perlin: &Perlin, spot: vec::IVec3) -> u32 {
-
-
         let per = perlin;
         if spot.y == 0 {
             return 15;
         }
 
-        
         let ret = match 0 {
             // 1 => {
             //     if self.noise_func2(spot) > 10.0 {
@@ -2806,14 +2930,20 @@ unsafe {
             _ => {
                 static WL: f32 = 2.0;
 
-                let biomenum = Self::_biome_noise(per, IVec2 {
-                    x: spot.x,
-                    y: spot.z,
-                });
-                let biomenum2 = Self::_biome_noise(per, IVec2 {
-                    x: spot.x * 20 + 5000,
-                    y: spot.z * 20 + 5000,
-                });
+                let biomenum = Self::_biome_noise(
+                    per,
+                    IVec2 {
+                        x: spot.x,
+                        y: spot.z,
+                    },
+                );
+                let biomenum2 = Self::_biome_noise(
+                    per,
+                    IVec2 {
+                        x: spot.x * 20 + 5000,
+                        y: spot.z * 20 + 5000,
+                    },
+                );
 
                 let mut underdirt = 5;
                 let mut surface = 3;
@@ -2841,24 +2971,24 @@ unsafe {
                             underdirt
                         }
                     } else {
-
-                        let beachnoise = per.get([spot.y as f64/7.5, spot.z as f64/7.5, spot.x as f64/7.5]);
+                        let beachnoise = per.get([
+                            spot.y as f64 / 7.5,
+                            spot.z as f64 / 7.5,
+                            spot.x as f64 / 7.5,
+                        ]);
                         if spot.y > (WL + beachnoise as f32) as i32
-                        || Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 5, z: 0 }) > 10.0
+                            || Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 5, z: 0 }) > 10.0
                         {
-                            if Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 1, z: 0 }) < 10.0 {
+                            if Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 1, z: 0 }) < 10.0
+                            {
                                 surface
                             } else {
                                 undersurface
                             }
-                            
                         } else {
                             beach
                         }
                     }
-
-
-                    
                 } else {
                     if spot.y < WL as i32 {
                         liquid

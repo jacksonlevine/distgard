@@ -5208,8 +5208,9 @@ impl Game {
                     //gl::Enable(gl::CULL_FACE);
                     // info!("Chunk rending!");
                 }
-
-                if unsafe { WEATHERTYPE } != 0.0 {
+                let fuckingplayerchunkpos = ChunkSystem::spot_to_chunk_pos_bevyvec3(&cam_clone.position);
+                let fuckingvec2playerchunkpos = Vec2::new(fuckingplayerchunkpos.x as f32, fuckingplayerchunkpos.y as f32);
+                if unsafe { WEATHERTYPE } != 0.0 && Vec2::new(cfl.pos.x as f32, cfl.pos.y as f32).distance(fuckingvec2playerchunkpos) < 2.0 {
                     WorldGeometry::bind_old_geometry_no_upload(
                         cfl.wvvbo,
                         cfl.wuvvbo,
@@ -5280,12 +5281,13 @@ impl Game {
     pub fn exit(&mut self) {
         (*self.run_chunk_thread).store(false, Ordering::Relaxed);
 
-        if let Some(handle) = self.chunk_thread.take() {
-            handle.join().unwrap();
-            info!("Thread joined successfully!");
-        } else {
-            info!("No thread to join or already joined.");
-        }
+        // if let Some(handle) = self.chunk_thread.take() {
+        //     if handle.is_finished()
+        //     handle.join().unwrap();
+        //     info!("Thread joined successfully!");
+        // } else {
+        //     info!("No thread to join or already joined.");
+        // }
         #[cfg(feature = "glfw")]
         self.drops.drops.clear();
 
@@ -5490,7 +5492,7 @@ impl Game {
                 match AUTOMATA_QUEUED_CHANGES.pop_front() {
                     Some(comm) => {
                         //println!("Poppin one");
-                        for comm in comm {
+                        for comm in comm.changes {
 
                         
 
@@ -5554,7 +5556,7 @@ impl Game {
                             match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                 Some(comm) => {
                                     //println!("Poppin one");
-                                    for comm in comm {
+                                    for comm in comm.changes {
             
                                     
             
@@ -5630,7 +5632,7 @@ impl Game {
                                     match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
-                                            for comm in comm {
+                                            for comm in comm.changes {
                     
                                             
                     
@@ -5714,7 +5716,7 @@ impl Game {
                                     match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
-                                            for comm in comm {
+                                            for comm in comm.changes {
                     
                                             
                     
@@ -5803,7 +5805,7 @@ impl Game {
                                     match AUTOMATA_QUEUED_CHANGES.pop_front() {
                                         Some(comm) => {
                                             //println!("Poppin one");
-                                            for comm in comm {
+                                            for comm in comm.changes {
                     
                                             
                     
