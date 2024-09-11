@@ -358,6 +358,8 @@ pub static mut PLAYERPOS: Lazy<PlayerCam> = Lazy::new(|| PlayerCam {
     pitch: AtomicF32::new(0.0),
 });
 
+pub static mut CHUNKSYS: Option<Arc<RwLock<ChunkSystem>>> = None;
+
 pub struct Game {
     pub chunksys: Arc<RwLock<ChunkSystem>>,
     pub shader0: Shader,
