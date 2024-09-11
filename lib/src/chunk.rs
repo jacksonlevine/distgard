@@ -778,6 +778,7 @@ impl ChunkSystem {
                     })));
 
                     cs.geobank.push(Arc::new(ChunkGeo::new()));
+                    
                     cs.chunk_memories
                         .lock()
                      

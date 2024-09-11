@@ -665,74 +665,74 @@ impl Game {
 
         let cam_clone = cam.clone();
         let csysclone = chunksys.clone();
-        if !headless {
-            thread::spawn(move || {
-                while unsafe { SHOULDRUN } {
-                    let mut pos = Vec3::ZERO;
-                    let mut hitblock = false;
+        // if !headless {
+        //     thread::spawn(move || {
+        //         while unsafe { SHOULDRUN } {
+        //             let mut pos = Vec3::ZERO;
+        //             let mut hitblock = false;
 
-                    match cam_clone.try_lock() {
-                        Some(camlock) => {
-                            pos = camlock.position.clone();
-                        }
-                        None => {
-                            //println!("Failed to lock camera: {:?}", e);
-                        }
-                    }
+        //             match cam_clone.try_lock() {
+        //                 Some(camlock) => {
+        //                     pos = camlock.position.clone();
+        //                 }
+        //                 None => {
+        //                     //println!("Failed to lock camera: {:?}", e);
+        //                 }
+        //             }
 
-                    if pos != Vec3::ZERO {
-                        let r = csysclone.read();
-                        while !hitblock && pos.y < 128.0 {
-                            let ppos = vec::IVec3::new(
-                                pos.x.floor() as i32,
-                                pos.y.round() as i32,
-                                pos.z.floor() as i32,
-                            );
-                            if r.blockat(ppos) != 0 {
-                                hitblock = true;
-                                break;
-                            }
-                            pos.y += 1.0;
-                        }
-                        unsafe {
-                            if hitblock {
-                                ROOFOVERHEAD.store(true, Ordering::Relaxed)
-                            } else {
-                                ROOFOVERHEAD.store(false, Ordering::Relaxed)
-                            }
-                        }
-                    }
+        //             if pos != Vec3::ZERO {
+        //                 let r = csysclone.read();
+        //                 while !hitblock && pos.y < 128.0 {
+        //                     let ppos = vec::IVec3::new(
+        //                         pos.x.floor() as i32,
+        //                         pos.y.round() as i32,
+        //                         pos.z.floor() as i32,
+        //                     );
+        //                     if r.blockat(ppos) != 0 {
+        //                         hitblock = true;
+        //                         break;
+        //                     }
+        //                     pos.y += 1.0;
+        //                 }
+        //                 unsafe {
+        //                     if hitblock {
+        //                         ROOFOVERHEAD.store(true, Ordering::Relaxed)
+        //                     } else {
+        //                         ROOFOVERHEAD.store(false, Ordering::Relaxed)
+        //                     }
+        //                 }
+        //             }
 
-                    thread::sleep(Duration::from_millis(250));
-                }
-            });
+        //             thread::sleep(Duration::from_millis(250));
+        //         }
+        //     });
 
-            //  let csysclone = chunksys.clone();
-            // let cam_clone = cam.clone();
+        //     //  let csysclone = chunksys.clone();
+        //     // let cam_clone = cam.clone();
 
-            // thread::spawn(move || {
-            //     while unsafe { SHOULDRUN } {
+        //     // thread::spawn(move || {
+        //     //     while unsafe { SHOULDRUN } {
 
-            //         match csysclone.try_read() {
-            //             Ok(csys) => {
-            //                 match QUEUE_THESE.pop() {
-            //                     Some(spot) => {
-            //                         csys.queue_rerender_with_key(spot, true, true);
-            //                     }
-            //                     None => {
+        //     //         match csysclone.try_read() {
+        //     //             Ok(csys) => {
+        //     //                 match QUEUE_THESE.pop() {
+        //     //                     Some(spot) => {
+        //     //                         csys.queue_rerender_with_key(spot, true, true);
+        //     //                     }
+        //     //                     None => {
 
-            //                     }
-            //                 }
-            //             }
-            //             Err(e) => {
+        //     //                     }
+        //     //                 }
+        //     //             }
+        //     //             Err(e) => {
 
-            //             }
-            //         }
+        //     //             }
+        //     //         }
 
-            //         thread::sleep(Duration::from_millis(250));
-            //     }
-            // });
-        }
+        //     //         thread::sleep(Duration::from_millis(250));
+        //     //     }
+        //     // });
+        // }
 
         #[cfg(feature = "glfw")]
         let mut hud = Hud::new(
