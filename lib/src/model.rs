@@ -180,9 +180,9 @@ impl Game {
                             let final_vertex = rotated_vertex + entity.position;
                             final_vertex
                         });
-    
+                        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
                         // Rasterize the triangle and update the collision map
-                        rasterize_triangle(transformed_triangle, &self.chunksys.read().justcollisionmap);
+                        rasterize_triangle(transformed_triangle, &csys.read().justcollisionmap);
                     }
                 }
             }
@@ -191,7 +191,9 @@ impl Game {
 
 
     pub fn create_non_static_model_entity(&mut self, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32, hostile: bool) {
-        let mut modent = ModelEntity::new_with_jump_height(model_index, pos, scale, rot, &self.chunksys, &self.camera, jump_height, hostile);
+        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let cam = unsafe { CAMERA.as_ref().unwrap() };
+        let mut modent = ModelEntity::new_with_jump_height(model_index, pos, scale, rot, csys, &cam, jump_height, hostile);
         
 
         //let animations = self.animations[model_index].clone();
@@ -201,7 +203,7 @@ impl Game {
         modent.nodes = Vec::new();
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
-            let csys_arc = Arc::clone(&self.chunksys);
+            let csys_arc = Arc::clone(&csys);
             //println!("This thing thinks the seed is {}", csys_arc.read().currentseed.read());
             Box::new(move |v: vec::IVec3| {
                 return csys_arc.read().collision_predicate(v);
@@ -214,7 +216,9 @@ impl Game {
     }
 
     pub fn insert_static_model_entity(&mut self, id: u32, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32, hostile: bool) {
-        let mut modent = ModelEntity::new_with_id(id, model_index, pos, scale, rot, &self.chunksys, &self.camera, hostile);
+        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let cam = unsafe { CAMERA.as_ref().unwrap() };
+        let mut modent = ModelEntity::new_with_id(id, model_index, pos, scale, rot, csys, &cam, hostile);
         modent.allowable_jump_height = jump_height;
 
         let animations = self.animations[model_index].clone();
@@ -224,7 +228,7 @@ impl Game {
         modent.nodes = nodes;
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
-            let csys_arc = Arc::clone(&self.chunksys);
+            let csys_arc = Arc::clone(&csys);
             Box::new(move |v: vec::IVec3| {
                 return csys_arc.read().collision_predicate(v);
             })
@@ -237,9 +241,11 @@ impl Game {
     
 
     pub fn insert_player_model_entity(&mut self, id: Uuid, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32) {
-        let mut modent = ModelEntity::new_with_id(0/*Does not use model entities id system, uses players id system */, model_index, pos, scale, rot, &self.chunksys, &self.camera, false);
+        
+        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let cam = unsafe { CAMERA.as_ref().unwrap() };
+        let mut modent = ModelEntity::new_with_id(0/*Does not use model entities id system, uses players id system */, model_index, pos, scale, rot, &csys, &cam, false);
         modent.allowable_jump_height = jump_height;
-
        // let animations = self.animations[model_index].clone();
         //let nodes = self.nodes[model_index].clone();
 
@@ -247,7 +253,7 @@ impl Game {
         //modent.nodes = nodes;
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
-            let csys_arc = Arc::clone(&self.chunksys);
+            let csys_arc = Arc::clone(&csys);
             Box::new(move |v: vec::IVec3| {
                 return csys_arc.read().collision_predicate(v);
             })
@@ -495,7 +501,8 @@ impl Game {
 
             
             let camclone = {
-                let cam_lock = self.camera.lock();
+                let cam = unsafe { CAMERA.as_ref().unwrap() };
+                let cam_lock = cam.lock();
                 cam_lock.clone()
                 //Camera::new()
             };
@@ -669,7 +676,8 @@ impl Game {
                                         entity.position.y as i32,
                                         entity.position.z as i32
                                     );
-                                    let csyslock = self.chunksys.read();
+                                    let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+                                    let csyslock = csys.read();
                                     let lmlock = csyslock.lightmap.lock();
 
                                     match lmlock.get(&samplingcoord) {
@@ -735,7 +743,7 @@ impl Game {
                                 8.0
                             );
 
-                            let fogcol = Planets::get_fog_col(self.chunksys.read().planet_type as u32);
+                            let fogcol = Planets::get_fog_col(0);
 
                             gl::Uniform4f(
                                 gl::GetUniformLocation(
