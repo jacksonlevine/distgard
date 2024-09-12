@@ -240,7 +240,7 @@ pub struct ChunkFacade {
 }
 
 pub static ChW: i32 = 15;
-pub static ChH: i32 = 30;
+pub static ChH: i32 = 85;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -2928,7 +2928,7 @@ impl ChunkSystem {
             //     }
             // }
             _ => {
-                static WL: f32 = 2.0;
+                static WL: f32 = 20.0;
 
                 let biomenum = Self::_biome_noise(
                     per,
