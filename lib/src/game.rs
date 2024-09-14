@@ -46,7 +46,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::Blocks;
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES};
+use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAP};
 
 pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
 
@@ -126,6 +126,7 @@ pub static mut SHOULDRUN: bool = false;
 
 pub static mut WEATHERTYPE: f32 = 0.0;
 pub static mut WEATHERTIMER: f32 = 0.0;
+
 pub const WEATHERINTERVAL: f32 = 120.0;
 
 pub static mut TRAMPOLINE: bool = false;
@@ -358,8 +359,13 @@ pub static mut PLAYERPOS: Lazy<PlayerCam> = Lazy::new(|| PlayerCam {
     pitch: AtomicF32::new(0.0),
 });
 
+
+//FREED MEMBERS TAKEN OUT OF Game AS PER BEVY MIGRATION PLAN STEP 1
+
 pub static mut CHUNKSYS: Option<Arc<RwLock<ChunkSystem>>> = None;
 pub static mut CAMERA: Option<Arc<Mutex<Camera>>> = None;
+
+
 
 pub struct Game {
 
@@ -4471,12 +4477,19 @@ impl Game {
         static mut hasbeenset: bool = false;
 
         unsafe {
-            let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
-            let cr = csys.read();
+            let per = {
+                let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+                let cr = csys.read();
+                cr.perlin.clone()
+            };
+            
+            let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+            let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
+            
             if !hasbeenset {
-                (*NUDM) = cr.nonuserdatamap.clone();
-                (*UDM) = cr.userdatamap.clone();
-                (*PERL) = cr.perlin.clone();
+                (*NUDM) = nudm.clone();
+                (*UDM) = udm.clone();
+                (*PERL) = per.clone();
                 hasbeenset = true;
             }
         }

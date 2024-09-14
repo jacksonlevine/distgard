@@ -301,6 +301,13 @@ impl ACSet {
 pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new(|| DashMap::new());
 pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| VecDeque::new());
 
+
+//MEMBERS TAKEN OUT AS PER BEVY MIGRATION PLAN STEP 1
+
+pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+
+
 pub struct ChunkSystem {
     pub chunks: Vec<Arc<Mutex<ChunkFacade>>>,
     pub geobank: Vec<Arc<ChunkGeo>>,
@@ -311,8 +318,10 @@ pub struct ChunkSystem {
     pub gen_rebuild_requests: lockfree::queue::Queue<usize>,
     pub light_rebuild_requests: lockfree::queue::Queue<usize>,
     pub background_rebuild_requests: lockfree::queue::Queue<usize>,
-    pub userdatamap: Arc<DashMap<vec::IVec3, u32>>,
-    pub nonuserdatamap: Arc<DashMap<vec::IVec3, u32>>,
+    
+    // pub userdatamap: Arc<DashMap<vec::IVec3, u32>>,
+    // pub nonuserdatamap: Arc<DashMap<vec::IVec3, u32>>,
+    
     pub justcollisionmap: DashMap<vec::IVec3, u8>,
     pub radius: u8,
     pub perlin: Arc<RwLock<Perlin>>,
@@ -328,6 +337,78 @@ pub struct ChunkSystem {
 }
 
 impl ChunkSystem {
+    
+    pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
+
+            unsafe {
+                USERDATAMAP = Some(Arc::new(DashMap::new()));
+                NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+            }
+        let mut cs = ChunkSystem {
+            chunks: Vec::new(),
+            geobank: Vec::new(),
+            takencare: Arc::new(DashMap::new()),
+            finished_user_geo_queue: Arc::new(lockfree::queue::Queue::new()),
+            finished_geo_queue: Arc::new(lockfree::queue::Queue::new()),
+            user_rebuild_requests: lockfree::queue::Queue::new(),
+            gen_rebuild_requests: lockfree::queue::Queue::new(),
+            light_rebuild_requests: lockfree::queue::Queue::new(),
+            background_rebuild_requests: lockfree::queue::Queue::new(),
+           // userdatamap: Arc::new(DashMap::new()),
+           // nonuserdatamap: Arc::new(DashMap::new()),
+            justcollisionmap: DashMap::new(),
+            radius,
+            perlin: Arc::new(RwLock::new(Perlin::new(seed))),
+            voxel_models: None,
+            chunk_memories: Mutex::new(ChunkRegistry {
+                memories: Vec::new(),
+            }),
+            planet_type: noisetype as u8,
+            headless,
+            hashadinitiallightpass: Arc::new(Mutex::new(HashMap::new())),
+            lightmap: Arc::new(Mutex::new(HashMap::new())),
+            generated_chunks: Arc::new(DashMap::new()),
+        };
+
+        // let directory_path = "assets/voxelmodels/";
+
+        // for entry in WalkDir::new(directory_path) {
+        //     let entry = entry.unwrap();
+        //     if entry.file_type().is_file() {
+        //         let path_str = entry.path().to_string_lossy().into_owned();
+        //         let jv = JVoxModel::new(Box::leak(path_str.into_boxed_str()));
+        //         //info!("{:#?}", jv.model);
+        //         cs.voxel_models.push(jv);
+        //     }
+        // }
+        if !cs.headless {
+            for _ in 0..radius * 2 + 5 {
+                for _ in 0..radius * 2 + 5 {
+                    cs.chunks.push(Arc::new(Mutex::new(ChunkFacade {
+                        geo_index: cs.geobank.len(),
+                        used: false,
+                        pos: IVec2 {
+                            x: CHUNKPOSDEFAULT,
+                            y: CHUNKPOSDEFAULT,
+                        },
+                    })));
+
+                    cs.geobank.push(Arc::new(ChunkGeo::new()));
+
+                    cs.chunk_memories
+                        .lock()
+                        .memories
+                        .push(ChunkMemory::new(&cs.geobank[cs.geobank.len() - 1]));
+                }
+            }
+        }
+
+        //tracing::info!("Amount of chunkgeo buffers: {}", 4 * cs.geobank.len());
+
+        cs
+    }
+    
+    
     pub fn write_new_udm_entry(&self, spot: vec::IVec3, block: u32) {
         let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);
@@ -374,7 +455,9 @@ impl ChunkSystem {
                 table_name
             ))
             .unwrap();
-        for entry in self.userdatamap.iter() {
+
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        for entry in udm.iter() {
             stmt.execute(params![
                 entry.key().x,
                 entry.key().y,
@@ -402,8 +485,10 @@ impl ChunkSystem {
     }
 
     pub fn load_world_from_file(&mut self, path: String) {
-        self.userdatamap.clear();
-        self.nonuserdatamap.clear();
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
+        udm.clear();
+        nudm.clear();
 
         match File::open(format!("{}/udm", path.clone())) {
             Ok(_) => {}
@@ -488,12 +573,16 @@ impl ChunkSystem {
                 ))
             })
             .unwrap();
+        {
+            let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+            for entry in userdatamap_iter {
+                let (key, value): (vec::IVec3, u32) = entry.unwrap();
+                
+                udm.insert(key, value);
+            }
 
-        for entry in userdatamap_iter {
-            let (key, value): (vec::IVec3, u32) = entry.unwrap();
-            self.userdatamap.insert(key, value);
         }
-
+        
         let file = File::open(format!("{}/pt", path)).unwrap();
         let reader = BufReader::new(file);
 
@@ -518,12 +607,12 @@ impl ChunkSystem {
 
     pub fn do_automata(&mut self, cam: &Arc<Mutex<Camera>>) {
         pub const ODDBIT: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
-        let chunkslist = self.chunks.clone();
+        //let chunkslist = self.chunks.clone();
 
         let takencare = self.takencare.clone();
 
-        let udm = self.userdatamap.clone();
-        let nudm = self.nonuserdatamap.clone();
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()}.clone();
+        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()}.clone();
         let per = self.perlin.clone();
         //let cam = cam.clone();
 
@@ -720,8 +809,8 @@ impl ChunkSystem {
         while let Some(_) = self.gen_rebuild_requests.pop() {}
         while let Some(_) = self.background_rebuild_requests.pop() {}
         info!("After that whole popping thing");
-        self.userdatamap.clear();
-        self.nonuserdatamap.clear();
+        //self.userdatamap.clear();
+        //self.nonuserdatamap.clear();
         self.justcollisionmap.clear();
         info!("After clearing the next 3 things");
     }
@@ -761,70 +850,7 @@ impl ChunkSystem {
         info!("After making new chunk stuff");
     }
 
-    pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
-        let mut cs = ChunkSystem {
-            chunks: Vec::new(),
-            geobank: Vec::new(),
-            takencare: Arc::new(DashMap::new()),
-            finished_user_geo_queue: Arc::new(lockfree::queue::Queue::new()),
-            finished_geo_queue: Arc::new(lockfree::queue::Queue::new()),
-            user_rebuild_requests: lockfree::queue::Queue::new(),
-            gen_rebuild_requests: lockfree::queue::Queue::new(),
-            light_rebuild_requests: lockfree::queue::Queue::new(),
-            background_rebuild_requests: lockfree::queue::Queue::new(),
-            userdatamap: Arc::new(DashMap::new()),
-            nonuserdatamap: Arc::new(DashMap::new()),
-            justcollisionmap: DashMap::new(),
-            radius,
-            perlin: Arc::new(RwLock::new(Perlin::new(seed))),
-            voxel_models: None,
-            chunk_memories: Mutex::new(ChunkRegistry {
-                memories: Vec::new(),
-            }),
-            planet_type: noisetype as u8,
-            headless,
-            hashadinitiallightpass: Arc::new(Mutex::new(HashMap::new())),
-            lightmap: Arc::new(Mutex::new(HashMap::new())),
-            generated_chunks: Arc::new(DashMap::new()),
-        };
-
-        // let directory_path = "assets/voxelmodels/";
-
-        // for entry in WalkDir::new(directory_path) {
-        //     let entry = entry.unwrap();
-        //     if entry.file_type().is_file() {
-        //         let path_str = entry.path().to_string_lossy().into_owned();
-        //         let jv = JVoxModel::new(Box::leak(path_str.into_boxed_str()));
-        //         //info!("{:#?}", jv.model);
-        //         cs.voxel_models.push(jv);
-        //     }
-        // }
-        if !cs.headless {
-            for _ in 0..radius * 2 + 5 {
-                for _ in 0..radius * 2 + 5 {
-                    cs.chunks.push(Arc::new(Mutex::new(ChunkFacade {
-                        geo_index: cs.geobank.len(),
-                        used: false,
-                        pos: IVec2 {
-                            x: CHUNKPOSDEFAULT,
-                            y: CHUNKPOSDEFAULT,
-                        },
-                    })));
-
-                    cs.geobank.push(Arc::new(ChunkGeo::new()));
-
-                    cs.chunk_memories
-                        .lock()
-                        .memories
-                        .push(ChunkMemory::new(&cs.geobank[cs.geobank.len() - 1]));
-                }
-            }
-        }
-
-        //tracing::info!("Amount of chunkgeo buffers: {}", 4 * cs.geobank.len());
-
-        cs
-    }
+    
     pub fn spot_to_chunk_pos(spot: &vec::IVec3) -> vec::IVec2 {
         return vec::IVec2 {
             x: (spot.x as f32 / ChW as f32).floor() as i32,
@@ -1093,14 +1119,16 @@ impl ChunkSystem {
     }
 
     pub fn set_block(&self, spot: vec::IVec3, block: u32, user_power: bool) {
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
             true => {
                 //info!("Has user power, set block to {block}");
-                self.userdatamap.insert(spot, block);
+                udm.insert(spot, block);
             }
             false => {
                 //info!("Non user power");
-                self.nonuserdatamap.insert(spot, block);
+                nudm.insert(spot, block);
             }
         }
         if !self.headless {
@@ -1130,14 +1158,16 @@ impl ChunkSystem {
     }
 
     pub fn set_block_no_sound(&self, spot: vec::IVec3, block: u32, user_power: bool) {
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
             true => {
                 //info!("Has user power, set block to {block}");
-                self.userdatamap.insert(spot, block);
+                udm.insert(spot, block);
             }
             false => {
                 //info!("Non user power");
-                self.nonuserdatamap.insert(spot, block);
+                nudm.insert(spot, block);
             }
         }
     }
@@ -2868,9 +2898,11 @@ impl ChunkSystem {
         // }
     }
     pub fn blockat(&self, spot: vec::IVec3) -> u32 {
+        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         Self::_blockat(
-            &self.nonuserdatamap.clone(),
-            &self.userdatamap.clone(),
+            &nudm.clone(),
+            &udm.clone(),
             &self.perlin.read(),
             spot,
         )

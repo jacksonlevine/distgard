@@ -299,7 +299,7 @@ impl Hud {
 
             if h != LASTHEALTH || stam != LASTSTAMINA {
 
-                let startx = -0.25;
+                let startx = -0.95;
                 let starty = -0.70;
 
                 let mut allgeo: Vec<f32> /*60 / 5 = 12*/ = vec![
@@ -322,9 +322,11 @@ impl Hud {
                 ];
 
 
-                let redwidth = ((stam as f32 * 0.2) * wwf) / WINDOWWIDTH as f32;
+                let stamwidth = ((stam as f32 * 0.2) * wwf) / WINDOWWIDTH as f32;
                 let redface   = TextureFace::new(0, 7);
-                let startx = 0.05;
+
+                let startx = -0.95;
+                let starty = -0.75;
 
                 allgeo.extend_from_slice(&[
                     startx - xthickness ,                                  starty - ythickness,                                      blackface.blx, blackface.bly, -1.0,  
@@ -337,10 +339,10 @@ impl Hud {
 
 
                     startx,                      starty,                         redface.blx, redface.bly, -1.0,  
-                    startx + redwidth,             starty,                         redface.brx, redface.bry, -1.0, 
-                    startx + redwidth,             starty + height,                redface.trx, redface.tr_y, -1.0, 
+                    startx + stamwidth,             starty,                         redface.brx, redface.bry, -1.0, 
+                    startx + stamwidth,             starty + height,                redface.trx, redface.tr_y, -1.0, 
 
-                    startx + redwidth,              starty + height,                redface.trx, redface.tr_y, -1.0, 
+                    startx + stamwidth,              starty + height,                redface.trx, redface.tr_y, -1.0, 
                     startx ,                     starty + height,                redface.tlx, redface.tly, -1.0, 
                     startx ,                     starty,                         redface.blx, redface.bly, -1.0,
                 ]);
