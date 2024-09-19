@@ -60,6 +60,8 @@ pub static mut BUILD_VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
 
 pub static mut BUILD_MODEL_OFFSET: IVec3 = IVec3::new(0, 0, 0);
 
+pub static tilewid: f32 =  0.10;
+
 use crate::camera::Camera;
 use crate::collisioncage::*;
 use crate::cube::Cube;
@@ -383,7 +385,7 @@ pub struct Game {
     pub cloudshader: Shader,
     pub starshader: Shader,
 
-    
+
     //Another resource moved to static. Another resource moved to static. (hey, hey)
     //pub camera: Arc<Mutex<Camera>>,
 
@@ -1351,6 +1353,8 @@ impl Game {
             health.clone(),
             stamina.clone(),
         );
+
+        
         //IMPORTANT: Push the inv row slots first
         fn add_inventory_rows(
             elements: &mut Vec<HudElement>,
@@ -1362,6 +1366,9 @@ impl Game {
             let tf = TextureFace::new(0, 14);
 
             let rh: f32 = 0.2;
+
+
+       
 
             for y in 0..rows {
                 for i in 0..rowlength {
@@ -1375,8 +1382,8 @@ impl Game {
                         SlotIndexType::None => SlotIndexType::None,
                     };
                     let invrowel = HudElement::new(
-                        Vec2::new(-(0.10 * 3.5) + i as f32 * 0.10, yoffset - y as f32 * rh),
-                        Vec2::new(0.15, 0.15),
+                        Vec2::new(-(tilewid * 3.5) + i as f32 * tilewid, yoffset - y as f32 * rh),
+                        Vec2::new(tilewid * 1.5,tilewid * 1.5),
                         [
                             tf.blx, tf.bly, tf.brx, tf.bry, tf.trx, tf.tr_y, tf.trx, tf.tr_y,
                             tf.tlx, tf.tly, tf.blx, tf.bly,
@@ -1402,8 +1409,8 @@ impl Game {
                         SlotIndexType::None => SlotIndexType::None,
                     };
                     let invrowel = HudElement::new(
-                        Vec2::new(-(0.10 * 3.5) + i as f32 * 0.10, yoffset - y as f32 * rh),
-                        Vec2::new(0.10, 0.10),
+                        Vec2::new(-(tilewid * 3.5) + i as f32 * tilewid, yoffset - y as f32 * rh),
+                        Vec2::new(tilewid, tilewid),
                         [
                             tf.blx, tf.bly, tf.brx, tf.bry, tf.trx, tf.tr_y, tf.trx, tf.tr_y,
                             tf.tlx, tf.tly, tf.blx, tf.bly,
@@ -1459,7 +1466,7 @@ impl Game {
 
                     let invrowel = HudElement::new(
                         Vec2::new(
-                            -(0.10 * 3.5) + 0.01 + i as f32 * 0.10,
+                            -(tilewid * 3.5) + 0.01 + i as f32 * tilewid,
                             yoffset - y as f32 * rh - 0.03,
                         ),
                         Vec2::new(0.05, 0.05),
@@ -1473,7 +1480,7 @@ impl Game {
 
                     let invrowel = HudElement::new(
                         Vec2::new(
-                            -(0.10 * 3.5) + 0.02 + i as f32 * 0.10,
+                            -(tilewid * 3.5) + 0.02 + i as f32 * tilewid,
                             yoffset - y as f32 * rh - 0.03,
                         ),
                         Vec2::new(0.05, 0.05),
@@ -1530,7 +1537,7 @@ impl Game {
 
         let invrowel = HudElement::new(
             Vec2::new(0.0, 0.0),
-            Vec2::new(0.10, 0.10),
+            Vec2::new(tilewid, tilewid),
             [
                 tf.blx, tf.bly, tf.brx, tf.bry, tf.trx, tf.tr_y, tf.trx, tf.tr_y, tf.tlx, tf.tly,
                 tf.blx, tf.bly,

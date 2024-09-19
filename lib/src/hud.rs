@@ -177,7 +177,7 @@ impl Hud {
 
                     let (width,height) = winsize;
 
-                    let realsize = (element.size*800.0) / Vec2::new(width as f32, height as f32);
+                    let realsize = ((element.size*800.0) / Vec2::new(width as f32, height as f32)) * 0.7;
 
                     let mut realpos = element.normalized_pos;
                     let mut xoff = 0.0;
