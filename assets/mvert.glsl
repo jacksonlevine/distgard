@@ -77,7 +77,7 @@ void main() {
     }
 
     if(isbutton != 0.0) {
-        mixedrots = vec3(pow(xrot - max((3.0 - time)/5.0, -0.1), 3 ), yrot, zrot);
+        mixedrots = vec3(xrot + sin(time)*0.5, yrot, zrot);
         // Adjust this to control how fast it decays
         float decay_speed = 2.0;
 

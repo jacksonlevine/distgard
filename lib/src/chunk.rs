@@ -46,6 +46,7 @@ use crate::game::CURRSEED;
 
 use crate::game::PLAYERCHUNKPOS;
 use crate::game::PLAYERPOS;
+use crate::game::WEATHERTYPE;
 use crate::packedvertex::PackedVertex;
 use crate::planetinfo::Planets;
 use crate::shader::Shader;
@@ -648,6 +649,8 @@ impl ChunkSystem {
                                                 y: j,
                                                 z: (c.pos.y * ChW) + k,
                                             };
+                                            if rng.gen_range(0..10) == 9 {
+                                            
 
                                             let combined =
                                                 Self::_blockat(&nudm, &udm, &per.read(), spot);
@@ -660,28 +663,31 @@ impl ChunkSystem {
 
                                                     match block {
                                                         3 => {
-                                                            if rng.gen_range(0..100) == 9 {
-                                                                //println!("Pushin one");
-                                                                AUTOMATA_QUEUED_CHANGES.push_back(
-                                                                    ACSet::new(1, [
-                                                                        AutomataChange::new(
-                                                                            block, spot, 48,
-                                                                        ),
-                                                                        AutomataChange::new(
-                                                                            block, spot, 48,
-                                                                        ),
-                                                                    ])
-                                                                );
+                                                            if WEATHERTYPE == 1.0 {
+                                                                if rng.gen_range(0..100) == 9 {
+                                                                    //println!("Pushin one");
+                                                                    AUTOMATA_QUEUED_CHANGES.push_back(
+                                                                        ACSet::new(1, [
+                                                                            AutomataChange::new(
+                                                                                block, spot, 48,
+                                                                            ),
+                                                                            AutomataChange::new(
+                                                                                block, spot, 48,
+                                                                            ),
+                                                                        ])
+                                                                    );
+                                                                }
                                                             }
+                                                            
 
-                                                            break;
+                                                            //break;
                                                         }
                                                         2 => {
                                                             if combined
                                                                 == (2u32 | (ODDBIT * ODDFRAME))
                                                             {
                                                                 let belowspot =
-                                                                    spot + IVec3::new(0, 1, 0);
+                                                                    spot + IVec3::new(0, -1, 0);
                                                                 let belowcombined = Self::_blockat(
                                                                     &nudm,
                                                                     &udm,
@@ -711,28 +717,30 @@ impl ChunkSystem {
                                                             }
                                                         }
                                                         7 => {
-                                                            let abovespot =
-                                                                spot + IVec3::new(0, 1, 0);
-                                                            let abovecombined = Self::_blockat(
-                                                                &nudm,
-                                                                &udm,
-                                                                &per.read(),
-                                                                abovespot,
-                                                            );
-                                                            let aboveblock = abovecombined
-                                                                & Blocks::block_id_bits();
+                                                            if WEATHERTYPE == 1.0 {
+                                                                let abovespot =
+                                                                    spot + IVec3::new(0, 1, 0);
+                                                                let abovecombined = Self::_blockat(
+                                                                    &nudm,
+                                                                    &udm,
+                                                                    &per.read(),
+                                                                    abovespot,
+                                                                );
+                                                                let aboveblock = abovecombined
+                                                                    & Blocks::block_id_bits();
 
-                                                            if aboveblock == 0 {
-                                                                if rng.gen_range(0..100) == 9 {
-                                                                    AUTOMATA_QUEUED_CHANGES
-                                                                        .push_back(ACSet::new(1, [
-                                                                            AutomataChange::new(
-                                                                                7, spot, 50,
-                                                                            ),
-                                                                            AutomataChange::new(
-                                                                                7, spot, 50,
-                                                                            ),
-                                                                        ]));
+                                                                if aboveblock == 0 {
+                                                                    if rng.gen_range(0..100) == 9 {
+                                                                        AUTOMATA_QUEUED_CHANGES
+                                                                            .push_back(ACSet::new(1, [
+                                                                                AutomataChange::new(
+                                                                                    7, spot, 50,
+                                                                                ),
+                                                                                AutomataChange::new(
+                                                                                    7, spot, 50,
+                                                                                ),
+                                                                            ]));
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -766,6 +774,14 @@ impl ChunkSystem {
                                                     }
                                                 }
                                             }
+
+
+
+
+
+                                        }
+
+
                                         }
                                     }
                                 }

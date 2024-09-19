@@ -46,3 +46,4 @@ pub mod keybinds;
 pub mod newserver;
 pub mod newclient;
 pub mod menu3d;
+pub mod actest;
