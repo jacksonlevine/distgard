@@ -73,7 +73,7 @@ void main() {
 
     if(istitle != 0.0) {
 
-        mixedrots = vec3((-1.0 * (pow(max((3.0 - time)/5.0, -0.1), 3))) + sin(time) * 0.1, yrot - sin(time)*0.02, zrot);
+        mixedrots = vec3(sin(time) * 0.1, yrot - sin(time)*0.02, zrot);
     }
 
     if(isbutton != 0.0) {
