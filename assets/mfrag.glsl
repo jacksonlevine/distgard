@@ -11,6 +11,8 @@ uniform float sunset;
 uniform float sunrise;
 uniform vec3 camDir;
 
+in float brightadd;
+
 uniform vec3 pos;
 
 uniform float opacity;
@@ -43,7 +45,7 @@ void main() {
     FragColor = texColor  * vec4(ambientBrightMult, ambientBrightMult, ambientBrightMult, 1.0);
     FragColor = mix(FragColor, fogColor, min(1, max(distance, 0)));
 
-    FragColor = vec4(FragColor.xyz, FragColor.w*opacity);
+    FragColor = vec4(FragColor.xyz + vec3(brightadd), FragColor.w*opacity);
 
     if(FragColor.a < 0.5) {
         discard;

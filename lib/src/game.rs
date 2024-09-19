@@ -383,6 +383,7 @@ pub struct Game {
     pub cloudshader: Shader,
     pub starshader: Shader,
 
+    
     //Another resource moved to static. Another resource moved to static. (hey, hey)
     //pub camera: Arc<Mutex<Camera>>,
 
@@ -1667,6 +1668,7 @@ impl Game {
             allowable_jump_height: 1.6,
             initial_timer: 0.0,
             voxel_models: vmarc2,
+            nodes: Vec::new(),
             gltf_models: Vec::new(),
             gltf_vbos: Vec::new(),
             gltf_vaos: Vec::new(),
@@ -1700,7 +1702,7 @@ impl Game {
             inventory: inv,
             animations: Vec::new(),
             skins: Vec::new(),
-            nodes: Vec::new(),
+            
             current_time: 0.0,
             // netconn: NetworkConnector::new(
             //     &chunksys,
@@ -1750,6 +1752,7 @@ impl Game {
         #[cfg(feature = "glfw")]
         if !headless {
             g.load_model(path!("assets/models/player.glb"));
+            
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
             // g.load_model(path!("assets/models/monster1/scene.gltf"));

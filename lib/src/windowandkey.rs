@@ -1,10 +1,11 @@
 use bevy::prelude::*;
+use gl::types::{GLenum, GLuint};
+use gltf::mesh::util::ReadIndices;
 
 use crate::{
     blockinfo::Blocks, game::{
-        Game, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP,
-        SINGLEPLAYER, TOOLTIPNAME,
-    }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
+        Game, JGltfNode, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
+    }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         LAST_ENTERED_SERVERADDRESS, LOAD_MISC, LOAD_OR_INITIALIZE_STATICS, MISCSETTINGS, SAVE_LESA,
     }, texture::Texture
 };
@@ -60,6 +61,23 @@ pub struct WindowAndKeyContext {
 
     pub logo: Texture,
     pub clipboard_context: ClipboardContext,
+    pub menu_camera: crate::camera::Camera,
+
+    pub gltf_models: Vec<(
+        gltf::Document,
+        Vec<gltf::buffer::Data>,
+        Vec<gltf::image::Data>,
+    )>,
+    pub gltf_vbos: Vec<Vec<Vec<GLuint>>>,
+    pub gltf_vaos: Vec<Vec<Vec<GLuint>>>,
+    pub gltf_counts: Vec<Vec<Vec<usize>>>,
+    pub gltf_drawmodes: Vec<Vec<Vec<GLenum>>>,
+    pub gltf_ebos: Vec<Vec<Vec<GLuint>>>,
+    pub gltf_textures: Vec<Vec<Vec<GLuint>>>,
+    pub gltf_paths: Vec<String>,
+    pub modelshader: crate::shader::Shader,
+
+    pub nodes: Vec<Vec<JGltfNode>>,
 
     #[cfg(feature = "steam")]
     pub client: Arc<Client>,
@@ -105,6 +123,7 @@ use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 use clipboard::ClipboardContext;
 
 impl WindowAndKeyContext {
+
     pub fn new(windowname: &'static str, width: u32, height: u32) -> Self {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
 
@@ -190,7 +209,12 @@ impl WindowAndKeyContext {
             gl::FrontFace(gl::CW);
         }
 
+        let mut menu_camera = crate::camera::Camera::new();
+        menu_camera.position = Vec3::new(0.0, 3.0, -5.0);
+        menu_camera.recalculate();
+
         let mut wak = WindowAndKeyContext {
+            menu_camera,
             width,
             height,
             game: None,
@@ -217,7 +241,16 @@ impl WindowAndKeyContext {
                 panic!("Error!!!!!!!!1111, {err:?}");
             }),
             clipboard_context: ctx,
-
+            nodes: Vec::new(),
+            gltf_models: Vec::new(),
+            gltf_vbos: Vec::new(),
+            gltf_vaos: Vec::new(),
+            gltf_counts: Vec::new(),
+            gltf_drawmodes: Vec::new(),
+            gltf_ebos: Vec::new(),
+            gltf_textures: Vec::new(),
+            gltf_paths: Vec::new(),
+            modelshader: crate::shader::Shader::new(path!("assets/mvert.glsl"), path!("assets/mfrag.glsl")),
             #[cfg(feature = "steam")]
             client: Arc::new(client),
             #[cfg(feature = "steam")]
@@ -230,14 +263,227 @@ impl WindowAndKeyContext {
             wak.serveraddrbuffer.reserve(100);
         }
 
-        
+        #[cfg(feature = "glfw")]
+        {
+            wak.load_model(path!("assets/models/menulogo.gltf"));
+            wak.load_model(path!("assets/models/menubuttontop.gltf"));
+            wak.load_model(path!("assets/models/menubuttonbottom.gltf"));
+            wak.load_model(path!("assets/models/skybox.gltf"));
+            wak.create_model_vbos();
+        }
    
             
 
         wak
     }
 
+    #[cfg(feature = "glfw")]
+    pub fn load_model(&mut self, path: &'static str) {
+        use std::path::Path;
+
+        use gltf::animation::util::ReadOutputs;
+
+        use crate::game::{AnimationChannel, JGltfNode, Joint, Skin};
+
+        let (document, buffers, images) = gltf::import(path).expect("Failed to load model");
+        self.gltf_models.push((document.clone(), buffers.clone(), images.clone()));
+        let path = Path::new(path);
+        let gp = path.parent()
+            .map(|p| p.to_str().unwrap_or(""))
+            .unwrap_or("")
+            .to_string();
+        self.gltf_paths.push(gp);
+
+        //let animindex = self.animations.len();
+        let nodeindex = self.nodes.len();
+
+        //self.animations.push(Vec::new());
+        self.nodes.push(Vec::new());
+
+        for animation in document.animations() {
+            let mut channels = Vec::new();
+            for channel in animation.channels() {
+                let _sampler = channel.sampler();
+                let reader = channel.reader(|buffer| Some(&buffers[buffer.index()]));
+                let inputs = reader.read_inputs().unwrap().collect::<Vec<f32>>();
+                let outputs: Vec<Vec<f32>> = match reader.read_outputs().unwrap() {
+                    ReadOutputs::Translations(translations) => translations.map(|v| v.to_vec()).collect(),
+                    ReadOutputs::Rotations(rotations) => rotations.into_f32().map(|v| v.to_vec()).collect(),
+                    ReadOutputs::Scales(scales) => scales.map(|v| v.to_vec()).collect(),
+                    ReadOutputs::MorphTargetWeights(weights) => weights.into_f32().collect::<Vec<f32>>().iter().map(|w| vec![*w]).collect(),
+                };
+
+                let keyframes = inputs.into_iter().zip(outputs).collect();
+
+                channels.push(AnimationChannel {
+                    node_index: channel.target().node().index(),
+                    property: channel.target().property(),
+                    keyframes,
+                });
+            }
+
+
+
+           
+        }
+
+        for skin in document.skins() {
+            let reader = skin.reader(|buffer| Some(&buffers[buffer.index()]));
+            let inverse_bind_matrices: Vec<Mat4> = reader.read_inverse_bind_matrices().unwrap().map(|m| {
+                let flat: Vec<f32> = m.iter().flatten().cloned().collect();
+                Mat4::from_cols_array(&flat.try_into().expect("Slice with incorrect length"))
+            }).collect();
+
+            let joints: Vec<Joint> = skin.joints()
+                .zip(inverse_bind_matrices)
+                .map(|(joint, inverse_bind_matrix)| Joint {
+                    node_index: joint.index(),
+                    inverse_bind_matrix,
+                })
+                .collect();
+
+
+        }
+
+        for node in document.nodes() {
+            self.nodes[nodeindex].push(JGltfNode {
+                transform: Mat4::from_cols_array_2d(&node.transform().matrix()),
+                children: node.children().map(|child| child.index()).collect(),
+            });
+        }
+    }
     
+    fn collect_indices(data: ReadIndices) -> Vec<u32> {
+        match data {
+            ReadIndices::U8(iter) => {
+                iter.map(|index| index as u32).collect()
+            },
+            ReadIndices::U16(iter) => {
+                iter.map(|index| index as u32).collect()
+            },
+            ReadIndices::U32(iter) => {
+                iter.collect()
+            },
+        }
+    }
+    #[cfg(feature = "glfw")]
+    pub fn create_model_vbos(&mut self) {
+        use gl::types::{GLsizeiptr, GLvoid};
+
+        use crate::model::load_document_textures;
+
+        for (index, (document, buffers, _images)) in self.gltf_models.iter().enumerate() {
+            self.gltf_counts.push(Vec::new());
+            self.gltf_drawmodes.push(Vec::new());
+            self.gltf_vaos.push(Vec::new());
+            self.gltf_vbos.push(Vec::new());
+            self.gltf_textures.push(Vec::new());
+
+            let textures = load_document_textures(&document, &buffers, self.gltf_paths[index].as_str());
+
+            for mesh in document.meshes() {
+                let mut mesh_vbos = Vec::new();
+                let mut mesh_vaos = Vec::new();
+                let mut mesh_counts = Vec::new();
+                let mut mesh_drawmodes = Vec::new();
+                let mut textures_here = Vec::new();
+                
+                for primitive in mesh.primitives() {
+
+                    let material = primitive.material();
+                    let pbr = material.pbr_metallic_roughness();
+
+                    let default_texture_index = 0;
+
+                    let base_color_texture_index = pbr.base_color_texture().map(|info| info.texture().index())
+                    .or_else(|| {
+                        document.textures().nth(0).map(|tex| tex.index()) // Example: Just grab the first texture if available
+                    })
+                    .unwrap_or(default_texture_index);
+
+                    textures_here.push(textures[base_color_texture_index]);
+
+                    //if let Some((_, accessor)) = primitive.attributes().find(|(semantic, _)| *semantic == Semantic::Positions) {
+                        let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+                        let positions = reader.read_positions().unwrap().collect::<Vec<_>>();
+                        let indices = WindowAndKeyContext::collect_indices(reader.read_indices().unwrap()); 
+                        let uvs = reader.read_tex_coords(0).unwrap().into_f32().collect::<Vec<_>>();
+
+                        let mut ebo: GLuint = 0;
+                        unsafe {
+                            gl::CreateBuffers(1, &mut ebo);
+                            gl::NamedBufferData(
+                                ebo,
+                                (indices.len() * std::mem::size_of::<u32>()) as GLsizeiptr,
+                                indices.as_ptr() as *const GLvoid,
+                                gl::STATIC_DRAW,  // Usage hint
+                            );
+                        }
+
+
+                        //let vertex_count = positions.len();
+                        let index_count = indices.len();
+                        let mut vbo: GLuint = 0;
+
+
+
+                        let mut uv_vbo: GLuint = 0;
+
+                        unsafe {
+                            gl::CreateBuffers(1, &mut vbo);
+                            gl::NamedBufferData(
+                                vbo,
+                                (positions.len() * std::mem::size_of::<[f32; 3]>()) as GLsizeiptr,
+                                positions.as_ptr() as *const GLvoid,
+                                gl::STATIC_DRAW,
+                            );
+
+
+                            gl::CreateBuffers(1, &mut uv_vbo);
+                            gl::NamedBufferData(
+                                uv_vbo,
+                                (uvs.len() * std::mem::size_of::<[f32; 2]>()) as GLsizeiptr,
+                                uvs.as_ptr() as *const GLvoid,
+                                gl::STATIC_DRAW,
+                            );
+                        }
+
+                        mesh_vbos.push(vbo);
+                        mesh_counts.push(index_count);
+                        mesh_drawmodes.push(primitive.mode().as_gl_enum());
+                        
+
+                        // Create VAO
+                        let mut vao: GLuint = 0;
+                        unsafe {
+                            gl::CreateVertexArrays(1, &mut vao);
+                            gl::VertexArrayVertexBuffer(vao, 0, vbo, 0, (3 * std::mem::size_of::<f32>()) as i32);
+                            gl::EnableVertexArrayAttrib(vao, 0);
+                            gl::VertexArrayAttribFormat(vao, 0, 3, gl::FLOAT, gl::FALSE, 0);
+                            gl::VertexArrayAttribBinding(vao, 0, 0);
+                            
+
+                            gl::VertexArrayVertexBuffer(vao, 1, uv_vbo, 0, (2 * std::mem::size_of::<f32>()) as i32);
+                            gl::EnableVertexArrayAttrib(vao, 1);
+                            gl::VertexArrayAttribFormat(vao, 1, 2, gl::FLOAT, gl::FALSE, 0);
+                            gl::VertexArrayAttribBinding(vao, 1, 1);
+
+
+                            gl::VertexArrayElementBuffer(vao, ebo);
+
+                        }
+                        mesh_vaos.push(vao);
+                    //}
+                }
+                self.gltf_vbos[index].push(mesh_vbos.clone());
+                println!("Adding {} length vbo list to gltfvbos", mesh_vbos.len());
+                self.gltf_vaos[index].push(mesh_vaos);
+                self.gltf_counts[index].push(mesh_counts);
+                self.gltf_drawmodes[index].push(mesh_drawmodes);
+                self.gltf_textures[index].push(textures_here);
+            }
+        }
+    }
 
     pub fn run(&mut self) {
         #[cfg(feature = "glfw")]
@@ -259,6 +505,8 @@ impl WindowAndKeyContext {
 
         let mut main_menu = false;
 
+       
+
         unsafe {
             match DECIDEDSPORMP {
                 false => {
@@ -268,6 +516,9 @@ impl WindowAndKeyContext {
 
                     let (width, height) = self.window.read().get_framebuffer_size();
                     self.imgui.io_mut().display_size = [width as f32, height as f32];
+
+                    let screen_width = width as f32;
+                    let screen_height = height as f32;
 
                     // Start the ImGui frame
                     let ui = self.imgui.frame();
@@ -279,10 +530,11 @@ impl WindowAndKeyContext {
                         | WindowFlags::NO_TITLE_BAR
                         | WindowFlags::NO_BACKGROUND;
 
-                    let window_size = (950.0, 750.0);
+                    // Scale the window and button size proportionally to the screen size
+                    let window_size = (screen_width * 0.75, screen_height * 0.75);
                     let window_pos = [
-                        width as f32 / 2.0 - (window_size.0 / 2.0),
-                        (height as f32 / 2.0 - (window_size.1 / 2.0)) + 75.0,
+                        screen_width / 2.0 - (window_size.0 / 2.0),
+                        screen_height / 2.0 - (window_size.1 / 2.0) + screen_height * 0.1, // Slightly offset vertically
                     ];
 
                     ui.window("Transparent Window")
@@ -290,8 +542,8 @@ impl WindowAndKeyContext {
                         .position(window_pos, Condition::Always)
                         .flags(window_flags)
                         .build(|| {
-                            let button_width = 500.0;
-                            let button_height = 20.0;
+                            let button_width = screen_width * 0.15; // Scale button width by 15% of screen width
+                            let button_height = screen_height * 0.07; // Scale button height by 7% of screen height
                             let window_size = ui.window_size();
 
                             let available_width = window_size[0];
@@ -300,31 +552,41 @@ impl WindowAndKeyContext {
                             let pos_x = (available_width - button_width) / 2.0;
                             let pos_y = (available_height - (button_height) - 10.0) / 2.0;
 
-                            ui.set_cursor_pos([pos_x, pos_y - 240.0]);
-
-                            // Scale down the image to 50% of its original size
+                            // Adjust the image size and position
                             let scaled_size = [
-                                (self.logo.size.0 as f32 * 0.5).round(),
-                                (self.logo.size.1 as f32 * 0.5).round(),
+                                (self.logo.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
+                                (self.logo.size.1 as f32 * screen_height / 720.0).round(),
                             ];
-
-                            // Calculate the position to center the image
                             let image_pos_x = (available_width - scaled_size[0]) / 2.0;
-                            let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - 150.0;
+                            let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - screen_height * 0.2;
 
                             ui.set_cursor_pos([image_pos_x, image_pos_y]);
 
-                            let texture_id = imgui::TextureId::from(self.logo.id as usize);
-                            imgui::Image::new(texture_id, scaled_size).build(&ui);
-
-                            ui.set_cursor_pos([pos_x, pos_y - 50.0]);
-                            ui.text_colored(
-                                [1.0, 0.0, 0.0, 1.0],
-                                "Welcome! Please choose an option.",
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                false, Vec3::new(0.0, 0.0, 0.0), 3
                             );
 
-                            ui.set_cursor_pos([pos_x, pos_y - 25.0]);
+                            // Draw 3D menu button for the image
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                false, Vec3::new(0.40, 4.5, 0.0), 0
+                            );
 
+                            // ui.set_cursor_pos([pos_x - screen_width * 0.04, pos_y - screen_height * 0.08]);
+                            // ui.text_colored([1.0, 0.0, 0.0, 1.0], "Welcome! Please choose an option.");
+
+                            // Center the button and adjust its size
+                            ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.02]);
+
+                            // Make button invisible but functional
+                            let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
+
+                            // Singleplayer button
                             if ui.button_with_size("Singleplayer", [button_width, button_height]) {
                                 unsafe {
                                     SINGLEPLAYER = true;
@@ -332,16 +594,33 @@ impl WindowAndKeyContext {
                                 }
                             }
 
-                            ui.set_cursor_pos([pos_x, pos_y]);
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                ui.is_item_hovered(), Vec3::new(0.0, 2.75, 0.0), 1
+                            );
 
+                                    ui.set_cursor_pos([pos_x, pos_y + screen_height * 0.08  - screen_height * 0.01]);
+
+                            // Multiplayer button
                             if ui.button_with_size("Multiplayer", [button_width, button_height]) {
                                 unsafe {
                                     SINGLEPLAYER = false;
                                     DECIDEDSPORMP = true;
                                 }
                             }
-                        });
 
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                ui.is_item_hovered(), Vec3::new(0.0, 2.0, 0.0), 2
+                            );
+
+                            // Pop the button style after use
+                            sttok1.pop();
+                        });
                     // Render the ImGui frame
                     self.guirenderer.render(&mut self.imgui);
 
@@ -367,6 +646,11 @@ impl WindowAndKeyContext {
                                 self.height = hei as u32;
                                 unsafe {
                                     gl::Viewport(0, 0, wid, hei);
+                                    WINDOWHEIGHT = hei;
+                                    WINDOWWIDTH = wid;
+                                    let mut cam = &mut self.menu_camera;
+                                    let cfov = cam.fov;
+                                    cam.update_fov(cfov);
                                 }
                             }
                             glfw::WindowEvent::CursorPos(xpos, ypos) => {
@@ -939,7 +1223,14 @@ impl WindowAndKeyContext {
                                             unsafe {
                                                 gl::Viewport(0, 0, wid, hei);
                                                 WINDOWHEIGHT = hei;
-                                                WINDOWWIDTH = wid
+                                                WINDOWWIDTH = wid;
+                                                let cam = unsafe {CAMERA.as_ref().unwrap()};
+                                                let mut c = cam.lock();
+                                                let cfov = c.fov;
+                                                c.update_fov(cfov);
+                                                let mut cam = &mut self.menu_camera;
+                                                let cfov = cam.fov;
+                                                cam.update_fov(cfov);
                                             }
                                         }
                                         glfw::WindowEvent::CursorPos(xpos, ypos) => {
@@ -1202,8 +1493,18 @@ impl WindowAndKeyContext {
                                 glfw::WindowEvent::FramebufferSize(wid, hei) => {
                                     self.width = wid as u32;
                                     self.height = hei as u32;
+                                    
                                     unsafe {
                                         gl::Viewport(0, 0, wid, hei);
+                                        WINDOWHEIGHT = hei;
+                                        WINDOWWIDTH = wid;
+                                        let cam = unsafe {CAMERA.as_ref().unwrap()};
+                                        let mut c = cam.lock();
+                                        let cfov = c.fov;
+                                        c.update_fov(cfov);
+                                        let mut cam = &mut self.menu_camera;
+                                        let cfov = cam.fov;
+                                        cam.update_fov(cfov);
                                     }
                                 }
                                 glfw::WindowEvent::CursorPos(xpos, ypos) => {

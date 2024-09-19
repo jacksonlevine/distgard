@@ -240,7 +240,7 @@ pub struct ChunkFacade {
 }
 
 pub static ChW: i32 = 15;
-pub static ChH: i32 = 85;
+pub static ChH: i32 = 200;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -2742,7 +2742,7 @@ impl ChunkSystem {
         let per = perlin;
 
         let mut spot = spot;
-        spot.y += 100;
+        spot.y += 50;
         let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0)
             + Vec3::new(0.0, 10.0, 0.0);
         let xzdivisor1 = 600.35 * 4.0;
@@ -2960,7 +2960,7 @@ impl ChunkSystem {
             //     }
             // }
             _ => {
-                static WL: f32 = 20.0;
+                static WL: f32 = 60.0;
 
                 let biomenum = Self::_biome_noise(
                     per,

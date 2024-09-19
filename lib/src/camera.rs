@@ -1,4 +1,4 @@
-use crate::game::{ControlsState, MOVING, SPRINTING};
+use crate::{game::{ControlsState, MOVING, SPRINTING}, windowandkey::{WINDOWHEIGHT, WINDOWWIDTH}};
 use bevy::prelude::*;
 
 #[derive(Clone, Default)]
@@ -55,7 +55,7 @@ impl Camera {
         let up = direction.cross(right);
 
         let model = Mat4::IDENTITY;
-        let projection = Mat4::perspective_rh_gl(fov.to_radians(), 1280.0 / 720.0, near, far);
+        let projection = Mat4::perspective_rh_gl(fov.to_radians(), unsafe { WINDOWWIDTH as f32 } / unsafe { WINDOWHEIGHT as f32 }, near, far);
         let view = Mat4::look_at_rh(position, position + direction, up);
         Camera {
             yaw: 0.0,
@@ -77,7 +77,7 @@ impl Camera {
     pub fn update_fov(&mut self, value: f32) {
         self.fov = value.clamp(50.0, 160.0);
         self.projection =
-            Mat4::perspective_rh_gl(self.fov.to_radians(), 1280.0 / 720.0, self.near, self.far);
+            Mat4::perspective_rh_gl(self.fov.to_radians(), unsafe { WINDOWWIDTH as f32 } / unsafe { WINDOWHEIGHT as f32 }, self.near, self.far);
         self.recalculate();
     }
     pub fn recalculate(&mut self) {

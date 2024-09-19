@@ -28,7 +28,7 @@ fn num_components(dimensions: Dimensions) -> i32 {
     }
 }
 
-fn load_document_textures(document: &gltf::Document, buffers: &[gltf::buffer::Data], base_path: &str) -> Vec<GLuint> {
+pub fn load_document_textures(document: &gltf::Document, buffers: &[gltf::buffer::Data], base_path: &str) -> Vec<GLuint> {
     document.images().map(|image| {
         let data = match image.source() {
             Source::Uri { uri, mime_type: _ } => {
@@ -516,6 +516,44 @@ impl Game {
                 ),
                 1,
             );
+
+            gl::Uniform1f(
+                gl::GetUniformLocation(
+                    self.modelshader.shader_id,
+                    b"istitle\0".as_ptr() as *const i8,
+                ),
+                0.0,
+            );
+
+            gl::Uniform1f(
+                gl::GetUniformLocation(
+                    self.modelshader.shader_id,
+                    b"time\0".as_ptr() as *const i8,
+                ),
+               0.0 //THIS IS ONLY NEEDED FOR THE MENU BUTTONS MOVING UP AND DOWN
+            );
+            gl::Uniform1f(
+                gl::GetUniformLocation(
+                    self.modelshader.shader_id,
+                    b"isbutton\0".as_ptr() as *const i8,
+                ),
+                0.0,
+            );
+            gl::Uniform1f(
+                gl::GetUniformLocation(
+                    self.modelshader.shader_id,
+                    b"issky\0".as_ptr() as *const i8,
+                ),
+                0.0,
+            );
+            gl::Uniform1f(
+                gl::GetUniformLocation(
+                    self.modelshader.shader_id,
+                    b"buttonactive\0".as_ptr() as *const i8,
+                ),
+                0.0
+            );
+
 
             gl::Uniform1f(
                 gl::GetUniformLocation(
