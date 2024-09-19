@@ -4736,7 +4736,7 @@ impl Game {
             if self.controls.up {
                 let amount = unsafe {
                     if SPRINTING {
-                        12.0
+                        18.0
                     } else {
                         7.0
                     }

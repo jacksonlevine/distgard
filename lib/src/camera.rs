@@ -92,10 +92,10 @@ impl Camera {
         delta: &f32,
         speed_mult: f32,
     ) -> Vec3 {
-        let mut xz_speed_mult = 2.2;
+        let mut xz_speed_mult = 2.2 * 3.0;
         unsafe {
             if SPRINTING {
-                xz_speed_mult = 2.74;
+                xz_speed_mult = 2.74 * 3.0;
             }
         }
 
@@ -132,7 +132,7 @@ impl Camera {
 
         //let closeness_to_stopped = (0.7 - Vec3::new(self.velocity.x, 0.0, self.velocity.z).length()).max(0.0);
 
-        let slipperiness: f32 = 0.3;
+        let slipperiness: f32 = 0.01;
 
         self.velocity.x *= slipperiness.powf(*delta * speed_mult);
         self.velocity.z *= slipperiness.powf(*delta * speed_mult);
