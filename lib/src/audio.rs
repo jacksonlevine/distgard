@@ -66,7 +66,7 @@ impl SoundSink {
 pub fn spawn_audio_thread() {
     thread::spawn(|| {
         unsafe {
-            while SHOULDRUN {
+            while true {
                 match FUNC_QUEUE.pop() {
                     Some(f) => {
                         match f {

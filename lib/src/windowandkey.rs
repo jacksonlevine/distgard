@@ -3,8 +3,8 @@ use gl::types::{GLenum, GLuint};
 use gltf::mesh::util::ReadIndices;
 
 use crate::{
-    blockinfo::Blocks, game::{
-        Game, JGltfNode, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
+    audio::spawn_audio_thread, blockinfo::Blocks, game::{
+        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, SONGS, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         LAST_ENTERED_SERVERADDRESS, LOAD_MISC, LOAD_OR_INITIALIZE_STATICS, MISCSETTINGS, SAVE_LESA,
     }, texture::Texture
@@ -121,6 +121,8 @@ fn toggle_fullscreen(window_ptr: *mut glfw::ffi::GLFWwindow) {
 use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
 use clipboard::ClipboardContext;
+
+pub static MAINMENUSONG: &str = "assets/music/bb4.mp3";
 
 impl WindowAndKeyContext {
 
@@ -271,7 +273,8 @@ impl WindowAndKeyContext {
             wak.load_model(path!("assets/models/skybox.gltf"));
             wak.create_model_vbos();
         }
-   
+
+        
             
 
         wak
@@ -510,6 +513,23 @@ impl WindowAndKeyContext {
         unsafe {
             match DECIDEDSPORMP {
                 false => {
+
+                    static mut playsong: bool = true;
+
+                    
+                    
+                    
+
+                    if playsong {
+                        #[cfg(feature = "audio")]
+                        {
+                            spawn_audio_thread();
+                            unsafe { AUDIOPLAYER.play_in_head(MAINMENUSONG) };
+                            playsong = false;
+                        }
+                        
+                    }
+
                     self.imgui
                         .io_mut()
                         .update_delta_time(Duration::from_secs_f32(self.delta_time));

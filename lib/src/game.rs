@@ -90,7 +90,7 @@ use crate::textureface::TextureFace;
 use crate::tools::{get_block_material, get_tools_target_material, Material};
 use crate::vec::{self, IVec2, IVec3};
 use crate::voxmodel::JVoxModel;
-use crate::windowandkey::uncapkb;
+use crate::windowandkey::{uncapkb, MAINMENUSONG};
 use crate::worldgeometry::WorldGeometry;
 
 static mut CONVEYOR_SOUND_TIMER: f32 = 0.0;
@@ -458,6 +458,7 @@ pub struct Game {
     pub headinwater: bool,
 
     pub currentbuttons: Vec<(String, String)>,
+
     pub loadedworld: AtomicBool,
     pub addressentered: Arc<AtomicBool>,
     pub address: Arc<Mutex<Option<String>>>,
@@ -1163,10 +1164,7 @@ impl Game {
 
         let stamina = Arc::new(AtomicI32::new(100));
 
-        if !headless {
-            #[cfg(feature = "audio")]
-            spawn_audio_thread();
-        }
+        
 
         faders.write().extend(vec![
             Fader::new(83.0, 80.0, 30.0, false), //FOV fader for moving
@@ -5924,6 +5922,8 @@ impl Game {
         let carc = cam.clone();
         let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
         let csysarc = csys.clone();
+
+        unsafe {AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());}
 
         //Uncomment to do automata (just snow updating grass simulation for now)
         csysarc.write().do_automata(&carc);
