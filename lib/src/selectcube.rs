@@ -4,7 +4,7 @@ use crate::shader::Shader;
 
 pub struct SelectCube {
     shader: Shader,
-    vbo: GLuint
+    // vbo: GLuint
 }
 
 impl SelectCube {
@@ -49,7 +49,7 @@ impl SelectCube {
         }
         SelectCube {
             shader,
-            vbo
+            // vbo
         }
     }
     #[cfg(feature = "glfw")]

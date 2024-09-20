@@ -1,32 +1,35 @@
 
 
 use std::{fs, path::Path, sync::Arc};
+use std::ptr::addr_of;
 use tracing::info;
 use dashmap::DashMap;
 use gl::types::{GLsizeiptr, GLuint, GLvoid};
 use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
-use gltf::{accessor::{Dimensions}, image::Source, mesh::util::ReadIndices};
+// use gltf::{accessor::{Dimensions}, image::Source, mesh::util::ReadIndices};
+use gltf::{image::Source, mesh::util::ReadIndices};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use uuid::Uuid;
-use crate::{camera::Camera, planetinfo::Planets};
-use gltf::{animation::util::ReadOutputs};
+// use crate::{camera::Camera, planetinfo::Planets};
+use crate::planetinfo::Planets;
+use gltf::animation::util::ReadOutputs;
 use crate::{collisioncage::{CollCage, Side}, game::*, modelentity::{AggroTarget, ModelEntity}, vec};
 use percent_encoding::percent_decode_str;
 
 
 
-fn num_components(dimensions: Dimensions) -> i32 {
-    match dimensions {
-        Dimensions::Scalar => 1,
-        Dimensions::Vec2 => 2,
-        Dimensions::Vec3 => 3,
-        Dimensions::Vec4 => 4,
-        Dimensions::Mat2 => 4, 
-        Dimensions::Mat3 => 9, 
-        Dimensions::Mat4 => 16,
-    }
-}
+// fn num_components(dimensions: Dimensions) -> i32 {
+//     match dimensions {
+//         Dimensions::Scalar => 1,
+//         Dimensions::Vec2 => 2,
+//         Dimensions::Vec3 => 3,
+//         Dimensions::Vec4 => 4,
+//         Dimensions::Mat2 => 4, 
+//         Dimensions::Mat3 => 9, 
+//         Dimensions::Mat4 => 16,
+//     }
+// }
 
 pub fn load_document_textures(document: &gltf::Document, buffers: &[gltf::buffer::Data], base_path: &str) -> Vec<GLuint> {
     document.images().map(|image| {
@@ -46,7 +49,7 @@ pub fn load_document_textures(document: &gltf::Document, buffers: &[gltf::buffer
                     Err(e) => {
                         // Handle errors, e.g., file not found
                         panic!("Failed to read image file: {:?}", e);
-                        Vec::new()
+                        // Vec::new()
                     }
                 }
             },
@@ -90,37 +93,37 @@ pub fn load_document_textures(document: &gltf::Document, buffers: &[gltf::buffer
     }).collect()
 }
 
-fn load_textures(images: &[gltf::image::Data]) -> Vec<GLuint> {
-    images.iter().map(|image_data| {
-        let img = image::load_from_memory(&image_data.pixels).expect("Failed to decode image").to_rgba8();
-        let dimensions = img.dimensions();
+// fn load_textures(images: &[gltf::image::Data]) -> Vec<GLuint> {
+//     images.iter().map(|image_data| {
+//         let img = image::load_from_memory(&image_data.pixels).expect("Failed to decode image").to_rgba8();
+//         let dimensions = img.dimensions();
 
-        let mut texture: GLuint = 0;
-        #[cfg(feature = "glfw")]
-        unsafe {
-            gl::CreateTextures(gl::TEXTURE_2D, 1, &mut texture);
-            gl::TextureStorage2D(texture, 1, gl::RGBA8, dimensions.0 as i32, dimensions.1 as i32);
-            gl::TextureSubImage2D(
-                texture,
-                0,
-                0,
-                0,
-                dimensions.0 as i32,
-                dimensions.1 as i32,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                img.as_raw().as_ptr() as *const GLvoid
-            );
+//         let mut texture: GLuint = 0;
+//         #[cfg(feature = "glfw")]
+//         unsafe {
+//             gl::CreateTextures(gl::TEXTURE_2D, 1, &mut texture);
+//             gl::TextureStorage2D(texture, 1, gl::RGBA8, dimensions.0 as i32, dimensions.1 as i32);
+//             gl::TextureSubImage2D(
+//                 texture,
+//                 0,
+//                 0,
+//                 0,
+//                 dimensions.0 as i32,
+//                 dimensions.1 as i32,
+//                 gl::RGBA,
+//                 gl::UNSIGNED_BYTE,
+//                 img.as_raw().as_ptr() as *const GLvoid
+//             );
 
-            gl::TextureParameteri(texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TextureParameteri(texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl::TextureParameteri(texture, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TextureParameteri(texture, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-        }
+//             gl::TextureParameteri(texture, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+//             gl::TextureParameteri(texture, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+//             gl::TextureParameteri(texture, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+//             gl::TextureParameteri(texture, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+//         }
 
-        texture
-    }).collect()
-}
+//         texture
+//     }).collect()
+// }
 
 fn get_rotation_matrix(xrot: f32, yrot: f32, zrot: f32) -> Mat4 {
     let rx = Mat4::from_rotation_x(-xrot);
@@ -180,7 +183,7 @@ impl Game {
                             let final_vertex = rotated_vertex + entity.position;
                             final_vertex
                         });
-                        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+                        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
                         // Rasterize the triangle and update the collision map
                         rasterize_triangle(transformed_triangle, &csys.read().justcollisionmap);
                     }
@@ -191,7 +194,7 @@ impl Game {
 
 
     pub fn create_non_static_model_entity(&mut self, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32, hostile: bool) {
-        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let cam = unsafe { CAMERA.as_ref().unwrap() };
         let mut modent = ModelEntity::new_with_jump_height(model_index, pos, scale, rot, csys, &cam, jump_height, hostile);
         
@@ -216,7 +219,7 @@ impl Game {
     }
 
     pub fn insert_static_model_entity(&mut self, id: u32, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32, hostile: bool) {
-        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let cam = unsafe { CAMERA.as_ref().unwrap() };
         let mut modent = ModelEntity::new_with_id(id, model_index, pos, scale, rot, csys, &cam, hostile);
         modent.allowable_jump_height = jump_height;
@@ -242,7 +245,7 @@ impl Game {
 
     pub fn insert_player_model_entity(&mut self, id: Uuid, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, jump_height: f32) {
         
-        let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let cam = unsafe { CAMERA.as_ref().unwrap() };
         let mut modent = ModelEntity::new_with_id(0/*Does not use model entities id system, uses players id system */, model_index, pos, scale, rot, &csys, &cam, false);
         modent.allowable_jump_height = jump_height;
@@ -501,7 +504,7 @@ impl Game {
 
             
             let camclone = {
-                let cam = unsafe { CAMERA.as_ref().unwrap() };
+                let cam = CAMERA.as_ref().unwrap();
                 let cam_lock = cam.lock();
                 cam_lock.clone()
                 //Camera::new()
@@ -714,7 +717,7 @@ impl Game {
                                         entity.position.y as i32,
                                         entity.position.z as i32
                                     );
-                                    let csys = unsafe { (&CHUNKSYS).as_ref().unwrap() };
+                                    let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
                                     let csyslock = csys.read();
                                     let lmlock = csyslock.lightmap.lock();
 
@@ -821,10 +824,6 @@ impl Game {
 
             gl::Enable(gl::CULL_FACE);
             //gl::DepthMask(gl::TRUE);
-        }
-        
-        unsafe {
-
         }
     }
     #[cfg(feature = "glfw")]

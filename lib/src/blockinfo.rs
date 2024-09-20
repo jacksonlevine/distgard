@@ -193,49 +193,49 @@ impl Blocks {
         }
     }
     pub fn get_light_color(id: u32) -> LightColor {
-        static white: LightColor = LightColor{x: 15, y: 15, z:15};
-        static blue: LightColor = LightColor{x: 0, y:0, z:15};
-        static purple: LightColor = LightColor{x: 7, y:0, z:10};
-        static yellow: LightColor = LightColor{x: 15, y:15, z:0};
+        static WHITE: LightColor = LightColor{x: 15, y: 15, z:15};
+        static BLUE: LightColor = LightColor{x: 0, y:0, z:15};
+        static PURPLE: LightColor = LightColor{x: 7, y:0, z:10};
+        static YELLOW: LightColor = LightColor{x: 15, y:15, z:0};
 
-        static red: LightColor = LightColor{x: 15, y:0, z:0};
-        static green: LightColor = LightColor{x: 0, y:15, z:0};
-        static orange: LightColor = LightColor{x: 15, y:7, z:0};
-        static teal: LightColor = LightColor{x: 2, y:15, z:12};
+        static RED: LightColor = LightColor{x: 15, y:0, z:0};
+        static GREEN: LightColor = LightColor{x: 0, y:15, z:0};
+        static ORANGE: LightColor = LightColor{x: 15, y:7, z:0};
+        static TEAL: LightColor = LightColor{x: 2, y:15, z:12};
 
-        static torch: LightColor = LightColor{x: 10, y:8, z:1};
+        static TORCH: LightColor = LightColor{x: 10, y:8, z:1};
         
         match id {
             18 => {
-                white
+                WHITE
             }
             24 => {
-                blue
+                BLUE
             }
             25 => {
-                purple
+                PURPLE
             }
             49 => {
-                torch
+                TORCH
             }
             26 => {
-                yellow
+                YELLOW
             }
 
             27 => {
-                red
+                RED
             }
             28 => {
-                green
+                GREEN
             }
             29 => {
-                orange
+                ORANGE
             }
             30 => {
-                teal
+                TEAL
             }
             _ => {
-                white
+                WHITE
             }
         }
     }

@@ -17,7 +17,7 @@ pub static CHUNKPOSDEFAULT: i32 = 999999;
 
 use bevy::prelude::*;
 use gl::types::GLuint;
-use lockfree::queue::Queue;
+// use lockfree::queue::Queue;
 use num_enum::FromPrimitive;
 use once_cell::sync::Lazy;
 use rand::rngs::StdRng;
@@ -44,7 +44,7 @@ use crate::game::AUDIOPLAYER;
 //use crate::game::CHUNKDRAWINGHERE;
 use crate::game::CURRSEED;
 
-use crate::game::PLAYERCHUNKPOS;
+// use crate::game::PLAYERCHUNKPOS;
 use crate::game::PLAYERPOS;
 use crate::game::WEATHERTYPE;
 use crate::packedvertex::PackedVertex;
@@ -240,8 +240,8 @@ pub struct ChunkFacade {
     pub pos: vec::IVec2,
 }
 
-pub static ChW: i32 = 15;
-pub static ChH: i32 = 200;
+pub static CH_W: i32 = 15;
+pub static CH_H: i32 = 200;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -606,7 +606,7 @@ impl ChunkSystem {
 
     pub fn start_with_seed(_seed: u32) {}
 
-    pub fn do_automata(&mut self, cam: &Arc<Mutex<Camera>>) {
+    pub fn do_automata(&mut self, _cam: &Arc<Mutex<Camera>>) {
         pub const ODDBIT: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
         //let chunkslist = self.chunks.clone();
 
@@ -620,7 +620,7 @@ impl ChunkSystem {
         thread::spawn(move || {
             let mut rng = StdRng::from_entropy();
 
-            let mut ODDFRAME: u32 = 0;
+            let mut odd_frame: u32 = 0;
 
             loop {
                 let psnap = unsafe { PLAYERPOS.snapshot() };
@@ -640,14 +640,14 @@ impl ChunkSystem {
                         match takencare.get(&poshere) {
                             Some(c) => {
                                 let c = c.value();
-                                for i in 0..ChW {
-                                    for k in 0..ChW {
-                                        let hit_block = false;
-                                        for j in (0..ChH).rev() {
+                                for i in 0..CH_W {
+                                    for k in 0..CH_W {
+                                        // let hit_block = false;
+                                        for j in (0..CH_H).rev() {
                                             let spot = vec::IVec3 {
-                                                x: ((c.pos.x) * ChW) + i,
+                                                x: ((c.pos.x) * CH_W) + i,
                                                 y: j,
-                                                z: (c.pos.y * ChW) + k,
+                                                z: (c.pos.y * CH_W) + k,
                                             };
                                             if rng.gen_range(0..10) == 9 {
                                             
@@ -655,7 +655,7 @@ impl ChunkSystem {
                                             let combined =
                                                 Self::_blockat(&nudm, &udm, &per.read(), spot);
                                             let block = combined & Blocks::block_id_bits();
-                                            let flags = combined & Blocks::block_flag_bits();
+                                            // let flags = combined & Blocks::block_flag_bits();
                                             unsafe {
                                                 //println!("weathertype: {}", WEATHERTYPE);
                                                 if true {
@@ -684,7 +684,7 @@ impl ChunkSystem {
                                                         }
                                                         2 => {
                                                             if combined
-                                                                == (2u32 | (ODDBIT * ODDFRAME))
+                                                                == (2u32 | (ODDBIT * odd_frame))
                                                             {
                                                                 let belowspot =
                                                                     spot + IVec3::new(0, -1, 0);
@@ -701,16 +701,16 @@ impl ChunkSystem {
                                                                     AUTOMATA_QUEUED_CHANGES
                                                                         .push_back(ACSet::new(2, [
                                                                         AutomataChange::new(
-                                                                            (2 | (ODDBIT
-                                                                                * (ODDFRAME))),
+                                                                            2 | (ODDBIT
+                                                                                * (odd_frame)),
                                                                             spot,
                                                                             0,
                                                                         ),
                                                                         AutomataChange::new(
                                                                             0,
                                                                             belowspot,
-                                                                            (2 | (ODDBIT
-                                                                                * (1 - ODDFRAME))),
+                                                                            2 | (ODDBIT
+                                                                                * (1 - odd_frame)),
                                                                         ),
                                                                     ]));
                                                                 }
@@ -792,7 +792,7 @@ impl ChunkSystem {
                 }
 
                 thread::sleep(Duration::from_secs_f32(0.5));
-                ODDFRAME = 1 - ODDFRAME;
+                odd_frame = 1 - odd_frame;
             }
         });
     }
@@ -869,14 +869,14 @@ impl ChunkSystem {
     
     pub fn spot_to_chunk_pos(spot: &vec::IVec3) -> vec::IVec2 {
         return vec::IVec2 {
-            x: (spot.x as f32 / ChW as f32).floor() as i32,
-            y: (spot.z as f32 / ChW as f32).floor() as i32,
+            x: (spot.x as f32 / CH_W as f32).floor() as i32,
+            y: (spot.z as f32 / CH_W as f32).floor() as i32,
         };
     }
     pub fn spot_to_chunk_pos_bevyvec3(spot: &bevy::prelude::Vec3) -> vec::IVec2 {
         return vec::IVec2 {
-            x: (spot.x as f32 / ChW as f32).floor() as i32,
-            y: (spot.z as f32 / ChW as f32).floor() as i32,
+            x: (spot.x as f32 / CH_W as f32).floor() as i32,
+            y: (spot.z as f32 / CH_W as f32).floor() as i32,
         };
     }
     pub fn initial_rebuild_on_main_thread(
@@ -890,8 +890,8 @@ impl ChunkSystem {
         // }
 
         let user_cpos = IVec2 {
-            x: (campos.x / ChW as f32).floor() as i32,
-            y: (campos.z / ChW as f32).floor() as i32,
+            x: (campos.x / CH_W as f32).floor() as i32,
+            y: (campos.z / CH_W as f32).floor() as i32,
         };
 
         let mut neededspots = Vec::new();
@@ -1330,7 +1330,7 @@ impl ChunkSystem {
                     }
                 }
 
-                let my_ray_here = match inner_light_seg.rays.iter_mut().find(|r| r.origin == origin)
+                let _my_ray_here = match inner_light_seg.rays.iter_mut().find(|r| r.origin == origin)
                 {
                     Some(k) => {
                         if k.value.x < n.0.x {
@@ -1353,8 +1353,9 @@ impl ChunkSystem {
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
-                drop(my_ray_here);
-                drop(inner_light_seg);
+                // dropping a reference does nothing
+                // drop(my_ray_here);
+                // drop(inner_light_seg);
             } else {
                 let chunkcoordoforigin = Self::spot_to_chunk_pos(&origin);
                 let chunkcoordhere = Self::spot_to_chunk_pos(&n.1);
@@ -1376,7 +1377,7 @@ impl ChunkSystem {
                     }
                 }
 
-                let my_ray_here = match inner_light_seg.rays.iter_mut().find(|r| r.origin == origin)
+                let _my_ray_here = match inner_light_seg.rays.iter_mut().find(|r| r.origin == origin)
                 {
                     Some(k) => {
                         if k.value.x < n.0.x {
@@ -1399,8 +1400,9 @@ impl ChunkSystem {
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
-                drop(my_ray_here);
-                drop(inner_light_seg);
+                // dropping a reference does nothing
+                // drop(my_ray_here);
+                // drop(inner_light_seg);
 
                 if n.0.x > 1 || n.0.y > 1 || n.0.z > 1 {
                     let neighbs = Cube::get_neighbors();
@@ -1484,10 +1486,10 @@ impl ChunkSystem {
 
         let lmarc = self.lightmap.clone();
 
-        for x in 0..ChW {
-            for z in 0..ChW {
-                for y in 0..ChH {
-                    let blockcoord = IVec3::new(pos.x * ChW + x, y, pos.y * ChW + z);
+        for x in 0..CH_W {
+            for z in 0..CH_W {
+                for y in 0..CH_H {
+                    let blockcoord = IVec3::new(pos.x * CH_W + x, y, pos.y * CH_W + z);
                     let lmlock = lmarc.lock();
                     match lmlock.get(&blockcoord) {
                         Some(k) => {
@@ -1552,7 +1554,7 @@ impl ChunkSystem {
 
         let chunklock = chunklock.clone();
 
-        static mut rng: Lazy<StdRng> = Lazy::new(|| StdRng::from_entropy());
+        static mut RNG: Lazy<StdRng> = Lazy::new(|| StdRng::from_entropy());
 
         if light {
             self.lightpass_on_chunk(chunklock.pos);
@@ -1585,14 +1587,14 @@ impl ChunkSystem {
         let mut weatherstoptops: HashMap<vec::IVec2, i32> = HashMap::new();
         let mut tops: HashMap<vec::IVec2, i32> = HashMap::new();
 
-        for i in 0..ChW {
-            for k in 0..ChW {
-                let mut hit_block = false;
-                for j in (0..ChH).rev() {
+        for i in 0..CH_W {
+            for k in 0..CH_W {
+                let mut hit_block: bool;
+                for j in (0..CH_H).rev() {
                     let spot = vec::IVec3 {
-                        x: (chunklock.pos.x * ChW) + i,
+                        x: (chunklock.pos.x * CH_W) + i,
                         y: j,
-                        z: (chunklock.pos.y * ChW) + k,
+                        z: (chunklock.pos.y * CH_W) + k,
                     };
                     let combined = self.blockatmemo(spot, &mut memo);
                     let block = combined & Blocks::block_id_bits();
@@ -2176,21 +2178,21 @@ impl ChunkSystem {
                     None => 0,
                 };
 
-                if unsafe { rng.gen_range(0..=10) > 9 } && topy < 115 {
+                if unsafe { RNG.gen_range(0..=10) > 9 } && topy < 115 {
                     //let mut rng = StdRng::from_entropy();
 
                     //spot xz top
                     let spoint: IVec3 = vec::IVec3 {
-                        x: (chunklock.pos.x * ChW) + i,
+                        x: (chunklock.pos.x * CH_W) + i,
                         y: topy,
-                        z: (chunklock.pos.y * ChW) + k,
+                        z: (chunklock.pos.y * CH_W) + k,
                     };
 
                     //spot xz top
                     let spo = Vec3 {
-                        x: (chunklock.pos.x * ChW) as f32 + i as f32,
+                        x: (chunklock.pos.x * CH_W) as f32 + i as f32,
                         y: topy as f32,
-                        z: (chunklock.pos.y * ChW) as f32 + k as f32,
+                        z: (chunklock.pos.y * CH_W) as f32 + k as f32,
                     };
 
                     //LET BLOCKLIGHT AT TOP
@@ -2339,7 +2341,7 @@ impl ChunkSystem {
                         14.0,
                     ]);
 
-                    let randyoffset = unsafe { rng.gen_range(0.0..1.0) };
+                    let randyoffset = unsafe { RNG.gen_range(0.0..1.0) };
 
                     wuvdata.extend_from_slice(&[
                         face.blx,
@@ -2617,10 +2619,10 @@ impl ChunkSystem {
 
         //let mut index = 0;
 
-        for x in 0..ChW {
-            for z in 0..ChW {
-                for y in (0..ChH - 40).rev() {
-                    let coord = IVec3::new(cpos.x * ChW + x, y, cpos.y * ChW + z);
+        for x in 0..CH_W {
+            for z in 0..CH_W {
+                for y in (0..CH_H - 40).rev() {
+                    let coord = IVec3::new(cpos.x * CH_W + x, y, cpos.y * CH_W + z);
                     //if index == spot {
                     if dim_floors.contains(&self.natural_blockat(coord)) {
                         let featnoise = self.feature_noise(IVec2 {
@@ -2761,7 +2763,7 @@ impl ChunkSystem {
         spot.y += 50;
         let spot = (Vec3::new(spot.x as f32, spot.y as f32, spot.z as f32) / 3.0)
             + Vec3::new(0.0, 10.0, 0.0);
-        let xzdivisor1 = 600.35 * 4.0;
+        // let xzdivisor1 = 600.35 * 4.0;
         let xzdivisor2 = 1000.35 * 4.0;
 
         let mut y = spot.y - 20.0;

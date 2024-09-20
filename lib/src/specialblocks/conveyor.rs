@@ -18,7 +18,7 @@ impl ConveyorInfo {
 
 
     pub fn conveyor_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 ConveyorInfo::base_conveyor_model().to_vec(),
                 rotate_coordinates_around_y_negative_90(ConveyorInfo::base_conveyor_model(), 1),
@@ -26,7 +26,7 @@ impl ConveyorInfo {
                 rotate_coordinates_around_y_negative_90(ConveyorInfo::base_conveyor_model(), 3)
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_conveyor_uvs() -> Vec<f32> {
@@ -78,7 +78,7 @@ impl ConveyorInfo {
     }
 
     pub fn base_conveyor_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 180] = [
+        static PLAYER_IS_MINUS_Z: [f32; 180] = [
             0.0, 1.0, 0.0, 0.0, 14.0,
             0.0, 0.0, 1.0, 0.0, 14.0,
             0.0, 0.0, 0.0, 0.0, 14.0,
@@ -117,7 +117,7 @@ impl ConveyorInfo {
             1.0, 1.0, 0.0, 0.0, 14.0,
 
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
     
 }

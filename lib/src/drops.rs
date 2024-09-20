@@ -1,10 +1,10 @@
-use std::{sync::*};
+use std::sync::*;
 use parking_lot::{Mutex, RwLock};
 
 use gl::types::{GLuint, GLvoid};
 use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
-use lockfree::queue::Queue;
+// use lockfree::queue::Queue;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use tracing::info;
@@ -22,7 +22,7 @@ pub struct Drop {
     time_falling_scalar: f32,
     velocity: Vec3,
     bound_box: BoundBox,
-    to_be_deleted: bool,
+    // to_be_deleted: bool,
     amount: u32
 }
 
@@ -44,7 +44,7 @@ impl Drop {
             time_falling_scalar: 1.0,
             velocity: Vec3::new(0.0, 0.0, 0.0),
             bound_box: BoundBox::new(position),
-            to_be_deleted: false,
+            // to_be_deleted: false,
             amount: amt
         }
     }

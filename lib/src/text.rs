@@ -12,7 +12,7 @@ use crate::glyphface::GlyphFace;
 pub struct Text {
     vao: GLuint,
     str: String,
-    laststr: String,
+    // laststr: String,
     vbo: GLuint,
     shader: GLuint,
     count: i32,
@@ -32,7 +32,7 @@ impl Text {
             let mut text = Text {
                 vao,
                 str: String::from_str(str).unwrap(),
-                laststr: String::new(),
+                // laststr: String::new(),
                 vbo,
                 shader,
                 count: 0

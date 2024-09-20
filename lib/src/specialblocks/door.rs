@@ -30,7 +30,7 @@ impl DoorInfo {
 
 
     pub fn door_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 DoorInfo::base_door_model().to_vec(),
                 rotate_coordinates_around_y_negative_90(DoorInfo::base_door_model(), 1),
@@ -38,7 +38,7 @@ impl DoorInfo {
                 rotate_coordinates_around_y_negative_90(DoorInfo::base_door_model(), 3)
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_opposite_door_bits(input: u32) -> u32 {
@@ -123,7 +123,7 @@ impl DoorInfo {
     }
 
     pub fn base_door_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 150] = [
+        static PLAYER_IS_MINUS_Z: [f32; 150] = [
             0.0, 0.0, 0.0, 0.0, 16.0, // front
             1.0, 0.0, 0.0, 0.0, 16.0,
             1.0, 1.0, 0.0, 0.0, 16.0,
@@ -164,6 +164,6 @@ impl DoorInfo {
             1.0, 1.0, 0.25, 0.0, 16.0,
             1.0, 0.0, 0.25, 0.0, 16.0, // back
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
 }

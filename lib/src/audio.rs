@@ -7,18 +7,18 @@ use tracing::info;
 
 
 #[cfg(feature = "audio")]
-use crate::game::{AUDIOPLAYER, SHOULDRUN};
+use crate::game::AUDIOPLAYER;
 use crate::statics::MISCSETTINGS;
 
 
 
 pub const POSFACTOR: f32 = 0.5; //Used for increasing the spread range of spatial sounds by scaling down the positions of everything.
 
-pub static mut FUNC_QUEUE: Lazy<Queue<FuncQueue>> = Lazy::new(|| Queue::new());
+static mut FUNC_QUEUE: Lazy<Queue<FuncQueue>> = Lazy::new(|| Queue::new());
 
 enum FuncQueue {
-    play_in_head(String),
-    play(String, Vec3, Vec3, f32)
+    PlayInHead(String),
+    Play(String, Vec3, Vec3, f32)
 }
 
 #[derive(Debug)]
@@ -47,7 +47,7 @@ impl SoundSeries {
 
 pub struct SoundSink {
     sink: SpatialSink,
-    worldpos: Vec3
+    // worldpos: Vec3
 }
 
 impl SoundSink {
@@ -57,7 +57,7 @@ impl SoundSink {
                 worldpos.into(), 
                 (camerapos - cameraright).into(), 
                 (camerapos + cameraright).into()).unwrap(),
-            worldpos
+            // worldpos
         }
     }
 }
@@ -66,14 +66,14 @@ impl SoundSink {
 pub fn spawn_audio_thread() {
     thread::spawn(|| {
         unsafe {
-            while true {
+            loop {
                 match FUNC_QUEUE.pop() {
                     Some(f) => {
                         match f {
-                            FuncQueue::play_in_head(f) => {
+                            FuncQueue::PlayInHead(f) => {
                                 AUDIOPLAYER._play_in_head(f);
                             },
-                            FuncQueue::play(id, pos, vel, vol) => {
+                            FuncQueue::Play(id, pos, vel, vol) => {
                                 AUDIOPLAYER._play(id, &pos, &vel, vol)
                             },
                         }
@@ -123,7 +123,7 @@ impl AudioPlayer {
         self._preload(id.to_string(), file_path.to_string())
     }
 
-    pub fn _preload(&mut self, id: String, file_path: String) -> Result<(), AudioError> {
+    pub fn _preload(&mut self, _id: String, file_path: String) -> Result<(), AudioError> {
         let mut file = File::open(&file_path).unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
@@ -172,7 +172,7 @@ impl AudioPlayer {
 
 
     pub fn play_in_head(&mut self, id: &'static str) {
-        unsafe { FUNC_QUEUE.push(FuncQueue::play_in_head(id.to_string())) };
+        unsafe { FUNC_QUEUE.push(FuncQueue::PlayInHead(id.to_string())) };
     }
 
     pub fn stop_head_sound(&mut self, id: String) {
@@ -223,7 +223,7 @@ impl AudioPlayer {
                 Ok(_) => {
                     self._play_in_head(id.clone());
                 }
-                Err(e) => {
+                Err(_e) => {
                     println!("Couldn't play or preload {}", id);
                 }
             }
@@ -243,11 +243,11 @@ impl AudioPlayer {
     }
 
     pub fn play_stringname(&mut self, id: String, pos: &Vec3, vel: &Vec3, vol: f32) {
-        unsafe { FUNC_QUEUE.push(FuncQueue::play(id, *pos, *vel, vol)) };
+        unsafe { FUNC_QUEUE.push(FuncQueue::Play(id, *pos, *vel, vol)) };
     }
 
     pub fn play(&mut self, id: &'static str, pos: &Vec3, vel: &Vec3, vol: f32) {
-        unsafe { FUNC_QUEUE.push(FuncQueue::play(id.to_string(), *pos , *vel, vol)) };
+        unsafe { FUNC_QUEUE.push(FuncQueue::Play(id.to_string(), *pos , *vel, vol)) };
     }
 
     pub fn _play(&mut self, id: String, pos: &Vec3, vel: &Vec3, vol: f32) {
@@ -295,7 +295,7 @@ impl AudioPlayer {
                 Ok(_) => {
                     self._play(id, &pos, vel, vol);
                 }
-                Err(e) => {
+                Err(_e) => {
                     println!("Couldn't play or preload {}", id);
                 }
             }

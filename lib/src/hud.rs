@@ -1,6 +1,7 @@
-
 use std::sync::*;
-use parking_lot::{Mutex, RwLock};
+use std::ptr::addr_of;
+// use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use atomic::{AtomicI32, AtomicI8};
 use gl::types::{GLuint, GLvoid};
 use bevy::prelude::*;
@@ -283,7 +284,7 @@ impl Hud {
             gl::Uniform1i(tex_loc, 0);
 
             let moused_slot_loc = gl::GetUniformLocation(self.shader.shader_id, b"mousedSlot\0".as_ptr() as *const i8);
-            gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&game::MOUSED_SLOT));
+            gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&*addr_of!(game::MOUSED_SLOT)));
 
             let trans_loc = gl::GetUniformLocation(self.shader.shader_id, b"translation\0".as_ptr() as *const i8);
             gl::Uniform2f(trans_loc, self.mousetrans.x, self.mousetrans.y);
@@ -295,7 +296,7 @@ impl Hud {
 
             let stam = self.stamina.load(atomic::Ordering::Relaxed);
 
-            static mut count: usize = 0;
+            static mut COUNT: usize = 0;
 
             if h != LASTHEALTH || stam != LASTSTAMINA {
 
@@ -347,39 +348,33 @@ impl Hud {
                     startx ,                     starty,                         redface.blx, redface.bly, -1.0,
                 ]);
 
-                unsafe {
-                    count = allgeo.len();
-                }
+                COUNT = allgeo.len();
 
 
                 let vao = self.healthvao;
                 let vbo = self.healthvbo;
 
+                gl::BindVertexArray(vao);
+                gl::NamedBufferData(vbo, (allgeo.len() * std::mem::size_of::<f32>()) as isize, allgeo.as_ptr() as *const GLvoid, gl::STATIC_DRAW);
+                
+                gl::VertexArrayVertexBuffer(vao, 0, vbo, 0, (5 * std::mem::size_of::<f32>()) as i32);
+                gl::EnableVertexArrayAttrib(vao, 0);
+                gl::VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
+                gl::VertexArrayAttribBinding(vao, 0, 0);
 
-                unsafe {
-                    gl::BindVertexArray(vao);
-                    gl::NamedBufferData(vbo, (allgeo.len() * std::mem::size_of::<f32>()) as isize, allgeo.as_ptr() as *const GLvoid, gl::STATIC_DRAW);
-                    
-                    gl::VertexArrayVertexBuffer(vao, 0, vbo, 0, (5 * std::mem::size_of::<f32>()) as i32);
-                    gl::EnableVertexArrayAttrib(vao, 0);
-                    gl::VertexArrayAttribFormat(vao, 0, 2, gl::FLOAT, gl::FALSE, 0);
-                    gl::VertexArrayAttribBinding(vao, 0, 0);
+                gl::EnableVertexArrayAttrib(vao, 1);
+                gl::VertexArrayAttribFormat(vao, 1, 2, gl::FLOAT, gl::FALSE, 2 * std::mem::size_of::<f32>() as u32);
+                gl::VertexArrayAttribBinding(vao, 1, 0);
 
-                    gl::EnableVertexArrayAttrib(vao, 1);
-                    gl::VertexArrayAttribFormat(vao, 1, 2, gl::FLOAT, gl::FALSE, 2 * std::mem::size_of::<f32>() as u32);
-                    gl::VertexArrayAttribBinding(vao, 1, 0);
-
-                    gl::EnableVertexArrayAttrib(vao, 2);
-                    gl::VertexArrayAttribFormat(vao, 2, 1, gl::FLOAT, gl::FALSE, 4 * std::mem::size_of::<f32>() as u32);
-                    gl::VertexArrayAttribBinding(vao, 2, 0);
-
-                }
+                gl::EnableVertexArrayAttrib(vao, 2);
+                gl::VertexArrayAttribFormat(vao, 2, 1, gl::FLOAT, gl::FALSE, 4 * std::mem::size_of::<f32>() as u32);
+                gl::VertexArrayAttribBinding(vao, 2, 0);
 
 
                 LASTHEALTH = h;
             }
 
-            gl::DrawArrays(gl::TRIANGLES, 0, count as i32 / 5);
+            gl::DrawArrays(gl::TRIANGLES, 0, COUNT as i32 / 5);
         }
         
     }
@@ -398,7 +393,7 @@ impl Hud {
             gl::Uniform1i(tex_loc, 0);
 
             let moused_slot_loc = gl::GetUniformLocation(self.shader.shader_id, b"mousedSlot\0".as_ptr() as *const i8);
-            gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&game::MOUSED_SLOT));
+            gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&*addr_of!(game::MOUSED_SLOT)));
 
             let trans_loc = gl::GetUniformLocation(self.shader.shader_id, b"translation\0".as_ptr() as *const i8);
             gl::Uniform2f(trans_loc, self.mousetrans.x, self.mousetrans.y);
@@ -415,7 +410,7 @@ impl Hud {
                 
                 let moused_slot_loc = gl::GetUniformLocation(self.shader.shader_id, b"mousedSlot\0".as_ptr() as *const i8);
 
-                gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&game::MOUSED_SLOT));
+                gl::Uniform1f(moused_slot_loc, HudElement::ass_slot_to_shader_float(&*addr_of!(game::MOUSED_SLOT)));
                 gl::DrawArrays(gl::TRIANGLES, 0, self.chestcount);
             }
 

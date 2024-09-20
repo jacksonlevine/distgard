@@ -19,7 +19,7 @@ impl TallGrassInfo {
 
 
     pub fn tallgrass_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 TallGrassInfo::base_tallgrass_model().to_vec(),
                 TallGrassInfo::base_tallgrass_model().to_vec(),
@@ -27,7 +27,7 @@ impl TallGrassInfo {
                 TallGrassInfo::base_tallgrass_model().to_vec()
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_tallgrass_uvs() -> Vec<f32> {
@@ -54,7 +54,7 @@ impl TallGrassInfo {
     }
 
     pub fn base_tallgrass_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 60] = [
+        static PLAYER_IS_MINUS_Z: [f32; 60] = [
             0.0, 1.0, 0.0,     0.0, 14.0, 
             0.0, 0.0, 0.0,     0.0, 14.0, 
             1.0, 0.0, 1.0,     0.0, 14.0, 
@@ -71,6 +71,6 @@ impl TallGrassInfo {
             1.0, 1.0, 0.0,     0.0, 14.0,
             0.0, 1.0, 1.0,     0.0, 14.0,
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
 }

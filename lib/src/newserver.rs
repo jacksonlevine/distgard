@@ -1,13 +1,14 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use bevy::prelude::*;
-use jeffy_quintet::client::certificate::CertificateVerificationMode;
+// use jeffy_quintet::client::certificate::CertificateVerificationMode;
 use jeffy_quintet::shared::channels::ChannelType;
-use jeffy_quintet::{client::*, server::*, shared::channels::ChannelsConfiguration};
+// use jeffy_quintet::{client::*, server::*, shared::channels::ChannelsConfiguration};
+use jeffy_quintet::{server::*, shared::channels::ChannelsConfiguration};
 
 use jeffy_quintet::server::certificate::CertificateRetrievalMode;
-use connection::ClientEndpointConfiguration;
-use uuid::Uuid;
+// use connection::ClientEndpointConfiguration;
+// use uuid::Uuid;
 
 use crate::server_types::*;
 
@@ -33,70 +34,71 @@ pub fn handle_client_messages(
     mut server: ResMut<QuintetServer>,
     /*...*/
 ) {
-    let mut endpoint = server.endpoint_mut();
+    let endpoint = server.endpoint_mut();
     for client_id in endpoint.clients() {
         while let Some(message) = endpoint.try_receive_message_from::<Message>(client_id) {
             match message {
                 _ => {
 
                 }
-                (channelid, Message::Disconnect) => {
+                // (channelid, Message::Disconnect) => {
 
-                },
-                (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
+                // },
+                // (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
 
-                },
-                (channelid, Message::BlockSet(servec3, blockid)) => {
+                // },
+                // (channelid, Message::BlockSet(servec3, blockid)) => {
 
-                },
-                (channelid, Message::InvUpdate(slotindex, slot)) => {
+                // },
+                // (channelid, Message::InvUpdate(slotindex, slot)) => {
 
-                },
-                (channelid, Message::ItemToYourMouse(slot)) => {
+                // },
+                // (channelid, Message::ItemToYourMouse(slot)) => {
 
-                },
-                (channelid, Message::MobUpdate) => {
+                // },
+                // (channelid, Message::MobUpdate) => {
 
-                },
-                (channelid, Message::MobUpdateBatch) => {
+                // },
+                // (channelid, Message::MobUpdateBatch) => {
 
-                },
-                (channelid, Message::MultiBlockSet(blocks)) => {
+                // },
+                // (channelid, Message::MultiBlockSet(blocks)) => {
 
-                },
-                (channelid, Message::RequestWorldInfo) => {
+                // },
+                // (channelid, Message::RequestWorldInfo) => {
 
-                },
-                (channelid, Message::TellYouMyID(id1, id2)) => {
+                // },
+                // (channelid, Message::TellYouMyID(id1, id2)) => {
 
-                },
-                (channelid, Message::YourId(id1, id2)) => {
+                // },
+                // (channelid, Message::YourId(id1, id2)) => {
 
-                },
-                (channelid, Message::TimeUpdate(newtime)) => {
+                // },
+                // (channelid, Message::TimeUpdate(newtime)) => {
 
-                },
-                (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
-                    //ChestReg, Pt, Udm, Seed
-                },
-                (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
-                    let uuid = Uuid::from_u64_pair(uuid.0, uuid.1);
-                    println!("Received {} {} {} {}", uuid, pos.0.x, pos.0.y, pos.0.z);
-                    // Send a message to a group of clients
-                    // if let Err(e) = endpoint.broadcast_message_on(1, message.1.clone()) {
-                    //     println!("Error broadcasting message: {:?}", e);
-                    // } else {
-                    //     println!("Broadcasted message to all clients.");
-                    // }
+                // },
+                // (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
+                //     //ChestReg, Pt, Udm, Seed
+                // },
+                // (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
+                //     let uuid = Uuid::from_u64_pair(uuid.0, uuid.1);
+                //     println!("Received {} {} {} {}", uuid, pos.0.x, pos.0.y, pos.0.z);
+                //     // Send a message to a group of clients
+                //     // if let Err(e) = endpoint.broadcast_message_on(1, message.1.clone()) {
+                //     //     println!("Error broadcasting message: {:?}", e);
+                //     // } else {
+                //     //     println!("Broadcasted message to all clients.");
+                //     // }
 
-                    endpoint.send_group_message_on(
-                        endpoint.clients().iter().filter(|s| **s != client_id),
-                        1,
-                        message.1.clone(),
-                    );
+                //     // TODO: handle potential error
+                //     let _ = endpoint.send_group_message_on(
+                //         endpoint.clients().iter().filter(|s| **s != client_id),
+                //         1,
+                //         message.1.clone(),
+                //     );
 
-                    /*...*/
-                }
+                //     /*...*/
+                // }
                   // // Match on your own message types ...
                   //You can also use endpoint.broadcast_message, which will send a message to all connected clients.
                   // ClientMessage::Join { username} => {

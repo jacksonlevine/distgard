@@ -504,11 +504,11 @@ impl ModelEntity {
             let amt_to_subtract = self.velocity * *delta * speed_mult;
             self.velocity -= amt_to_subtract;
         }
-        #[cfg(feature = "show_mob_pos")]
-        info!(
-            "Mob cam pos: {}, {}, {}",
-            self.position.x, self.position.y, self.position.z
-        );
+        // #[cfg(feature = "show_mob_pos")]
+        // info!(
+        //     "Mob cam pos: {}, {}, {}",
+        //     self.position.x, self.position.y, self.position.z
+        // );
     }
 
 

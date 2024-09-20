@@ -5,7 +5,7 @@ use tracing_subscriber::fmt::Subscriber;
 use tracing::{error, info};
 use std::fs::File;
 
-use voxelland::windowandkey::{uncapkb, WindowAndKeyContext};
+use voxelland::windowandkey::{UNCAPKB, WindowAndKeyContext};
 
 use voxelland::game::{Game, DECIDEDSPORMP, SHOULDRUN};
 
@@ -121,7 +121,7 @@ fn main() {
     wak_context.game.as_mut().unwrap().set_mouse_focused(true);
     wak_context.game.as_mut().unwrap().window.write().set_cursor_mode(glfw::CursorMode::Disabled);
     unsafe {
-        uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
+        UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
     }
     
     while !wak_context.window.read().should_close() {

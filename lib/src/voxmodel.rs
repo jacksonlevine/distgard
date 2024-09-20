@@ -14,12 +14,12 @@ pub struct JVoxModel {
 
 impl JVoxModel {
     pub fn new(path: &'static str) -> JVoxModel {
-        static mut idnum: i32 = 0;
+        static mut ID_NUM: i32 = 0;
         unsafe {
-            idnum += 1;
+            ID_NUM += 1;
             JVoxModel {
                 model: vox_format::from_file(path).unwrap(),
-                idnumber: idnum
+                idnumber: ID_NUM
             }
         }
     }

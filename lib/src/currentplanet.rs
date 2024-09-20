@@ -1,7 +1,7 @@
 
 
 pub struct CurrentPlanet {
-    seed: u32,
-    hostile: bool,
+    // seed: u32,
+    // hostile: bool,
     
 }

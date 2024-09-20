@@ -5,7 +5,7 @@ use crate::shader::Shader;
 
 pub struct BlockOverlay {
     shader: Shader,
-    vbo: GLuint
+    // vbo: GLuint
 }
 
 impl BlockOverlay {
@@ -89,7 +89,7 @@ impl BlockOverlay {
         }
         BlockOverlay {
             shader,
-            vbo
+            // vbo
         }
     }
 
