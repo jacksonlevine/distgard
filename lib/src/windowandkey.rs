@@ -11,9 +11,24 @@ use crate::{
     }, texture::Texture
 };
 
-use clipboard::ClipboardProvider;
+// clipboard support
+use clipboard::{ClipboardContext, ClipboardProvider};
+use imgui::ClipboardBackend;
+
+// TODO: can we use glfw as the clipboard backend?
+pub struct ClipboardSupport(pub ClipboardContext);
+
+impl ClipboardBackend for ClipboardSupport {
+    fn get(&mut self) -> Option<String> {
+        self.0.get_contents().ok()
+    }
+    fn set(&mut self, text: &str) {
+        let _ = self.0.set_contents(text.to_owned());
+    }
+}
+
 use glfw::{
-    Action, Context, Glfw, GlfwReceiver, Key, Modifiers,
+    Action, Context, Glfw, GlfwReceiver, Key, //Modifiers,
     PWindow, WindowEvent,
 };
 
@@ -35,9 +50,6 @@ pub static mut WINDOWHEIGHT: i32 = 0;
 
 pub static mut UNCAPKB: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
 
-pub static mut COPY: bool = false;
-pub static mut PASTE: bool = false;
-
 pub struct WindowAndKeyContext {
     pub width: u32,
     pub height: u32,
@@ -58,7 +70,6 @@ pub struct WindowAndKeyContext {
     pub serveraddrbuffer: String,
 
     pub logo: Texture,
-    pub clipboard_context: ClipboardContext,
     pub menu_camera: crate::camera::Camera,
 
     pub gltf_models: Vec<(
@@ -118,15 +129,11 @@ fn toggle_fullscreen(window_ptr: *mut glfw::ffi::GLFWwindow) {
 
 // use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
-use clipboard::ClipboardContext;
-
 pub static MAINMENUSONG: &str = path!("assets/music/bb4.mp3");
 
 impl WindowAndKeyContext {
 
     pub fn new(windowname: &'static str, width: u32, height: u32) -> Self {
-        let ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-
         #[cfg(feature = "steam")]
         let (client, single) = Client::init().unwrap();
         // #[cfg(feature = "steam")]
@@ -157,6 +164,7 @@ impl WindowAndKeyContext {
         // Initialize ImGui
         let mut imgui = imgui::Context::create();
         imgui.set_ini_filename(None);
+        imgui.set_clipboard_backend(ClipboardContext::new().ok().map(ClipboardSupport).unwrap());
 
         let scale_factor = 1.0;
 
@@ -182,6 +190,8 @@ impl WindowAndKeyContext {
             io.key_map[ImGuiKey::Space as usize] = Key::Space as u32;
             io.key_map[ImGuiKey::Enter as usize] = Key::Enter as u32;
             io.key_map[ImGuiKey::Escape as usize] = Key::Escape as u32;
+            io.key_map[ImGuiKey::C as usize] = Key::C as u32;
+            io.key_map[ImGuiKey::V as usize] = Key::V as u32;
         }
 
         let font_size = 16.0;
@@ -240,7 +250,6 @@ impl WindowAndKeyContext {
                 );
                 panic!("Error!!!!!!!!1111, {err:?}");
             }),
-            clipboard_context: ctx,
             nodes: Vec::new(),
             gltf_models: Vec::new(),
             gltf_vbos: Vec::new(),
@@ -1413,22 +1422,12 @@ impl WindowAndKeyContext {
 
                                 ui.set_cursor_pos([pos_x, pos_y]);
 
-                                if ui.button_with_size(
-                                    "Enter server address: (Click here to paste)",
-                                    [button_width, button_height],
-                                ) {
-                                    match self.clipboard_context.get_contents() {
-                                        Ok(contents) => {
-                                            self.serveraddrbuffer = contents;
-                                        }
-                                        Err(_) => {}
-                                    }
-                                }
+                                ui.text("Enter server address:");
 
                                 ui.set_cursor_pos([pos_x, pos_y + 25.0]);
+                                ui.set_next_item_width(button_width);
 
                                 ui.input_text("##serveraddress", &mut self.serveraddrbuffer)
-                                    .flags(InputTextFlags::ALWAYS_OVERWRITE)
                                     .build();
 
                                 ui.set_cursor_pos([pos_x, pos_y + 50.0]);
@@ -1484,54 +1483,12 @@ impl WindowAndKeyContext {
                                 glfw::WindowEvent::CursorPos(xpos, ypos) => {
                                     io.mouse_pos = [xpos as f32, ypos as f32];
                                 }
-                                glfw::WindowEvent::CharModifiers(char, _modifiers) => {
-                                    println!("{:?}", char);
-                                }
-                                glfw::WindowEvent::Key(key, _scancode, action, modifiers) => {
+                                glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => {
                                     let pressed = action == glfw::Action::Press
                                         || action == glfw::Action::Repeat;
 
-                                    // Why won't this work, for Christ?
-
-                                    // if glfw::Modifiers::Control == modifiers && key == Key::V {
-                                    //     if pressed {
-                                    //         //println!("Ctrl+v");
-                                    //         PASTE = true;
-                                    //         match self.clipboard_context.get_contents() {
-                                    //             Ok(contents) => {
-                                    //                 self.serveraddrbuffer = contents;
-                                    //                 println!("Set the contents! Booyah! Done!");
-                                    //             }
-                                    //             Err(e) => {
-                                    //                 println!("Couldn't get clipboard contents. {e}");
-                                    //             }
-                                    //         }
-                                    //     }
-
-                                    // }
-
-                                    // if glfw::Modifiers::Control == modifiers && key == Key::C {
-                                    //     if pressed {
-                                    //         // println!("Ctrl+c");
-                                    //         COPY = true;
-                                    //         match self.clipboard_context.get_contents() {
-                                    //             Ok(contents) => {
-                                    //                 self.serveraddrbuffer = contents;
-                                    //                 println!("Set the contents! Booyah! Done!");
-                                    //             }
-                                    //             Err(e) => {
-                                    //                 println!("Couldn't get clipboard contents. {e}");
-                                    //             }
-                                    //         }
-                                    //     }
-
-                                    // }
-
                                     if (key as usize) < 512 {
                                         io.keys_down[key as usize] = pressed;
-
-                                        Self::set_mod(io, modifiers);
-                                        io.keys_down[key as usize] = action != Action::Release;
                                     }
 
                                     if action == glfw::Action::Press {
@@ -1547,10 +1504,6 @@ impl WindowAndKeyContext {
                                             }
                                             glfw::Key::LeftSuper | glfw::Key::RightSuper => {
                                                 io.key_super = true
-                                            }
-                                            glfw::Key::Backspace => {
-                                                io.keys_down[glfw::Key::Backspace as usize] = true;
-                                                io.add_input_character('\x08');
                                             }
                                             _ => {}
                                         }
@@ -1568,15 +1521,14 @@ impl WindowAndKeyContext {
                                             glfw::Key::LeftSuper | glfw::Key::RightSuper => {
                                                 io.key_super = false
                                             }
-                                            glfw::Key::Backspace => {
-                                                io.keys_down[glfw::Key::Backspace as usize] = false
-                                            }
                                             _ => {}
                                         }
                                     }
                                 }
+                                // glfw::WindowEvent::CharModifiers(char, _modifiers) => {
+                                //     println!("{:?}", char);
+                                // }
                                 glfw::WindowEvent::Char(char) => {
-                                    println!("char");
                                     io.add_input_character(char);
                                 }
                                 glfw::WindowEvent::Scroll(x, y) => {
@@ -1594,10 +1546,11 @@ impl WindowAndKeyContext {
         self.window.write().swap_buffers();
     }
 
-    fn set_mod(io: &mut imgui::Io, modifier: Modifiers) {
-        io.key_ctrl = modifier.intersects(Modifiers::Control);
-        io.key_alt = modifier.intersects(Modifiers::Alt);
-        io.key_shift = modifier.intersects(Modifiers::Shift);
-        io.key_super = modifier.intersects(Modifiers::Super);
-    }
+    // TODO: create better abstractions around glfw/imgui input
+    // fn set_mod(io: &mut imgui::Io, modifier: Modifiers) {
+    //     io.key_ctrl = modifier.intersects(Modifiers::Control);
+    //     io.key_alt = modifier.intersects(Modifiers::Alt);
+    //     io.key_shift = modifier.intersects(Modifiers::Shift);
+    //     io.key_super = modifier.intersects(Modifiers::Super);
+    // }
 }
