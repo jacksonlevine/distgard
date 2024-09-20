@@ -1,8 +1,5 @@
-
-
-
-
-use parking_lot::{Mutex, RwLock};
+// use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use bevy::prelude::*;
 
 use crate::chunk::ChunkSystem;

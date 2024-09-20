@@ -1,5 +1,6 @@
-use std::sync::{Arc};
-use parking_lot::{Mutex, RwLock};
+use std::sync::Arc;
+// use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 
 use bevy::prelude::*;
 use glfw::PWindow;

@@ -1,4 +1,4 @@
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 use tracing::info;
 use crate::shader::Shader;
 use gl;

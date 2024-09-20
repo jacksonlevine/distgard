@@ -60,7 +60,7 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
     controllersupport: true
 } );
 
-pub fn SAVE_MISC() {
+pub fn save_misc() {
     unsafe {
         let misc_settings = &*MISCSETTINGS;
         let json = to_string_pretty(misc_settings).expect("Failed to serialize MISCSETTINGS");
@@ -69,7 +69,7 @@ pub fn SAVE_MISC() {
     }
 }
 
-pub fn LOAD_MISC() {
+pub fn load_misc() {
     if Path::new("misc").exists() {
         let mut file = File::open("misc").expect("Failed to open file");
         let mut json = String::new();
@@ -81,12 +81,12 @@ pub fn LOAD_MISC() {
 
         unsafe {
             *MISCSETTINGS = loaded_settings;
-            SAVE_MISC();
+            save_misc();
         }
     }
 }
 
-pub fn SAVE_LESA() {
+pub fn save_lesa() {
     let mmu = "lesa";
 
     // Always create or overwrite the file
@@ -97,7 +97,7 @@ pub fn SAVE_LESA() {
     info!("UUID file created or overwritten.");
 }
 
-pub fn LOAD_OR_INITIALIZE_STATICS() {
+pub fn load_or_initialize_statics() {
     
     let mmu = "mmu";
 

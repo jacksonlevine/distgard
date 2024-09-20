@@ -1,18 +1,19 @@
+use std::ptr::addr_of;
 use bevy::prelude::*;
 use gl::types::{GLenum, GLuint};
 use gltf::mesh::util::ReadIndices;
 
 use crate::{
     audio::spawn_audio_thread, blockinfo::Blocks, game::{
-        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, SONGS, TOOLTIPNAME
+        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
-        LAST_ENTERED_SERVERADDRESS, LOAD_MISC, LOAD_OR_INITIALIZE_STATICS, MISCSETTINGS, SAVE_LESA,
+        LAST_ENTERED_SERVERADDRESS, load_misc, load_or_initialize_statics, MISCSETTINGS, save_lesa,
     }, texture::Texture
 };
 
 use clipboard::ClipboardProvider;
 use glfw::{
-    ffi::glfwGetKeyName, get_key_name, Action, Context, Glfw, GlfwReceiver, Key, Modifiers,
+    Action, Context, Glfw, GlfwReceiver, Key, Modifiers,
     PWindow, WindowEvent,
 };
 
@@ -23,19 +24,16 @@ use imgui::*;
 use imgui_opengl_renderer::Renderer;
 use parking_lot::{Mutex, RwLock};
 use std::{
-    f32::consts::E,
-    ffi::CStr,
     sync::{atomic::AtomicBool, Arc},
-    thread,
     time::{Duration, Instant},
 };
 
-use imgui::{Condition};
+use imgui::Condition;
 
 pub static mut WINDOWWIDTH: i32 = 0;
 pub static mut WINDOWHEIGHT: i32 = 0;
 
-pub static mut uncapkb: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
+pub static mut UNCAPKB: Lazy<Arc<AtomicBool>> = Lazy::new(|| Arc::new(AtomicBool::new(false)));
 
 pub static mut COPY: bool = false;
 pub static mut PASTE: bool = false;
@@ -118,7 +116,7 @@ fn toggle_fullscreen(window_ptr: *mut glfw::ffi::GLFWwindow) {
     }
 }
 
-use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
+// use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
 use clipboard::ClipboardContext;
 
@@ -127,7 +125,7 @@ pub static MAINMENUSONG: &str = path!("assets/music/bb4.mp3");
 impl WindowAndKeyContext {
 
     pub fn new(windowname: &'static str, width: u32, height: u32) -> Self {
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        let ctx: ClipboardContext = ClipboardProvider::new().unwrap();
 
         #[cfg(feature = "steam")]
         let (client, single) = Client::init().unwrap();
@@ -145,7 +143,7 @@ impl WindowAndKeyContext {
             .expect("Failed to create GLFW window.");
         gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-        LOAD_MISC();
+        load_misc();
 
         window.set_key_polling(true);
         window.set_framebuffer_size_polling(true);
@@ -259,7 +257,7 @@ impl WindowAndKeyContext {
             single,
         };
 
-        LOAD_OR_INITIALIZE_STATICS();
+        load_or_initialize_statics();
         unsafe {
             wak.serveraddrbuffer = (*LAST_ENTERED_SERVERADDRESS).clone();
             wak.serveraddrbuffer.reserve(100);
@@ -286,7 +284,7 @@ impl WindowAndKeyContext {
 
         use gltf::animation::util::ReadOutputs;
 
-        use crate::game::{AnimationChannel, JGltfNode, Joint, Skin};
+        use crate::game::{AnimationChannel, JGltfNode, Joint};
 
         let (document, buffers, images) = gltf::import(path).expect("Failed to load model");
         self.gltf_models.push((document.clone(), buffers.clone(), images.clone()));
@@ -337,7 +335,7 @@ impl WindowAndKeyContext {
                 Mat4::from_cols_array(&flat.try_into().expect("Slice with incorrect length"))
             }).collect();
 
-            let joints: Vec<Joint> = skin.joints()
+            let _joints: Vec<Joint> = skin.joints()
                 .zip(inverse_bind_matrices)
                 .map(|(joint, inverse_bind_matrix)| Joint {
                     node_index: joint.index(),
@@ -514,18 +512,18 @@ impl WindowAndKeyContext {
             match DECIDEDSPORMP {
                 false => {
 
-                    static mut playsong: bool = true;
+                    static mut PLAY_SONG: bool = true;
 
                     
                     
                     
 
-                    if playsong {
+                    if PLAY_SONG {
                         #[cfg(feature = "audio")]
                         {
                             spawn_audio_thread();
-                            unsafe { AUDIOPLAYER.play_in_head(MAINMENUSONG) };
-                            playsong = false;
+                            AUDIOPLAYER.play_in_head(MAINMENUSONG);
+                            PLAY_SONG = false;
                         }
                         
                     }
@@ -608,10 +606,8 @@ impl WindowAndKeyContext {
 
                             // Singleplayer button
                             if ui.button_with_size("Singleplayer", [button_width, button_height]) {
-                                unsafe {
-                                    SINGLEPLAYER = true;
-                                    DECIDEDSPORMP = true;
-                                }
+                                SINGLEPLAYER = true;
+                                DECIDEDSPORMP = true;
                             }
 
                             draw_3d_menu_button(
@@ -625,10 +621,8 @@ impl WindowAndKeyContext {
 
                             // Multiplayer button
                             if ui.button_with_size("Multiplayer", [button_width, button_height]) {
-                                unsafe {
-                                    SINGLEPLAYER = false;
-                                    DECIDEDSPORMP = true;
-                                }
+                                SINGLEPLAYER = false;
+                                DECIDEDSPORMP = true;
                             }
 
                             draw_3d_menu_button(
@@ -657,21 +651,18 @@ impl WindowAndKeyContext {
                                     glfw::MouseButton::Button6 => 5,
                                     glfw::MouseButton::Button7 => 6,
                                     glfw::MouseButton::Button8 => 7,
-                                    _ => return,
                                 };
                                 io.mouse_down[index] = action == glfw::Action::Press;
                             }
                             glfw::WindowEvent::FramebufferSize(wid, hei) => {
                                 self.width = wid as u32;
                                 self.height = hei as u32;
-                                unsafe {
-                                    gl::Viewport(0, 0, wid, hei);
-                                    WINDOWHEIGHT = hei;
-                                    WINDOWWIDTH = wid;
-                                    let mut cam = &mut self.menu_camera;
-                                    let cfov = cam.fov;
-                                    cam.update_fov(cfov);
-                                }
+                                gl::Viewport(0, 0, wid, hei);
+                                WINDOWHEIGHT = hei;
+                                WINDOWWIDTH = wid;
+                                let cam = &mut self.menu_camera;
+                                let cfov = cam.fov;
+                                cam.update_fov(cfov);
                             }
                             glfw::WindowEvent::CursorPos(xpos, ypos) => {
                                 io.mouse_pos = [xpos as f32, ypos as f32];
@@ -752,30 +743,30 @@ impl WindowAndKeyContext {
                                 if g.loadedworld.load(std::sync::atomic::Ordering::Relaxed) {
                                     g.update();
 
-                                    if unsafe {MISCSETTINGS.controllersupport == true} {
-                                        // let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
+                                    // if MISCSETTINGS.controllersupport == true {
+                                    //     let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
 
-                                        // static mut lastx: f64 = 0.0;
-                                        // static mut lasty: f64 = 0.0;
+                                    //     static mut lastx: f64 = 0.0;
+                                    //     static mut lasty: f64 = 0.0;
 
-                                        // static mut x: f64 = 0.0;
-                                        // static mut y: f64 = 0.0;
+                                    //     static mut x: f64 = 0.0;
+                                    //     static mut y: f64 = 0.0;
 
-                                        // let axes = state.get_axes();
+                                    //     let axes = state.get_axes();
 
-                                        // if axes.len() >= 2 {
-                                        //     unsafe {
-                                        //         x += axes[0] as f64;
-                                        //         y += axes[1] as f64;
+                                    //     if axes.len() >= 2 {
+                                    //         unsafe {
+                                    //             x += axes[0] as f64;
+                                    //             y += axes[1] as f64;
 
-                                        //         if lastx != x || lasty != y {
-                                        //             lastx = x;
-                                        //             lasty = y;
-                                        //             g.cursor_pos(x, y);
-                                        //         }
-                                        //     }
-                                        // }
-                                    }
+                                    //             if lastx != x || lasty != y {
+                                    //                 lastx = x;
+                                    //                 lasty = y;
+                                    //                 g.cursor_pos(x, y);
+                                    //             }
+                                    //         }
+                                    //     }
+                                    // }
                                     
                                 }
 
@@ -783,13 +774,11 @@ impl WindowAndKeyContext {
                                     .io_mut()
                                     .update_delta_time(Duration::from_secs_f32(self.delta_time));
 
-                                if uncapkb.load(std::sync::atomic::Ordering::Relaxed) {
+                                if UNCAPKB.load(std::sync::atomic::Ordering::Relaxed) {
                                     self.imgui.io_mut().want_capture_keyboard = false;
                                     self.imgui.io_mut().want_text_input = false;
                                     self.imgui.io_mut().want_capture_mouse = false;
-                                    unsafe {
-                                        uncapkb.store(false, std::sync::atomic::Ordering::Relaxed);
-                                    }
+                                    UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
                                 }
 
                                 if gchestopen {
@@ -843,7 +832,7 @@ impl WindowAndKeyContext {
                                     ];
 
                                     // unsafe {
-                                    //     uncapkb.store(false, std::sync::atomic::Ordering::Relaxed);
+                                    //     UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
                                     // }
 
                                     ui.window("Transparent Window")
@@ -886,9 +875,7 @@ impl WindowAndKeyContext {
                                                         if index == 0 {
                                                             if ui.button_with_size(binding, [button_width, button_height]) {
                                                                 g.button_command(glfwkey.to_string());
-                                                                unsafe {
-                                                                    uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                                } 
+                                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                                             }
                                                         } else {
                                                             if ui.button_with_size(binding, [button_width, button_height]) {
@@ -901,7 +888,7 @@ impl WindowAndKeyContext {
                                                             // let name = if glfwkey.starts_with("Button") { glfwkey } else { 
                                                             //     &glfw::get_key_name(None, Some(glfwkey.parse::<i32>().unwrap_or(0))).unwrap_or("Unknown key".into())
                                                             // };
-                                                            let mut name = glfwkey;
+                                                            let name = glfwkey;
 
                                                             let int = glfwkey.parse::<i32>().unwrap_or(1);
 
@@ -914,7 +901,6 @@ impl WindowAndKeyContext {
                                                             if !name.is_empty() {
                                                                 if ui.button_with_size(name, [button_width, button_height]) {
                                                                 
-                                                                unsafe {
                                                                     LISTENINGFORREBIND = true;
                                                                     if !glfwkey.starts_with("Button") {
                                                                         ABOUTTOREBIND = Some(AboutToRebind {
@@ -955,9 +941,8 @@ impl WindowAndKeyContext {
                                                                         });
                                                                     }
                                                                     
-                                                                    uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
+                                                                    UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                                                 } 
-                                                            }
                                                             
                                                             }
                                                             
@@ -1007,9 +992,7 @@ impl WindowAndKeyContext {
                                                         } else {
                                                             if ui.button_with_size(buttonname, [button_width, button_height]) {
                                                                 g.button_command(command);
-                                                                unsafe {
-                                                                    uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                                } 
+                                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                                             }
                                                         }
                                                         
@@ -1077,71 +1060,67 @@ impl WindowAndKeyContext {
                                                 //     }
                                                 //     pos_y += button_height + 10.0; // Add some spacing between buttons
                                                 // }
-                                                unsafe {
+                                                ui.text_colored(
+                                                    [1.0, 1.0, 0.0, 1.0],
+                                                    "Hold ctrl to craft all of a recipe",
+                                                );
+                                                if CROUCHING {
                                                     ui.text_colored(
                                                         [1.0, 1.0, 0.0, 1.0],
-                                                        "Hold ctrl to craft all of a recipe",
+                                                        "Ctrl pressed.",
                                                     );
-                                                    if CROUCHING {
+                                                }
+                                                for (index, recipeent) in CURRENT_AVAIL_RECIPES
+                                                    .lock()
+                                                    .iter_mut()
+                                                    .enumerate()
+                                                {
+                                                    let recipe = recipeent.recipe.clone();
+                                                    ui.set_cursor_pos([pos_x, pos_y]);
+                                                    let str = format!(
+                                                        "{}, {}",
+                                                        Blocks::get_name(recipe.1 .0),
+                                                        recipe.1 .1
+                                                    );
+                                                    if RECIPES_DISABLED {
                                                         ui.text_colored(
-                                                            [1.0, 1.0, 0.0, 1.0],
-                                                            "Ctrl pressed.",
+                                                            [0.0, 0.0, 1.0, 1.0],
+                                                            str,
                                                         );
+                                                    } else {
+                                                        if ui.button_with_size(
+                                                            str,
+                                                            [button_width, button_height],
+                                                        ) {
+                                                            recipeindexscrafted.push(index);
+                                                            //g.craft_recipe_index(index);
+                                                            recipeent.disabled = true;
+                                                            RECIPES_DISABLED = true;
+                                                        }
                                                     }
-                                                    for (index, recipeent) in CURRENT_AVAIL_RECIPES
-                                                        .lock()
-                                                        .iter_mut()
-                                                        .enumerate()
+
+                                                    let mut costs = String::from("Using ");
+
+                                                    for (index, entry) in
+                                                        recipe.0.iter().enumerate()
                                                     {
-                                                        let recipe = recipeent.recipe.clone();
-                                                        ui.set_cursor_pos([pos_x, pos_y]);
-                                                        let str = format!(
-                                                            "{}, {}",
-                                                            Blocks::get_name(recipe.1 .0),
-                                                            recipe.1 .1
-                                                        );
-                                                        if RECIPES_DISABLED {
-                                                            ui.text_colored(
-                                                                [0.0, 0.0, 1.0, 1.0],
-                                                                str,
-                                                            );
+                                                        costs += entry.1.to_string().as_str();
+                                                        costs += " ";
+                                                        costs += Blocks::get_name(entry.0);
+                                                        if index < (recipe.0.len() - 1) {
+                                                            costs += ", ";
                                                         } else {
-                                                            if ui.button_with_size(
-                                                                str,
-                                                                [button_width, button_height],
-                                                            ) {
-                                                                recipeindexscrafted.push(index);
-                                                                //g.craft_recipe_index(index);
-                                                                recipeent.disabled = true;
-                                                                unsafe {
-                                                                    RECIPES_DISABLED = true;
-                                                                }
-                                                            }
+                                                            costs += ".";
                                                         }
-
-                                                        let mut costs = String::from("Using ");
-
-                                                        for (index, entry) in
-                                                            recipe.0.iter().enumerate()
-                                                        {
-                                                            costs += entry.1.to_string().as_str();
-                                                            costs += " ";
-                                                            costs += Blocks::get_name(entry.0);
-                                                            if index < (recipe.0.len() - 1) {
-                                                                costs += ", ";
-                                                            } else {
-                                                                costs += ".";
-                                                            }
-                                                        }
-
-                                                        ui.text_colored(
-                                                            [1.0, 0.0, 0.0, 1.0],
-                                                            costs,
-                                                        );
-
-                                                        pos_y += button_height + 10.0;
-                                                        // Add some spacing between buttons
                                                     }
+
+                                                    ui.text_colored(
+                                                        [1.0, 0.0, 0.0, 1.0],
+                                                        costs,
+                                                    );
+
+                                                    pos_y += button_height + 10.0;
+                                                    // Add some spacing between buttons
                                                 }
                                             });
 
@@ -1150,14 +1129,12 @@ impl WindowAndKeyContext {
                                         }
                                         Game::update_avail_recipes(&g.inventory.clone());
 
-                                        unsafe {
-                                            if RECIPES_DISABLED {
-                                                if RECIPE_COOLDOWN_TIMER < 0.5 {
-                                                    RECIPE_COOLDOWN_TIMER += self.delta_time;
-                                                } else {
-                                                    RECIPES_DISABLED = false;
-                                                    RECIPE_COOLDOWN_TIMER = 0.0;
-                                                }
+                                        if RECIPES_DISABLED {
+                                            if RECIPE_COOLDOWN_TIMER < 0.5 {
+                                                RECIPE_COOLDOWN_TIMER += self.delta_time;
+                                            } else {
+                                                RECIPES_DISABLED = false;
+                                                RECIPE_COOLDOWN_TIMER = 0.0;
                                             }
                                         }
 
@@ -1173,31 +1150,29 @@ impl WindowAndKeyContext {
                                 for (_, event) in glfw::flush_messages(&self.events) {
                                     match event {
                                         glfw::WindowEvent::MouseButton(mousebutton, action, _) => {
-                                            if unsafe { LISTENINGFORREBIND } {
-                                                unsafe {
-                                                    match &ABOUTTOREBIND {
-                                                                    Some(atr) => {
-                                                    
-                                                                        match atr.key {
-                                                                            crate::keybinds::Rebindable::Key(oldscan) => {
-                                                                                
-                                                                            },
-                                                                            crate::keybinds::Rebindable::MouseButton(mb) => {
-                                                                                if !MISCSETTINGS.mousebinds.contains_key(&format!("{:?}", mousebutton)) {
-                                                                                    MISCSETTINGS.mousebinds.remove(&format!("{:?}", mb));
-                                                                                    MISCSETTINGS.mousebinds.insert(format!("{:?}", mousebutton), atr.action.clone());
-                                                                                    g.button_command("bindingsmenu".into());
-                                                                                }
-                                                                                
-                                                                                LISTENINGFORREBIND = false;
-                                                                            },
-                                                                        }
-                                                                        
-                                                                    }
-                                                                    None => {
-                                                                        
-                                                                    }
+                                            if LISTENINGFORREBIND {
+                                                match &*addr_of!(ABOUTTOREBIND) {
+                                                    Some(atr) => {
+                                    
+                                                        match atr.key {
+                                                            crate::keybinds::Rebindable::Key(_oldscan) => {
+                                                                
+                                                            },
+                                                            crate::keybinds::Rebindable::MouseButton(mb) => {
+                                                                if !MISCSETTINGS.mousebinds.contains_key(&format!("{:?}", mousebutton)) {
+                                                                    MISCSETTINGS.mousebinds.remove(&format!("{:?}", mb));
+                                                                    MISCSETTINGS.mousebinds.insert(format!("{:?}", mousebutton), atr.action.clone());
+                                                                    g.button_command("bindingsmenu".into());
                                                                 }
+                                                                
+                                                                LISTENINGFORREBIND = false;
+                                                            },
+                                                        }
+                                                        
+                                                    }
+                                                    None => {
+                                                        
+                                                    }
                                                 }
                                             } else {
                                                 let index = match mousebutton {
@@ -1209,7 +1184,6 @@ impl WindowAndKeyContext {
                                                     glfw::MouseButton::Button6 => 5,
                                                     glfw::MouseButton::Button7 => 6,
                                                     glfw::MouseButton::Button8 => 7,
-                                                    _ => return,
                                                 };
                                                 io.mouse_down[index] =
                                                     action == glfw::Action::Press;
@@ -1240,18 +1214,16 @@ impl WindowAndKeyContext {
                                         glfw::WindowEvent::FramebufferSize(wid, hei) => {
                                             self.width = wid as u32;
                                             self.height = hei as u32;
-                                            unsafe {
-                                                gl::Viewport(0, 0, wid, hei);
-                                                WINDOWHEIGHT = hei;
-                                                WINDOWWIDTH = wid;
-                                                let cam = unsafe {CAMERA.as_ref().unwrap()};
-                                                let mut c = cam.lock();
-                                                let cfov = c.fov;
-                                                c.update_fov(cfov);
-                                                let mut cam = &mut self.menu_camera;
-                                                let cfov = cam.fov;
-                                                cam.update_fov(cfov);
-                                            }
+                                            gl::Viewport(0, 0, wid, hei);
+                                            WINDOWHEIGHT = hei;
+                                            WINDOWWIDTH = wid;
+                                            let cam = CAMERA.as_ref().unwrap();
+                                            let mut c = cam.lock();
+                                            let cfov = c.fov;
+                                            c.update_fov(cfov);
+                                            let cam = &mut self.menu_camera;
+                                            let cfov = cam.fov;
+                                            cam.update_fov(cfov);
                                         }
                                         glfw::WindowEvent::CursorPos(xpos, ypos) => {
                                             g.cursor_pos(xpos, ypos);
@@ -1265,33 +1237,31 @@ impl WindowAndKeyContext {
                                             action,
                                             _modifiers,
                                         ) => {
-                                            if unsafe { LISTENINGFORREBIND } {
-                                                unsafe {
-                                                    let keyscan = key.get_scancode().unwrap_or(0);
+                                            if LISTENINGFORREBIND {
+                                                let keyscan = key.get_scancode().unwrap_or(0);
 
-                                                    match &ABOUTTOREBIND {
-                                                                Some(atr) => {
-                                                
-                                                                    match atr.key {
-                                                                        crate::keybinds::Rebindable::Key(oldscan) => {
-                                                                            if !MISCSETTINGS.keybinds.contains_key(&keyscan) {
-                                                                                MISCSETTINGS.keybinds.remove(&oldscan);
-                                                                                MISCSETTINGS.keybinds.insert(keyscan, atr.action.clone());
-                                                                                g.button_command("bindingsmenu".into());
-                                                                            }
-                                                                            
-                                                                            LISTENINGFORREBIND = false;
-                                                                        },
-                                                                        crate::keybinds::Rebindable::MouseButton(mb) => {
-                                                
-                                                                        },
-                                                                    }
-                                                                   
+                                                match &*addr_of!(ABOUTTOREBIND) {
+                                                    Some(atr) => {
+                                    
+                                                        match atr.key {
+                                                            crate::keybinds::Rebindable::Key(oldscan) => {
+                                                                if !MISCSETTINGS.keybinds.contains_key(&keyscan) {
+                                                                    MISCSETTINGS.keybinds.remove(&oldscan);
+                                                                    MISCSETTINGS.keybinds.insert(keyscan, atr.action.clone());
+                                                                    g.button_command("bindingsmenu".into());
                                                                 }
-                                                                None => {
-                                                                    
-                                                                }
-                                                            }
+                                                                
+                                                                LISTENINGFORREBIND = false;
+                                                            },
+                                                            crate::keybinds::Rebindable::MouseButton(_mb) => {
+                                    
+                                                            },
+                                                        }
+                                                        
+                                                    }
+                                                    None => {
+                                                        
+                                                    }
                                                 }
                                             } else {
                                                 let pressed = action == glfw::Action::Press
@@ -1322,9 +1292,7 @@ impl WindowAndKeyContext {
                                                         glfw::CursorMode::Disabled,
                                                     );
                                                     g.set_mouse_focused(true);
-                                                    unsafe {
-                                                        uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                    } 
+                                                    UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                                    
                                                 } else {
                                                     if gmenuopen
@@ -1340,9 +1308,7 @@ impl WindowAndKeyContext {
                                                             glfw::CursorMode::Disabled,
                                                         );
                                                         g.set_mouse_focused(true);
-                                                        unsafe {
-                                                            uncapkb.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                        } 
+                                                        UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                                     }
 
                                                     if (!io.want_capture_keyboard
@@ -1443,7 +1409,7 @@ impl WindowAndKeyContext {
                                 let available_height = window_size[1];
 
                                 let pos_x = (available_width - button_width) / 2.0;
-                                let mut pos_y = (available_height - (button_height) - 10.0) / 2.0;
+                                let pos_y = (available_height - (button_height) - 10.0) / 2.0;
 
                                 ui.set_cursor_pos([pos_x, pos_y]);
 
@@ -1468,26 +1434,18 @@ impl WindowAndKeyContext {
                                 ui.set_cursor_pos([pos_x, pos_y + 50.0]);
 
                                 if ui.button_with_size("Connect", [button_width, button_height]) {
-                                    unsafe {
-                                        SINGLEPLAYER = false;
-                                        DECIDEDSPORMP = true;
-                                    }
-                                    unsafe {
-                                        *LAST_ENTERED_SERVERADDRESS = self.serveraddrbuffer.clone();
-                                    }
-                                    unsafe {
-                                        THEENTEREDADDRESS = self.serveraddrbuffer.clone();
-                                    }
-                                    unsafe {
-                                        ADDRESSENTERED.store(true, std::sync::atomic::Ordering::Relaxed);
-                                    }
-                                    SAVE_LESA();
+                                    SINGLEPLAYER = false;
+                                    DECIDEDSPORMP = true;
+                                    *LAST_ENTERED_SERVERADDRESS = self.serveraddrbuffer.clone();
+                                    THEENTEREDADDRESS = self.serveraddrbuffer.clone();
+                                    ADDRESSENTERED.store(true, std::sync::atomic::Ordering::Relaxed);
+                                    save_lesa();
                                     *(self.serveraddress.lock()) =
                                         Some(self.serveraddrbuffer.clone());
                                     self.addressentered
                                         .store(true, std::sync::atomic::Ordering::Relaxed);
                                 }
-                                pos_y += button_height + 10.0; // Add some spacing between buttons
+                                // pos_y += button_height + 10.0; // Add some spacing between buttons
                             });
 
                         // Render the ImGui frame
@@ -1506,34 +1464,30 @@ impl WindowAndKeyContext {
                                         glfw::MouseButton::Button6 => 5,
                                         glfw::MouseButton::Button7 => 6,
                                         glfw::MouseButton::Button8 => 7,
-                                        _ => return,
                                     };
                                     io.mouse_down[index] = action == glfw::Action::Press;
                                 }
                                 glfw::WindowEvent::FramebufferSize(wid, hei) => {
                                     self.width = wid as u32;
                                     self.height = hei as u32;
-                                    
-                                    unsafe {
-                                        gl::Viewport(0, 0, wid, hei);
-                                        WINDOWHEIGHT = hei;
-                                        WINDOWWIDTH = wid;
-                                        let cam = unsafe {CAMERA.as_ref().unwrap()};
-                                        let mut c = cam.lock();
-                                        let cfov = c.fov;
-                                        c.update_fov(cfov);
-                                        let mut cam = &mut self.menu_camera;
-                                        let cfov = cam.fov;
-                                        cam.update_fov(cfov);
-                                    }
+                                    gl::Viewport(0, 0, wid, hei);
+                                    WINDOWHEIGHT = hei;
+                                    WINDOWWIDTH = wid;
+                                    let cam = CAMERA.as_ref().unwrap();
+                                    let mut c = cam.lock();
+                                    let cfov = c.fov;
+                                    c.update_fov(cfov);
+                                    let cam = &mut self.menu_camera;
+                                    let cfov = cam.fov;
+                                    cam.update_fov(cfov);
                                 }
                                 glfw::WindowEvent::CursorPos(xpos, ypos) => {
                                     io.mouse_pos = [xpos as f32, ypos as f32];
                                 }
-                                glfw::WindowEvent::CharModifiers(char, modifiers) => {
+                                glfw::WindowEvent::CharModifiers(char, _modifiers) => {
                                     println!("{:?}", char);
                                 }
-                                glfw::WindowEvent::Key(key, scancode, action, modifiers) => {
+                                glfw::WindowEvent::Key(key, _scancode, action, modifiers) => {
                                     let pressed = action == glfw::Action::Press
                                         || action == glfw::Action::Repeat;
 
@@ -1543,32 +1497,32 @@ impl WindowAndKeyContext {
                                     //     if pressed {
                                     //         //println!("Ctrl+v");
                                     //         PASTE = true;
-                                    //         // match self.clipboard_context.get_contents() {
-                                    //         //     Ok(contents) => {
-                                    //         //         self.serveraddrbuffer = contents;
-                                    //         //         println!("Set the contents! Booyah! Done!");
-                                    //         //     }
-                                    //         //     Err(e) => {
-                                    //         //         println!("Couldn't get clipboard contents. {e}");
-                                    //         //     }
-                                    //         // }
+                                    //         match self.clipboard_context.get_contents() {
+                                    //             Ok(contents) => {
+                                    //                 self.serveraddrbuffer = contents;
+                                    //                 println!("Set the contents! Booyah! Done!");
+                                    //             }
+                                    //             Err(e) => {
+                                    //                 println!("Couldn't get clipboard contents. {e}");
+                                    //             }
+                                    //         }
                                     //     }
 
                                     // }
 
                                     // if glfw::Modifiers::Control == modifiers && key == Key::C {
                                     //     if pressed {
-                                    //         println!("Ctrl+c");
+                                    //         // println!("Ctrl+c");
                                     //         COPY = true;
-                                    //         // match self.clipboard_context.get_contents() {
-                                    //         //     Ok(contents) => {
-                                    //         //         self.serveraddrbuffer = contents;
-                                    //         //         println!("Set the contents! Booyah! Done!");
-                                    //         //     }
-                                    //         //     Err(e) => {
-                                    //         //         println!("Couldn't get clipboard contents. {e}");
-                                    //         //     }
-                                    //         // }
+                                    //         match self.clipboard_context.get_contents() {
+                                    //             Ok(contents) => {
+                                    //                 self.serveraddrbuffer = contents;
+                                    //                 println!("Set the contents! Booyah! Done!");
+                                    //             }
+                                    //             Err(e) => {
+                                    //                 println!("Couldn't get clipboard contents. {e}");
+                                    //             }
+                                    //         }
                                     //     }
 
                                     // }

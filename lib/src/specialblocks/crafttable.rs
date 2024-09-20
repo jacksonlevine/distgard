@@ -19,7 +19,7 @@ impl CraftTableInfo {
 
 
     pub fn craft_table_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 CraftTableInfo::base_craft_table_model().to_vec(),
                 rotate_coordinates_around_y_negative_90(CraftTableInfo::base_craft_table_model(), 1),
@@ -27,7 +27,7 @@ impl CraftTableInfo {
                 rotate_coordinates_around_y_negative_90(CraftTableInfo::base_craft_table_model(), 3)
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_craft_table_uvs() -> Vec<f32> {
@@ -222,7 +222,7 @@ impl CraftTableInfo {
     }
 
     pub fn base_craft_table_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 900] = [
+        static PLAYER_IS_MINUS_Z: [f32; 900] = [
             0.19119387865066528, 0.8131672143936157, 0.20535674691200256, 0.0, 14.0,
             0.0036072134971618652, 0.8131672143936157, 0.20535674691200256, 0.0, 14.0,
             0.0036072134971618652, 0.8131672143936157, 0.005356699228286743, 0.0, 14.0,
@@ -405,7 +405,7 @@ impl CraftTableInfo {
             0.9953209161758423, 0.8131672143936157, 0.9991742968559265, 0.0, 14.0,
             
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
     
 }

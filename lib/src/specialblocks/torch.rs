@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 
 use crate::specialblocks::vertexutils::rotate_coordinates_around_y_negative_90;
-use crate::textureface::TextureFace;
+// use crate::textureface::TextureFace;
 
 
 
@@ -19,7 +19,7 @@ impl TorchInfo {
 
 
     pub fn torch_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 TorchInfo::base_torch_model().to_vec(),
                 rotate_coordinates_around_y_negative_90(TorchInfo::base_torch_model(), 1),
@@ -27,7 +27,7 @@ impl TorchInfo {
                 rotate_coordinates_around_y_negative_90(TorchInfo::base_torch_model(), 3)
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_torch_uvs() -> Vec<f32> {
@@ -162,7 +162,7 @@ impl TorchInfo {
     }
 
     pub fn base_torch_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 600] = [0.42930662631988525, 0.5400863885879517, 0.4119277894496918, 0.0, 14.0,
+        static PLAYER_IS_MINUS_Z: [f32; 600] = [0.42930662631988525, 0.5400863885879517, 0.4119277894496918, 0.0, 14.0,
         0.42930662631988525, -0.019913578405976295, 0.5674477815628052, 0.0, 14.0,
         0.42930662631988525, -0.019913578405976295, 0.4119277894496918, 0.0, 14.0,
         0.42930662631988525, -0.019913578405976295, 0.4119277894496918, 0.0, 14.0,
@@ -284,6 +284,6 @@ impl TorchInfo {
         0.44384056329727173, 0.5234615802764893, 0.3521174192428589, 0.0, 14.0,
         
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
 }

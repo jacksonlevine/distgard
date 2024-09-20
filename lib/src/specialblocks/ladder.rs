@@ -19,7 +19,7 @@ impl LadderInfo {
 
 
     pub fn ladder_model_from_index(index: usize) -> &'static Vec<f32> {
-        static models: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
+        static MODELS: Lazy<Vec<Vec<f32>>> = Lazy::new(|| {
             vec![
                 LadderInfo::base_ladder_model().to_vec(),
                 rotate_coordinates_around_y_negative_90(LadderInfo::base_ladder_model(), 1),
@@ -27,7 +27,7 @@ impl LadderInfo {
                 rotate_coordinates_around_y_negative_90(LadderInfo::base_ladder_model(), 3)
             ]
         });
-        &(*models)[index]
+        &(*MODELS)[index]
     }
 
     pub fn get_ladder_uvs() -> Vec<f32> {
@@ -54,7 +54,7 @@ impl LadderInfo {
     }
 
     pub fn base_ladder_model() -> &'static [f32] {
-        static player_is_minus_z: [f32; 60] = [
+        static PLAYER_IS_MINUS_Z: [f32; 60] = [
             1.0, 0.0, 1.0, 0.0, 14.0,
             0.0, 0.0, 1.0, 0.0, 14.0,
             0.0, 1.0, 1.0, 0.0, 14.0,
@@ -71,6 +71,6 @@ impl LadderInfo {
             0.0, 1.0, 0.9, 0.0, 14.0,
             0.0, 0.0, 0.9, 0.0, 14.0
         ];
-        &player_is_minus_z
+        &PLAYER_IS_MINUS_Z
     }
 }

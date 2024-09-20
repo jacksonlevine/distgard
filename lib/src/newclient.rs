@@ -1,16 +1,17 @@
-use std::net::{IpAddr, Ipv4Addr};
-use std::str::FromStr;
+// use std::net::{IpAddr, Ipv4Addr};
+// use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use bevy::math::VectorSpace;
+// use bevy::math::VectorSpace;
 use bevy::prelude::*;
 use jeffy_quintet::client::certificate::CertificateVerificationMode;
 use jeffy_quintet::shared::channels::ChannelType;
-use jeffy_quintet::{client::*, server::*, shared::channels::ChannelsConfiguration};
+use jeffy_quintet::{client::*, shared::channels::ChannelsConfiguration};
+// use jeffy_quintet::{client::*, server::*, shared::channels::ChannelsConfiguration};
 
-use jeffy_quintet::server::certificate::CertificateRetrievalMode;
+// use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use connection::ClientEndpointConfiguration;
 
 use crate::server_types::Message;
@@ -80,7 +81,8 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
 
     let address = unsafe { THEENTEREDADDRESS.clone() }; // Remove any trailing newline characters
 
-    client.open_connection(
+    // handle potential error?
+    let _ = client.open_connection(
         ClientEndpointConfiguration::from_strings(
                              &address,
                              "0.0.0.0:0"
@@ -111,8 +113,8 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
 // }
 
 pub fn handle_server_messages(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    _commands: Commands,
+    _asset_server: Res<AssetServer>,
     mut client: ResMut<QuintetClient>,
     //mut opl: ResMut<JOtherPlayers>,
     //mut otherplayerbodies: Query<(&mut Transform, &JId, &mut InterpolationThing)>, /*...*/
@@ -126,48 +128,48 @@ pub fn handle_server_messages(
             _ => {
                     
             }
-            (channelid, Message::Disconnect) => {
+            // (channelid, Message::Disconnect) => {
 
-            },
-            (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
+            // },
+            // (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
 
-            },
-            (channelid, Message::BlockSet(servec3, blockid)) => {
+            // },
+            // (channelid, Message::BlockSet(servec3, blockid)) => {
 
-            },
-            (channelid, Message::InvUpdate(slotindex, slot)) => {
+            // },
+            // (channelid, Message::InvUpdate(slotindex, slot)) => {
 
-            },
-            (channelid, Message::ItemToYourMouse(slot)) => {
+            // },
+            // (channelid, Message::ItemToYourMouse(slot)) => {
 
-            },
-            (channelid, Message::MobUpdate) => {
+            // },
+            // (channelid, Message::MobUpdate) => {
 
-            },
-            (channelid, Message::MobUpdateBatch) => {
+            // },
+            // (channelid, Message::MobUpdateBatch) => {
 
-            },
-            (channelid, Message::MultiBlockSet(blocks)) => {
+            // },
+            // (channelid, Message::MultiBlockSet(blocks)) => {
 
-            },
-            (channelid, Message::RequestWorldInfo) => {
+            // },
+            // (channelid, Message::RequestWorldInfo) => {
 
-            },
-            (channelid, Message::TellYouMyID(id1, id2)) => {
+            // },
+            // (channelid, Message::TellYouMyID(id1, id2)) => {
 
-            },
-            (channelid, Message::YourId(id1, id2)) => {
+            // },
+            // (channelid, Message::YourId(id1, id2)) => {
 
-            },
-            (channelid, Message::TimeUpdate(newtime)) => {
+            // },
+            // (channelid, Message::TimeUpdate(newtime)) => {
 
-            },
-            (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
-                //ChestReg, Pt, Udm, Seed
-            },
-            (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
+            // },
+            // (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
+            //     //ChestReg, Pt, Udm, Seed
+            // },
+            // (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
 
-            }
+            // }
 
 
 

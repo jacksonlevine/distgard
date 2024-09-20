@@ -6,12 +6,12 @@ use rusqlite::{params, Connection};
 use voxelland::hud::SlotIndexType;
 use voxelland::inventory::{self, ChestInventory, Inventory};
 use std::collections::HashMap;
-use std::fs::{File};
+use std::fs::File;
 
 use std::io::{self, ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc};
+use std::sync::Arc;
 use parking_lot::{Mutex, RwLock};
 
 use std::thread;
