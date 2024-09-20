@@ -6237,6 +6237,9 @@ impl Game {
                         other_half = block_hit + IVec3::new(0, 1, 0);
                     }
 
+                    #[cfg(feature = "glfw")]
+                    self.drops.add_drop(tip, 19, 1);
+
                     if self.vars.in_multiplayer {
                         // let mut message = Message::new(
                         //     MessageType::MultiBlockSet,
