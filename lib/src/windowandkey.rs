@@ -122,7 +122,7 @@ use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
 use clipboard::ClipboardContext;
 
-pub static MAINMENUSONG: &str = "assets/music/bb4.mp3";
+pub static MAINMENUSONG: &str = path!("assets/music/bb4.mp3");
 
 impl WindowAndKeyContext {
 
