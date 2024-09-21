@@ -18,6 +18,7 @@ pub struct Camera {
     pub mvp: Mat4,
 
     pub velocity: Vec3,
+    pub slickness: f32,
 
     pub far: f32,
     pub near: f32,
@@ -38,6 +39,7 @@ impl Camera {
             view: Mat4::IDENTITY,
             mvp: Mat4::IDENTITY,
             velocity: Vec3::ZERO,
+            slickness: 0.01,
             far: 250.0,
             near: 0.1,
         }
@@ -70,6 +72,7 @@ impl Camera {
             view,
             mvp: projection * model * view,
             velocity: Vec3::new(0.0, 0.0, 0.0),
+            slickness: 0.01,
             far,
             near,
         }
@@ -106,24 +109,30 @@ impl Camera {
             self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize()
                 * xz_speed_mult
                 * *delta
-                * speed_mult;
+                * speed_mult
+                * (1.0 - self.slickness);
         }
         if cs.left {
             moving = true;
-            self.velocity +=
-                (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * *delta * speed_mult;
+            self.velocity += (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) 
+                * *delta 
+                * speed_mult 
+                * (1.0 - self.slickness);
         }
         if cs.back {
             moving = true;
             self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize()
                 * xz_speed_mult
                 * -*delta
-                * speed_mult;
+                * speed_mult
+                * (1.0 - self.slickness);
         }
         if cs.right {
             moving = true;
-            self.velocity +=
-                (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) * -*delta * speed_mult;
+            self.velocity += (self.right * Vec3::new(xz_speed_mult, 0.0, xz_speed_mult)) 
+                * -*delta 
+                * speed_mult
+                * (1.0 - self.slickness);
         }
         unsafe {
             MOVING = moving;
@@ -132,15 +141,13 @@ impl Camera {
 
         //let closeness_to_stopped = (0.7 - Vec3::new(self.velocity.x, 0.0, self.velocity.z).length()).max(0.0);
 
-        let slipperiness: f32 = 0.01;
-
-        self.velocity.x *= slipperiness.powf(*delta * speed_mult);
-        self.velocity.z *= slipperiness.powf(*delta * speed_mult);
+        self.velocity.x *= self.slickness.powf(*delta * speed_mult);
+        self.velocity.z *= self.slickness.powf(*delta * speed_mult);
 
         if self.velocity.length() > 0.0 {
             let amt_to_subtract = self.velocity * *delta * speed_mult;
 
-            self.velocity -= amt_to_subtract;
+            self.velocity.y -= amt_to_subtract.y;
 
             return self.position + amt_to_subtract;
         } else {

@@ -4,7 +4,7 @@ pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
 pub struct Blocks {}
 
 
-static BREAKTIMES: [f32; 51] = [
+static BREAKTIMES: [f32; 52] = [
     0.1,
     0.5,
     0.7,
@@ -58,10 +58,11 @@ static BREAKTIMES: [f32; 51] = [
     1.0,
     1.0,
     0.3,
-    0.7
+    0.7,
+    1.0
 ];
 
-static TEXS: [[(u8, u8); 3]; 51] = [
+static TEXS: [[(u8, u8); 3]; 52] = [
             //sides   //bot   //top
             [(0, 0), (0, 0), (0, 0)],  // 0
             [(1, 0), (1, 0), (1, 0)],  // 1 sand
@@ -125,7 +126,8 @@ static TEXS: [[(u8, u8); 3]; 51] = [
 
             [(8,4),(4,0),(8,5)], // 48, snowy grass
             [(9,4),(9,4),(9,4)], // 49, torch
-            [(7, 5), (7, 0), (8, 5)],  // 50 snow leaves   
+            [(7, 5), (7, 0), (8, 5)],  // 50 snow leaves
+            [(1, 7), (1, 7), (1, 7)],  // 51 ice
         ];
 
 
@@ -187,6 +189,7 @@ impl Blocks {
             48 => {"Snowy Grass Block"}
             49 => {"Torch"}
             50 => {"Snowy Leaves"}
+            51 => {"Ice"}
             _ => {
                 "Unknown Item"
             }
@@ -369,7 +372,7 @@ impl Blocks {
             7 => {
                 "plantplaceseries"
             }
-            8 => {
+            8 | 51 => {
                 "glassplaceseries"
             }
             22 => {
@@ -386,6 +389,19 @@ impl Blocks {
             }
             _ => {
                 "stoneplaceseries"
+            }
+        }
+    }
+    pub fn get_slickness(id: u32) -> f32 {
+        match id {
+            0 => {
+                0.01
+            }
+            51 => {
+                0.9
+            }
+            _ => {
+                0.01
             }
         }
     }

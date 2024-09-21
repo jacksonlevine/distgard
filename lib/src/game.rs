@@ -4599,6 +4599,8 @@ impl Game {
 
         let mut conveyor = false;
 
+        cam_clone.slickness = Blocks::get_slickness(blockunderfeet);
+
         match blockunderfeet {
             46 => unsafe {
                 if !TRAMPOLINE {
