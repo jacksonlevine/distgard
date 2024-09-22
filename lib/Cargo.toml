@@ -46,6 +46,7 @@ bevy = "0.14.1"
 jeffy_quintet = { path = "../core/jeffy_quintet" }
 lib = "0.0.0"
 hashbrown = "0.14.5"
+rocksdb = "0.22.0"
 
 
 [features]

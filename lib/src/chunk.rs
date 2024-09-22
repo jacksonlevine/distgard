@@ -3,6 +3,9 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
+use std::hash::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::path::Path;
@@ -23,6 +26,7 @@ use once_cell::sync::Lazy;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+use rocksdb::DB;
 use rusqlite::params;
 use rusqlite::Connection;
 
@@ -303,9 +307,59 @@ pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new(|| Dash
 pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| VecDeque::new());
 
 
+
 //MEMBERS TAKEN OUT AS PER BEVY MIGRATION PLAN STEP 1
 
-pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+//pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+
+
+pub static mut USERDATAMAP: Option<Arc<DB>> = None;
+
+pub fn get_udm_entry(key: &IVec3) -> Option<u32>
+ {
+    match unsafe { USERDATAMAP } {
+        Some(db) => {
+            let mut hasher = DefaultHasher::new();
+            key.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            match db.get(hash) {
+                Ok(block) => {
+                    let block_type = u32::from_le_bytes(value[0..4].try_into().unwrap_or(0));
+                    Some(blocktype)
+                }
+                Err(e) => {
+                    None
+                }
+            }
+        }
+        None => {
+            None
+        }
+    }
+
+
+    
+ }
+
+pub fn put_udm_entry(key: &IVec3, block: u32) {
+    match unsafe { USERDATAMAP } {
+        Some(db) => {
+            let mut hasher = DefaultHasher::new();
+            key.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            db.put(hash, block.to_le_bytes())
+        }
+        None => {
+
+        }
+    }
+    
+}
+
+
+
 pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 
@@ -426,174 +480,6 @@ impl ChunkSystem {
 
         stmt.execute(params![spot.x, spot.y, spot.z, block])
             .unwrap();
-    }
-
-    pub fn save_current_world_to_file(&self, path: String) {
-        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
-        let table_name = format!("userdatamap_{}", seed);
-
-        let conn = Connection::open("db").unwrap();
-
-        conn.execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS {} (
-                    x INTEGER,
-                    y INTEGER,
-                    z INTEGER,
-                    value INTEGER,
-                    PRIMARY KEY (x, y, z)
-                )",
-                table_name
-            ),
-            (),
-        )
-        .unwrap();
-
-        // Insert userdatamap entries
-        let mut stmt = conn
-            .prepare(&format!(
-                "INSERT OR REPLACE INTO {} (x, y, z, value) VALUES (?, ?, ?, ?)",
-                table_name
-            ))
-            .unwrap();
-
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-        for entry in udm.iter() {
-            stmt.execute(params![
-                entry.key().x,
-                entry.key().y,
-                entry.key().z,
-                *entry.value()
-            ])
-            .unwrap();
-        }
-
-        fs::create_dir_all(&path).unwrap();
-
-        // let mut file = File::create(path.clone() + "/udm").unwrap();
-        // for entry in self.userdatamap.iter() {
-        //     writeln!(file, "{} {}", entry.key(), entry.value()).unwrap();
-        // }
-
-        let mut file = File::create(path.clone() + "/seed").unwrap();
-        writeln!(file, "{}", unsafe {
-            CURRSEED.load(std::sync::atomic::Ordering::Relaxed)
-        })
-        .unwrap();
-
-        let mut file = File::create(path.clone() + "/pt").unwrap();
-        writeln!(file, "{}", self.planet_type).unwrap();
-    }
-
-    pub fn load_world_from_file(&mut self, path: String) {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
-        udm.clear();
-        nudm.clear();
-
-        match File::open(format!("{}/udm", path.clone())) {
-            Ok(_) => {}
-            Err(_) => {
-                fs::create_dir_all(&path.clone()).unwrap();
-                self.save_current_world_to_file(path.clone());
-            }
-        }
-
-        let conn = Connection::open("db").unwrap();
-
-        conn.execute_batch(
-            "
-            PRAGMA synchronous = OFF;
-            PRAGMA journal_mode = WAL;
-            PRAGMA cache_size = 10000;
-        ",
-        )
-        .unwrap();
-
-        // let file = File::open(format!("{}/udm", path)).unwrap();
-        // let reader = BufReader::new(file);
-
-        // for line in reader.lines() {
-        //     let line = line.unwrap();
-        //     let mut parts = line.splitn(4, ' ');
-        //     if let (Some(x), Some(y), Some(z), Some(value)) = (parts.next(), parts.next(), parts.next(), parts.next()) {
-        //         let key = format!("{} {} {}", x, y, z);
-        //         self.userdatamap.insert(vec::IVec3::from_str(&key).unwrap(), value.parse::<u32>().unwrap());
-        //     }
-        // }
-        let pa = format!("{}/seed2", path);
-
-        if Path::new(&pa).exists() {
-            let file = File::open(pa).unwrap();
-            let reader = BufReader::new(file);
-
-            for line in reader.lines() {
-                let line = line.unwrap();
-                let mut parts = line.splitn(2, ' ');
-                if let Some(seed) = parts.next() {
-                    let s = seed.parse::<u32>().unwrap();
-                    info!("Seed Is {}", s);
-                    *(self.perlin.write()) = Perlin::new(s);
-
-                    unsafe { CURRSEED.store(s, std::sync::atomic::Ordering::Relaxed) }
-                }
-            }
-        } else {
-            info!("Seed2 doesnt exist");
-        }
-
-        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
-        let table_name = format!("userdatamap_{}", seed);
-        info!("LOADING FROM TABLENAME {}", table_name);
-
-        conn.execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS {} (
-                    x INTEGER,
-                    y INTEGER,
-                    z INTEGER,
-                    value INTEGER,
-                    PRIMARY KEY (x, y, z)
-                )",
-                table_name
-            ),
-            (),
-        )
-        .unwrap();
-
-        // Query the userdatamap table
-        let mut stmt = conn
-            .prepare(&format!("SELECT x, y, z, value FROM {}", table_name))
-            .unwrap();
-
-        let userdatamap_iter = stmt
-            .query_map([], |row| {
-                Ok((
-                    vec::IVec3::new(row.get(0)?, row.get(1)?, row.get(2)?),
-                    row.get(3)?,
-                ))
-            })
-            .unwrap();
-        {
-            let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-            for entry in userdatamap_iter {
-                let (key, value): (vec::IVec3, u32) = entry.unwrap();
-                
-                udm.insert(key, value);
-            }
-
-        }
-        
-        let file = File::open(format!("{}/pt", path)).unwrap();
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line.unwrap();
-            let mut parts = line.splitn(2, ' ');
-            if let Some(pt) = parts.next() {
-                self.planet_type = pt.parse::<u8>().unwrap();
-            }
-        }
     }
 
     pub fn collision_predicate(&self, vec: vec::IVec3) -> bool {
