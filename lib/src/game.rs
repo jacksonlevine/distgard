@@ -130,7 +130,7 @@ pub static mut MOVING: bool = false;
 
 pub static mut SHOULDRUN: bool = false;
 
-pub static mut WEATHERTYPE: f32 = 0.0;
+pub static mut WEATHERTYPE: f32 = 1.0;
 pub static mut WEATHERTIMER: f32 = 0.0;
 
 pub const WEATHERINTERVAL: f32 = 120.0;
@@ -508,7 +508,7 @@ pub fn attend_chunk_queues() {
                             
         
             
-                                if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                if (csys_arc.blockat(comm.spot))
                                     == comm.expectedhere
                                 {
         

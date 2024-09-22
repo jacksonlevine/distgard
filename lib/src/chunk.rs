@@ -683,37 +683,74 @@ impl ChunkSystem {
                                                             //break;
                                                         }
                                                         2 => {
+
+                                                            let waterfall = || {
+                                                                let belowspot =
+                                                                        spot + IVec3::new(0, -1, 0);
+                                                                    let belowcombined = Self::_blockat(
+                                                                        &nudm,
+                                                                        &udm,
+                                                                        &per.read(),
+                                                                        belowspot,
+                                                                    );
+                                                                    let belowblock = belowcombined
+                                                                        & Blocks::block_id_bits();
+
+                                                                    if belowblock == 0 {
+                                                                        AUTOMATA_QUEUED_CHANGES
+                                                                            .push_back(ACSet::new(2, [
+                                                                            AutomataChange::new(
+                                                                                2 | (ODDBIT
+                                                                                    * (odd_frame)),
+                                                                                spot,
+                                                                                0,
+                                                                            ),
+                                                                            AutomataChange::new(
+                                                                                0,
+                                                                                belowspot,
+                                                                                2 | (ODDBIT
+                                                                                    * (1 - odd_frame)),
+                                                                            ),
+                                                                        ]));
+                                                                    }
+                                                            };
+
                                                             if combined
                                                                 == (2u32 | (ODDBIT * odd_frame))
                                                             {
-                                                                let belowspot =
-                                                                    spot + IVec3::new(0, -1, 0);
-                                                                let belowcombined = Self::_blockat(
-                                                                    &nudm,
-                                                                    &udm,
-                                                                    &per.read(),
-                                                                    belowspot,
-                                                                );
-                                                                let belowblock = belowcombined
-                                                                    & Blocks::block_id_bits();
+                                                                if WEATHERTYPE == 1.0 {
+                                                                    let abovespot =
+                                                                        spot + IVec3::new(0, 1, 0);
+                                                                    let abovecombined = Self::_blockat(
+                                                                        &nudm,
+                                                                        &udm,
+                                                                        &per.read(),
+                                                                        abovespot,
+                                                                    );
+                                                                    let aboveblock = abovecombined
+                                                                        & Blocks::block_id_bits();
 
-                                                                if belowblock == 0 {
-                                                                    AUTOMATA_QUEUED_CHANGES
-                                                                        .push_back(ACSet::new(2, [
-                                                                        AutomataChange::new(
-                                                                            2 | (ODDBIT
-                                                                                * (odd_frame)),
-                                                                            spot,
-                                                                            0,
-                                                                        ),
-                                                                        AutomataChange::new(
-                                                                            0,
-                                                                            belowspot,
-                                                                            2 | (ODDBIT
-                                                                                * (1 - odd_frame)),
-                                                                        ),
-                                                                    ]));
+                                                                    if aboveblock == 0 {
+                                                                        if rng.gen_range(0..100) == 9 {
+                                                                            AUTOMATA_QUEUED_CHANGES
+                                                                                .push_back(ACSet::new(1, [
+                                                                                    AutomataChange::new(
+                                                                                        2 | (ODDBIT
+                                                                                            * (odd_frame)), spot, 51,
+                                                                                    ),
+                                                                                    AutomataChange::new(
+                                                                                        2 | (ODDBIT
+                                                                                            * (odd_frame)), spot, 51,
+                                                                                    ),
+                                                                                ]));
+                                                                        }
+                                                                    } else {
+                                                                        waterfall();
+                                                                    }
+                                                                } else {
+                                                                    waterfall();
                                                                 }
+                                                                
                                                             }
                                                         }
                                                         7 => {
@@ -742,6 +779,23 @@ impl ChunkSystem {
                                                                             ]));
                                                                     }
                                                                 }
+                                                            }
+                                                        }
+                                                        51 => {
+                                                            if WEATHERTYPE != 1.0 {
+                                                                
+                                                                if rng.gen_range(0..100) == 9 {
+                                                                    AUTOMATA_QUEUED_CHANGES
+                                                                        .push_back(ACSet::new(1, [
+                                                                            AutomataChange::new(
+                                                                                51, spot, 2 | (ODDBIT * (1 - odd_frame)),
+                                                                            ),
+                                                                            AutomataChange::new(
+                                                                                51, spot, 2 | (ODDBIT * (1 - odd_frame)),
+                                                                            ),
+                                                                        ]));
+                                                                }
+                                                                
                                                             }
                                                         }
                                                         22 => {
