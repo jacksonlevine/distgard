@@ -312,21 +312,43 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 
 //pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
+#[derive(Clone)]
+pub struct UserDataMap(Arc<DB>);
 
-pub static mut USERDATAMAP: Option<Arc<DB>> = None;
+impl UserDataMap {
+    pub fn get(&self, vec: &IVec3) -> Option<u32> {
+        get_udm_entry(vec)
+    }
+
+    pub fn insert(&self, vec: IVec3, block: u32) {
+        put_udm_entry(&vec, block);
+    }
+}
+
+pub static mut USERDATAMAP: Option<UserDataMap> = None;
 
 pub fn get_udm_entry(key: &IVec3) -> Option<u32>
  {
-    match unsafe { USERDATAMAP } {
+    println!("Getting entry");
+    match unsafe { &USERDATAMAP } {
         Some(db) => {
+            let db = db.0.clone();
             let mut hasher = DefaultHasher::new();
             key.hash(&mut hasher);
             let hash = hasher.finish();
 
-            match db.get(hash) {
-                Ok(block) => {
-                    let block_type = u32::from_le_bytes(value[0..4].try_into().unwrap_or(0));
-                    Some(blocktype)
+            match db.get(hash.to_le_bytes()) {
+                Ok(value) => {
+                    match value {
+                        Some(value) => {
+                            println!("Got to here");
+                            let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
+                            Some(blocktype)
+                        }
+                        None => {
+                            None
+                        }
+                    }
                 }
                 Err(e) => {
                     None
@@ -343,13 +365,15 @@ pub fn get_udm_entry(key: &IVec3) -> Option<u32>
  }
 
 pub fn put_udm_entry(key: &IVec3, block: u32) {
-    match unsafe { USERDATAMAP } {
+    println!("Putting entry");
+    match unsafe { &USERDATAMAP } {
         Some(db) => {
+            let db = db.0.clone();
             let mut hasher = DefaultHasher::new();
             key.hash(&mut hasher);
             let hash = hasher.finish();
 
-            db.put(hash, block.to_le_bytes())
+            db.put(hash.to_le_bytes(), block.to_le_bytes());
         }
         None => {
 
@@ -396,7 +420,19 @@ impl ChunkSystem {
     pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
 
             unsafe {
-                USERDATAMAP = Some(Arc::new(DashMap::new()));
+                //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                println!("Opening db");
+                match DB::open_default("_rdb") {
+                    Ok(db) => {
+                        println!("Opened db, assigning to USERDATAMAP");
+                        USERDATAMAP = Some(UserDataMap(Arc::new(db)));
+                        println!("Opened db");
+                    }
+                    Err(e) => {
+                        println!("Error opening db: {}", e);
+                    }
+                }
+
                 NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
             }
         let mut cs = ChunkSystem {
@@ -2856,18 +2892,17 @@ impl ChunkSystem {
         // }
     }
     pub fn blockat(&self, spot: vec::IVec3) -> u32 {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         Self::_blockat(
             &nudm.clone(),
-            &udm.clone(),
+            unsafe { &USERDATAMAP.as_ref().unwrap().clone() },
             &self.perlin.read(),
             spot,
         )
     }
     pub fn _blockat(
         nonuserdatamap: &Arc<DashMap<IVec3, u32>>,
-        userdatamap: &Arc<DashMap<IVec3, u32>>,
+        userdatamap: &UserDataMap,
         perlin: &Perlin,
         spot: vec::IVec3,
     ) -> u32 {
@@ -2881,7 +2916,7 @@ impl ChunkSystem {
 
         match userdatamap.get(&spot) {
             Some(id) => {
-                return *id;
+                return id;
             }
             None => {}
         }
