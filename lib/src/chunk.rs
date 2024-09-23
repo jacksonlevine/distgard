@@ -329,7 +329,6 @@ pub static mut USERDATAMAP: Option<UserDataMap> = None;
 
 pub fn get_udm_entry(key: &IVec3) -> Option<u32>
  {
-    println!("Getting entry");
     match unsafe { &USERDATAMAP } {
         Some(db) => {
             let db = db.0.clone();
@@ -341,7 +340,7 @@ pub fn get_udm_entry(key: &IVec3) -> Option<u32>
                 Ok(value) => {
                     match value {
                         Some(value) => {
-                            println!("Got to here");
+                            //println!("Got to here");
                             let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
                             Some(blocktype)
                         }
@@ -365,7 +364,6 @@ pub fn get_udm_entry(key: &IVec3) -> Option<u32>
  }
 
 pub fn put_udm_entry(key: &IVec3, block: u32) {
-    println!("Putting entry");
     match unsafe { &USERDATAMAP } {
         Some(db) => {
             let db = db.0.clone();
