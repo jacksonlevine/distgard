@@ -14,6 +14,7 @@ use std::thread;
 use std::time::Duration;
 
 use bevy::math::U16Vec3;
+use borsh::BorshSerialize;
 use dashmap::DashMap;
 
 pub static CHUNKPOSDEFAULT: i32 = 999999;
@@ -327,24 +328,32 @@ impl UserDataMap {
 
 pub static mut USERDATAMAP: Option<UserDataMap> = None;
 
+pub fn key_to_bytes(key: &IVec3) -> Result<Vec<u8>, borsh::io::Error> {
+    borsh::to_vec(&[key.x, key.y, key.z])
+}
+
 pub fn get_udm_entry(key: &IVec3) -> Option<u32>
  {
     match unsafe { &USERDATAMAP } {
         Some(db) => {
             let db = db.0.clone();
-            let mut hasher = DefaultHasher::new();
-            key.hash(&mut hasher);
-            let hash = hasher.finish();
-
-            match db.get(hash.to_le_bytes()) {
-                Ok(value) => {
-                    match value {
-                        Some(value) => {
-                            //println!("Got to here");
-                            let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
-                            Some(blocktype)
+            
+            match key_to_bytes(key) {
+                Ok(key) => {
+                    match db.get(key) {
+                        Ok(value) => {
+                            match value {
+                                Some(value) => {
+                                    //println!("Got to here");
+                                    let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
+                                    Some(blocktype)
+                                }
+                                None => {
+                                    None
+                                }
+                            }
                         }
-                        None => {
+                        Err(e) => {
                             None
                         }
                     }
@@ -353,6 +362,7 @@ pub fn get_udm_entry(key: &IVec3) -> Option<u32>
                     None
                 }
             }
+            
         }
         None => {
             None
@@ -367,11 +377,22 @@ pub fn put_udm_entry(key: &IVec3, block: u32) {
     match unsafe { &USERDATAMAP } {
         Some(db) => {
             let db = db.0.clone();
-            let mut hasher = DefaultHasher::new();
-            key.hash(&mut hasher);
-            let hash = hasher.finish();
 
-            db.insert(hash.to_le_bytes(), &block.to_le_bytes());
+            match key_to_bytes(key) {
+                Ok(key) => {
+                    match db.insert(key, &block.to_le_bytes()) {
+                        Ok(_) => {
+                            //println!("Inserted key");
+                        }
+                        Err(e) => {
+                            println!("Error inserting key: {}", e);
+                        }
+                    };
+                }
+                Err(e) => {
+                    println!("Error converting key to bytes: {}", e);
+                }
+            }
         }
         None => {
 
