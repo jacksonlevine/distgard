@@ -313,7 +313,7 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 //pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 #[derive(Clone)]
-pub struct UserDataMap(Arc<Db>);
+pub struct UserDataMap(Db);
 
 impl UserDataMap {
     pub fn get(&self, vec: &IVec3) -> Option<u32> {
@@ -423,7 +423,7 @@ impl ChunkSystem {
                 match sled::open("_sdb") {
                     Ok(db) => {
                         println!("Opened db, assigning to USERDATAMAP");
-                        USERDATAMAP = Some(UserDataMap(Arc::new(db)));
+                        USERDATAMAP = Some(UserDataMap(db));
                         println!("Opened db");
                     }
                     Err(e) => {
