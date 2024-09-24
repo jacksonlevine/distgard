@@ -26,7 +26,7 @@ use once_cell::sync::Lazy;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use rocksdb::DB;
+use sled::Db;
 use rusqlite::params;
 use rusqlite::Connection;
 
@@ -313,7 +313,7 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 //pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 #[derive(Clone)]
-pub struct UserDataMap(Arc<DB>);
+pub struct UserDataMap(Arc<Db>);
 
 impl UserDataMap {
     pub fn get(&self, vec: &IVec3) -> Option<u32> {
@@ -371,7 +371,7 @@ pub fn put_udm_entry(key: &IVec3, block: u32) {
             key.hash(&mut hasher);
             let hash = hasher.finish();
 
-            db.put(hash.to_le_bytes(), block.to_le_bytes());
+            db.insert(hash.to_le_bytes(), &block.to_le_bytes());
         }
         None => {
 
@@ -420,7 +420,7 @@ impl ChunkSystem {
             unsafe {
                 //USERDATAMAP = Some(Arc::new(DashMap::new()));
                 println!("Opening db");
-                match DB::open_default("_rdb") {
+                match sled::open("_sdb") {
                     Ok(db) => {
                         println!("Opened db, assigning to USERDATAMAP");
                         USERDATAMAP = Some(UserDataMap(Arc::new(db)));
