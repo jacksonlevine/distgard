@@ -14,7 +14,7 @@ use gl::types::{GLenum, GLsizei, GLsizeiptr, GLuint, GLvoid};
 use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use glfw::{Action, Key, MouseButton, PWindow};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 // use std::time::{Duration, Instant};
 
 use lockfree::queue::Queue;
@@ -50,7 +50,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::Blocks;
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAP};
+use crate::chunk::{ChunkFacade, ChunkSystem, UserDataMap, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAP};
 
 pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
 
@@ -1206,6 +1206,8 @@ impl Game {
             println!("Headless, giving seed generation duty to servero.");
             0
         };
+
+        //let randseed = 63920910; //dont worry, ignore this cool seed
 
         let mut csys = ChunkSystem::new(10, randseed, 0, headless);
 
@@ -4483,7 +4485,7 @@ impl Game {
 
     pub fn update_movement_and_physics(&mut self) {
         static mut NUDM: Lazy<Arc<DashMap<IVec3, u32>>> = Lazy::new(|| Arc::new(DashMap::new()));
-        static mut UDM: Lazy<Arc<DashMap<IVec3, u32>>> = Lazy::new(|| Arc::new(DashMap::new()));
+        let UDM = unsafe { &*addr_of!(USERDATAMAP) }.as_ref().unwrap();
         static mut PERL: Lazy<Arc<RwLock<Perlin>>> =
             Lazy::new(|| Arc::new(RwLock::new(Perlin::new(0))));
         static mut HAS_BEEN_SET: bool = false;
@@ -4500,7 +4502,6 @@ impl Game {
             
             if !HAS_BEEN_SET {
                 (*NUDM) = nudm.clone();
-                (*UDM) = udm.clone();
                 (*PERL) = per.clone();
                 HAS_BEEN_SET = true;
             }
@@ -5919,6 +5920,8 @@ impl Game {
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let csysarc = csys.clone();
 
+
+        #[cfg(feature="audio")]
         unsafe {AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());}
 
         //Uncomment to do automata (just snow updating grass simulation for now)

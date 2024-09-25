@@ -3,6 +3,9 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
+use std::hash::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::path::Path;
@@ -11,6 +14,7 @@ use std::thread;
 use std::time::Duration;
 
 use bevy::math::U16Vec3;
+use borsh::BorshSerialize;
 use dashmap::DashMap;
 
 pub static CHUNKPOSDEFAULT: i32 = 999999;
@@ -23,6 +27,7 @@ use once_cell::sync::Lazy;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+use sled::Db;
 use rusqlite::params;
 use rusqlite::Connection;
 
@@ -63,6 +68,8 @@ use crate::textureface::TEXTURE_WIDTH;
 use crate::vec::IVec3;
 use crate::vec::{self, IVec2};
 
+use arrayvec::ArrayVec;
+
 use tracing::info;
 
 use crate::blockinfo::Blocks;
@@ -82,7 +89,7 @@ pub struct LightRay {
 }
 
 pub struct LightSegment {
-    pub rays: Vec<LightRay>,
+    pub rays: ArrayVec<LightRay, 16>,
 }
 
 impl LightSegment {
@@ -303,9 +310,101 @@ pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new(|| Dash
 pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| VecDeque::new());
 
 
+
 //MEMBERS TAKEN OUT AS PER BEVY MIGRATION PLAN STEP 1
 
-pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+//pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+
+#[derive(Clone)]
+pub struct UserDataMap(Db);
+
+impl UserDataMap {
+    pub fn get(&self, vec: &IVec3) -> Option<u32> {
+        get_udm_entry(vec)
+    }
+
+    pub fn insert(&self, vec: IVec3, block: u32) {
+        put_udm_entry(&vec, block);
+    }
+}
+
+pub static mut USERDATAMAP: Option<UserDataMap> = None;
+
+pub fn key_to_bytes(key: &IVec3) -> Result<Vec<u8>, borsh::io::Error> {
+    borsh::to_vec(&[key.x, key.y, key.z])
+}
+
+pub fn get_udm_entry(key: &IVec3) -> Option<u32>
+ {
+    match unsafe { &USERDATAMAP } {
+        Some(db) => {
+            let db = db.0.clone();
+            
+            match key_to_bytes(key) {
+                Ok(key) => {
+                    match db.get(key) {
+                        Ok(value) => {
+                            match value {
+                                Some(value) => {
+                                    //println!("Got to here");
+                                    let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
+                                    Some(blocktype)
+                                }
+                                None => {
+                                    None
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    None
+                }
+            }
+            
+        }
+        None => {
+            None
+        }
+    }
+
+
+    
+ }
+
+pub fn put_udm_entry(key: &IVec3, block: u32) {
+    match unsafe { &USERDATAMAP } {
+        Some(db) => {
+            let db = db.0.clone();
+
+            match key_to_bytes(key) {
+                Ok(key) => {
+                    match db.insert(key, &block.to_le_bytes()) {
+                        Ok(_) => {
+                            //println!("Inserted key");
+                        }
+                        Err(e) => {
+                            println!("Error inserting key: {}", e);
+                        }
+                    };
+                }
+                Err(e) => {
+                    println!("Error converting key to bytes: {}", e);
+                }
+            }
+        }
+        None => {
+
+        }
+    }
+    
+}
+
+
+
 pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 
@@ -342,7 +441,19 @@ impl ChunkSystem {
     pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
 
             unsafe {
-                USERDATAMAP = Some(Arc::new(DashMap::new()));
+                //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                println!("Opening db");
+                match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
+                    Ok(db) => {
+                        println!("Opened db, assigning to USERDATAMAP");
+                        USERDATAMAP = Some(UserDataMap(db));
+                        println!("Opened db");
+                    }
+                    Err(e) => {
+                        println!("Error opening db: {}", e);
+                    }
+                }
+
                 NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
             }
         let mut cs = ChunkSystem {
@@ -426,174 +537,6 @@ impl ChunkSystem {
 
         stmt.execute(params![spot.x, spot.y, spot.z, block])
             .unwrap();
-    }
-
-    pub fn save_current_world_to_file(&self, path: String) {
-        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
-        let table_name = format!("userdatamap_{}", seed);
-
-        let conn = Connection::open("db").unwrap();
-
-        conn.execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS {} (
-                    x INTEGER,
-                    y INTEGER,
-                    z INTEGER,
-                    value INTEGER,
-                    PRIMARY KEY (x, y, z)
-                )",
-                table_name
-            ),
-            (),
-        )
-        .unwrap();
-
-        // Insert userdatamap entries
-        let mut stmt = conn
-            .prepare(&format!(
-                "INSERT OR REPLACE INTO {} (x, y, z, value) VALUES (?, ?, ?, ?)",
-                table_name
-            ))
-            .unwrap();
-
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-        for entry in udm.iter() {
-            stmt.execute(params![
-                entry.key().x,
-                entry.key().y,
-                entry.key().z,
-                *entry.value()
-            ])
-            .unwrap();
-        }
-
-        fs::create_dir_all(&path).unwrap();
-
-        // let mut file = File::create(path.clone() + "/udm").unwrap();
-        // for entry in self.userdatamap.iter() {
-        //     writeln!(file, "{} {}", entry.key(), entry.value()).unwrap();
-        // }
-
-        let mut file = File::create(path.clone() + "/seed").unwrap();
-        writeln!(file, "{}", unsafe {
-            CURRSEED.load(std::sync::atomic::Ordering::Relaxed)
-        })
-        .unwrap();
-
-        let mut file = File::create(path.clone() + "/pt").unwrap();
-        writeln!(file, "{}", self.planet_type).unwrap();
-    }
-
-    pub fn load_world_from_file(&mut self, path: String) {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-        let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
-        udm.clear();
-        nudm.clear();
-
-        match File::open(format!("{}/udm", path.clone())) {
-            Ok(_) => {}
-            Err(_) => {
-                fs::create_dir_all(&path.clone()).unwrap();
-                self.save_current_world_to_file(path.clone());
-            }
-        }
-
-        let conn = Connection::open("db").unwrap();
-
-        conn.execute_batch(
-            "
-            PRAGMA synchronous = OFF;
-            PRAGMA journal_mode = WAL;
-            PRAGMA cache_size = 10000;
-        ",
-        )
-        .unwrap();
-
-        // let file = File::open(format!("{}/udm", path)).unwrap();
-        // let reader = BufReader::new(file);
-
-        // for line in reader.lines() {
-        //     let line = line.unwrap();
-        //     let mut parts = line.splitn(4, ' ');
-        //     if let (Some(x), Some(y), Some(z), Some(value)) = (parts.next(), parts.next(), parts.next(), parts.next()) {
-        //         let key = format!("{} {} {}", x, y, z);
-        //         self.userdatamap.insert(vec::IVec3::from_str(&key).unwrap(), value.parse::<u32>().unwrap());
-        //     }
-        // }
-        let pa = format!("{}/seed2", path);
-
-        if Path::new(&pa).exists() {
-            let file = File::open(pa).unwrap();
-            let reader = BufReader::new(file);
-
-            for line in reader.lines() {
-                let line = line.unwrap();
-                let mut parts = line.splitn(2, ' ');
-                if let Some(seed) = parts.next() {
-                    let s = seed.parse::<u32>().unwrap();
-                    info!("Seed Is {}", s);
-                    *(self.perlin.write()) = Perlin::new(s);
-
-                    unsafe { CURRSEED.store(s, std::sync::atomic::Ordering::Relaxed) }
-                }
-            }
-        } else {
-            info!("Seed2 doesnt exist");
-        }
-
-        let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
-        let table_name = format!("userdatamap_{}", seed);
-        info!("LOADING FROM TABLENAME {}", table_name);
-
-        conn.execute(
-            &format!(
-                "CREATE TABLE IF NOT EXISTS {} (
-                    x INTEGER,
-                    y INTEGER,
-                    z INTEGER,
-                    value INTEGER,
-                    PRIMARY KEY (x, y, z)
-                )",
-                table_name
-            ),
-            (),
-        )
-        .unwrap();
-
-        // Query the userdatamap table
-        let mut stmt = conn
-            .prepare(&format!("SELECT x, y, z, value FROM {}", table_name))
-            .unwrap();
-
-        let userdatamap_iter = stmt
-            .query_map([], |row| {
-                Ok((
-                    vec::IVec3::new(row.get(0)?, row.get(1)?, row.get(2)?),
-                    row.get(3)?,
-                ))
-            })
-            .unwrap();
-        {
-            let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
-            for entry in userdatamap_iter {
-                let (key, value): (vec::IVec3, u32) = entry.unwrap();
-                
-                udm.insert(key, value);
-            }
-
-        }
-        
-        let file = File::open(format!("{}/pt", path)).unwrap();
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            let line = line.unwrap();
-            let mut parts = line.splitn(2, ' ');
-            if let Some(pt) = parts.next() {
-                self.planet_type = pt.parse::<u8>().unwrap();
-            }
-        }
     }
 
     pub fn collision_predicate(&self, vec: vec::IVec3) -> bool {
@@ -1379,7 +1322,7 @@ impl ChunkSystem {
                 match lmlock.get_mut(&n.1) {
                     Some(k2) => inner_light_seg = k2,
                     None => {
-                        lmlock.insert(n.1, LightSegment { rays: Vec::new() });
+                        lmlock.insert(n.1, LightSegment { rays: ArrayVec::new() });
                         inner_light_seg = lmlock.get_mut(&n.1).unwrap();
                     }
                 }
@@ -1399,11 +1342,18 @@ impl ChunkSystem {
                         k
                     }
                     None => {
-                        inner_light_seg.rays.push(LightRay {
+                        match inner_light_seg.rays.try_push(LightRay {
                             value: n.0,
                             origin,
                             directions: Vec::new(),
-                        });
+                        }) {
+                            Ok(_) => {
+
+                            }
+                            Err(_) => {
+
+                            }
+                        };
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
@@ -1426,7 +1376,7 @@ impl ChunkSystem {
                 match lmlock.get_mut(&n.1) {
                     Some(k2) => inner_light_seg = k2,
                     None => {
-                        lmlock.insert(n.1, LightSegment { rays: Vec::new() });
+                        lmlock.insert(n.1, LightSegment { rays: ArrayVec::new() });
                         inner_light_seg = lmlock.get_mut(&n.1).unwrap();
                     }
                 }
@@ -1446,11 +1396,18 @@ impl ChunkSystem {
                         k
                     }
                     None => {
-                        inner_light_seg.rays.push(LightRay {
+                        match inner_light_seg.rays.try_push(LightRay {
                             value: n.0,
                             origin,
                             directions: Vec::new(),
-                        });
+                        }) {
+                            Ok(_) => {
+
+                            }
+                            Err(_) => {
+
+                            }
+                        };
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
@@ -1502,18 +1459,24 @@ impl ChunkSystem {
 
                             let inner_light_seg = lmlock.get_mut(&n.1).unwrap();
 
-                            let my_ray_here = inner_light_seg
+                            match inner_light_seg
                                 .rays
                                 .iter_mut()
-                                .find(|r| r.origin == origin)
-                                .unwrap();
+                                .find(|r| r.origin == origin) {
+                                    Some(my_ray_here) => {
+                                        if !my_ray_here
+                                            .directions
+                                            .contains(&CubeSide::from_primitive(index))
+                                        {
+                                            my_ray_here.directions.push(CubeSide::from_primitive(index));
+                                        }
+                                    }
+                                    None => {
+                                        
+                                    }
+                                };
 
-                            if !my_ray_here
-                                .directions
-                                .contains(&CubeSide::from_primitive(index))
-                            {
-                                my_ray_here.directions.push(CubeSide::from_primitive(index));
-                            }
+                            
                         }
                     }
                 }
@@ -2030,14 +1993,14 @@ impl ChunkSystem {
                                                 .count();
 
                                             let base_light: i32 =
-                                                v[3] as i32 - AMB_CHANGES[amb_change] as i32; // Perform calculations as i32
+                                                v[3] as i32 - AMB_CHANGES[amb_change] as i32; 
                                             let adjusted_light: i32 = if hit_block {
                                                 base_light - 3
                                             } else {
                                                 base_light
                                             };
                                             let clamped_light: u8 =
-                                                adjusted_light.clamp(0, 15) as u8; // Clamp in i32 context, then cast to u8
+                                                adjusted_light.clamp(0, 15) as u8; 
 
                                             let pack = PackedVertex::pack(
                                                 i as u8 + v[0],
@@ -2045,7 +2008,7 @@ impl ChunkSystem {
                                                 k as u8 + v[2],
                                                 ind as u8,
                                                 clamped_light,
-                                                isgrass, //TEMPORARY UNUSED
+                                                isgrass, 
                                                 texcoord.0,
                                                 texcoord.1,
                                             );
@@ -2084,7 +2047,7 @@ impl ChunkSystem {
                                                     k as u8 + v[2],
                                                     ind as u8,
                                                     clamped_light,
-                                                    isgrass, //TEMPORARY UNUSED
+                                                    isgrass,
                                                     texcoord.0,
                                                     texcoord.1,
                                                 );
@@ -2970,18 +2933,17 @@ impl ChunkSystem {
         // }
     }
     pub fn blockat(&self, spot: vec::IVec3) -> u32 {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         Self::_blockat(
             &nudm.clone(),
-            &udm.clone(),
+            unsafe { &USERDATAMAP.as_ref().unwrap().clone() },
             &self.perlin.read(),
             spot,
         )
     }
     pub fn _blockat(
         nonuserdatamap: &Arc<DashMap<IVec3, u32>>,
-        userdatamap: &Arc<DashMap<IVec3, u32>>,
+        userdatamap: &UserDataMap,
         perlin: &Perlin,
         spot: vec::IVec3,
     ) -> u32 {
@@ -2995,7 +2957,7 @@ impl ChunkSystem {
 
         match userdatamap.get(&spot) {
             Some(id) => {
-                return *id;
+                return id;
             }
             None => {}
         }
