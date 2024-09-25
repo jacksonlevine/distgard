@@ -14,7 +14,7 @@ use gl::types::{GLenum, GLsizei, GLsizeiptr, GLuint, GLvoid};
 use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use glfw::{Action, Key, MouseButton, PWindow};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 // use std::time::{Duration, Instant};
 
 use lockfree::queue::Queue;
@@ -5918,6 +5918,8 @@ impl Game {
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let csysarc = csys.clone();
 
+
+        #[cfg(feature="audio")]
         unsafe {AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());}
 
         //Uncomment to do automata (just snow updating grass simulation for now)

@@ -68,6 +68,8 @@ use crate::textureface::TEXTURE_WIDTH;
 use crate::vec::IVec3;
 use crate::vec::{self, IVec2};
 
+use arrayvec::ArrayVec;
+
 use tracing::info;
 
 use crate::blockinfo::Blocks;
@@ -87,7 +89,7 @@ pub struct LightRay {
 }
 
 pub struct LightSegment {
-    pub rays: Vec<LightRay>,
+    pub rays: ArrayVec<LightRay, 16>,
 }
 
 impl LightSegment {
@@ -1320,7 +1322,7 @@ impl ChunkSystem {
                 match lmlock.get_mut(&n.1) {
                     Some(k2) => inner_light_seg = k2,
                     None => {
-                        lmlock.insert(n.1, LightSegment { rays: Vec::new() });
+                        lmlock.insert(n.1, LightSegment { rays: ArrayVec::new() });
                         inner_light_seg = lmlock.get_mut(&n.1).unwrap();
                     }
                 }
@@ -1340,11 +1342,18 @@ impl ChunkSystem {
                         k
                     }
                     None => {
-                        inner_light_seg.rays.push(LightRay {
+                        match inner_light_seg.rays.try_push(LightRay {
                             value: n.0,
                             origin,
                             directions: Vec::new(),
-                        });
+                        }) {
+                            Ok(_) => {
+
+                            }
+                            Err(_) => {
+
+                            }
+                        };
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
@@ -1367,7 +1376,7 @@ impl ChunkSystem {
                 match lmlock.get_mut(&n.1) {
                     Some(k2) => inner_light_seg = k2,
                     None => {
-                        lmlock.insert(n.1, LightSegment { rays: Vec::new() });
+                        lmlock.insert(n.1, LightSegment { rays: ArrayVec::new() });
                         inner_light_seg = lmlock.get_mut(&n.1).unwrap();
                     }
                 }
@@ -1387,11 +1396,18 @@ impl ChunkSystem {
                         k
                     }
                     None => {
-                        inner_light_seg.rays.push(LightRay {
+                        match inner_light_seg.rays.try_push(LightRay {
                             value: n.0,
                             origin,
                             directions: Vec::new(),
-                        });
+                        }) {
+                            Ok(_) => {
+
+                            }
+                            Err(_) => {
+
+                            }
+                        };
                         inner_light_seg.rays.last_mut().unwrap()
                     }
                 };
@@ -1443,18 +1459,24 @@ impl ChunkSystem {
 
                             let inner_light_seg = lmlock.get_mut(&n.1).unwrap();
 
-                            let my_ray_here = inner_light_seg
+                            match inner_light_seg
                                 .rays
                                 .iter_mut()
-                                .find(|r| r.origin == origin)
-                                .unwrap();
+                                .find(|r| r.origin == origin) {
+                                    Some(my_ray_here) => {
+                                        if !my_ray_here
+                                            .directions
+                                            .contains(&CubeSide::from_primitive(index))
+                                        {
+                                            my_ray_here.directions.push(CubeSide::from_primitive(index));
+                                        }
+                                    }
+                                    None => {
+                                        
+                                    }
+                                };
 
-                            if !my_ray_here
-                                .directions
-                                .contains(&CubeSide::from_primitive(index))
-                            {
-                                my_ray_here.directions.push(CubeSide::from_primitive(index));
-                            }
+                            
                         }
                     }
                 }
@@ -1971,14 +1993,14 @@ impl ChunkSystem {
                                                 .count();
 
                                             let base_light: i32 =
-                                                v[3] as i32 - AMB_CHANGES[amb_change] as i32; // Perform calculations as i32
+                                                v[3] as i32 - AMB_CHANGES[amb_change] as i32; 
                                             let adjusted_light: i32 = if hit_block {
                                                 base_light - 3
                                             } else {
                                                 base_light
                                             };
                                             let clamped_light: u8 =
-                                                adjusted_light.clamp(0, 15) as u8; // Clamp in i32 context, then cast to u8
+                                                adjusted_light.clamp(0, 15) as u8; 
 
                                             let pack = PackedVertex::pack(
                                                 i as u8 + v[0],
@@ -1986,7 +2008,7 @@ impl ChunkSystem {
                                                 k as u8 + v[2],
                                                 ind as u8,
                                                 clamped_light,
-                                                isgrass, //TEMPORARY UNUSED
+                                                isgrass, 
                                                 texcoord.0,
                                                 texcoord.1,
                                             );
@@ -2025,7 +2047,7 @@ impl ChunkSystem {
                                                     k as u8 + v[2],
                                                     ind as u8,
                                                     clamped_light,
-                                                    isgrass, //TEMPORARY UNUSED
+                                                    isgrass,
                                                     texcoord.0,
                                                     texcoord.1,
                                                 );
