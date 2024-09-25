@@ -443,7 +443,7 @@ impl ChunkSystem {
             unsafe {
                 //USERDATAMAP = Some(Arc::new(DashMap::new()));
                 println!("Opening db");
-                match sled::open("_sdb") {
+                match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
                     Ok(db) => {
                         println!("Opened db, assigning to USERDATAMAP");
                         USERDATAMAP = Some(UserDataMap(db));

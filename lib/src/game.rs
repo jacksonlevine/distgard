@@ -1207,6 +1207,8 @@ impl Game {
             0
         };
 
+        //let randseed = 63920910; //dont worry, ignore this cool seed
+
         let mut csys = ChunkSystem::new(10, randseed, 0, headless);
 
         unsafe {
