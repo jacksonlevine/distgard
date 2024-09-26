@@ -635,7 +635,7 @@ impl WindowAndKeyContext {
                             if ui.button_with_size("Singleplayer", [button_width, button_height]) {
                                 #[cfg(feature="audio")]
                                 {
-                                    AUDIOPLAYER.play_in_head("assets/sfx/mclickgo.mp3");
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
                                 }
                                 SINGLEPLAYER = true;
                                 DECIDEDSPORMP = true;
@@ -650,7 +650,7 @@ impl WindowAndKeyContext {
                                 }
                                 #[cfg(feature="audio")]
                                 {
-                                    AUDIOPLAYER.play_in_head("assets/sfx/mclick1.mp3");
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
                                 }
                             }
 
@@ -667,7 +667,7 @@ impl WindowAndKeyContext {
                             if ui.button_with_size("Multiplayer", [button_width, button_height]) {
                                 #[cfg(feature="audio")]
                                 {
-                                    AUDIOPLAYER.play_in_head("assets/sfx/mclickgo.mp3");
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
                                 }
                                 SINGLEPLAYER = false;
                                 DECIDEDSPORMP = true;
@@ -682,7 +682,7 @@ impl WindowAndKeyContext {
                                 }
                                 #[cfg(feature="audio")]
                                 {
-                                    AUDIOPLAYER.play_in_head("assets/sfx/mclick1.mp3");
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
                                 }
                             }
                             draw_3d_menu_button(
