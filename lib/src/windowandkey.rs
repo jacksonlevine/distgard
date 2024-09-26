@@ -227,8 +227,8 @@ impl WindowAndKeyContext {
         #[cfg(feature = "audio")]
         {
             unsafe {
-                AUDIOPLAYER.preload("assets/sfx/mclick1.mp3", "assets/sfx/mclick1.mp3");
-                AUDIOPLAYER.preload("assets/sfx/mclickgo.mp3", "assets/sfx/mclickgo.mp3");
+                AUDIOPLAYER.preload(path!("assets/sfx/mclick1.mp3"), path!("assets/sfx/mclick1.mp3"));
+                AUDIOPLAYER.preload(path!("assets/sfx/mclickgo.mp3"), path!("assets/sfx/mclickgo.mp3"));
             }
         }
 
@@ -1295,6 +1295,7 @@ impl WindowAndKeyContext {
                                     None => {}
                                 }
                             } else {
+                                //println!("Io capture mouse: {}", io.want_capture_mouse);
                                 if !io.want_capture_mouse && !g.vars.menu_open {
                                     if mousebutton == glfw::MouseButtonLeft {
                                         if !io.want_capture_mouse {
