@@ -130,7 +130,7 @@ fn toggle_fullscreen(window_ptr: *mut glfw::ffi::GLFWwindow) {
 
 // use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
-pub static MAINMENUSONG: &str = path!("assets/music/bb4.mp3");
+pub static MAINMENUSONG: &str = path!("assets/music/dd2dd3.mp3");
 
 impl WindowAndKeyContext {
 
@@ -223,6 +223,14 @@ impl WindowAndKeyContext {
         let mut menu_camera = crate::camera::Camera::new();
         menu_camera.position = Vec3::new(0.0, 3.0, -5.0);
         menu_camera.recalculate();
+
+        #[cfg(feature = "audio")]
+        {
+            unsafe {
+                AUDIOPLAYER.preload("assets/sfx/mclick1.mp3", "assets/sfx/mclick1.mp3");
+                AUDIOPLAYER.preload("assets/sfx/mclickgo.mp3", "assets/sfx/mclickgo.mp3");
+            }
+        }
 
         let mut wak = WindowAndKeyContext {
             menu_camera,
@@ -625,30 +633,63 @@ impl WindowAndKeyContext {
 
                             // Singleplayer button
                             if ui.button_with_size("Singleplayer", [button_width, button_height]) {
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head("assets/sfx/mclickgo.mp3");
+                                }
                                 SINGLEPLAYER = true;
                                 DECIDEDSPORMP = true;
+                            }
+
+                            static mut ELEMENT1MOUSED: bool = false;
+                            let hovered = ui.is_item_hovered();
+
+                            if hovered != unsafe { ELEMENT1MOUSED } {
+                                unsafe {
+                                    ELEMENT1MOUSED = hovered;
+                                }
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head("assets/sfx/mclick1.mp3");
+                                }
                             }
 
                             draw_3d_menu_button(
                                 &self.modelshader, &self.menu_camera, 
                                 &self.gltf_vaos, &self.gltf_textures, 
                                 &self.gltf_counts, &self.gltf_drawmodes,
-                                ui.is_item_hovered(), Vec3::new(0.0, 2.75, 0.0), 1
+                                hovered, Vec3::new(0.0, 2.75, 0.0), 1
                             );
 
                                     ui.set_cursor_pos([pos_x, pos_y + screen_height * 0.08  - screen_height * 0.01]);
 
                             // Multiplayer button
                             if ui.button_with_size("Multiplayer", [button_width, button_height]) {
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head("assets/sfx/mclickgo.mp3");
+                                }
                                 SINGLEPLAYER = false;
                                 DECIDEDSPORMP = true;
                             }
 
+                            static mut ELEMENT2MOUSED: bool = false;
+                            let hovered = ui.is_item_hovered();
+
+                            if hovered != unsafe { ELEMENT2MOUSED } {
+                                unsafe {
+                                    ELEMENT2MOUSED = hovered;
+                                }
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head("assets/sfx/mclick1.mp3");
+                                }
+                            }
                             draw_3d_menu_button(
                                 &self.modelshader, &self.menu_camera, 
                                 &self.gltf_vaos, &self.gltf_textures, 
                                 &self.gltf_counts, &self.gltf_drawmodes,
-                                ui.is_item_hovered(), Vec3::new(0.0, 2.0, 0.0), 2
+                                hovered, Vec3::new(0.0, 2.0, 0.0), 2
                             );
 
                             // Pop the button style after use
