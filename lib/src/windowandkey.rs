@@ -1,13 +1,13 @@
-use std::ptr::addr_of;
+use std::ptr::{addr_of, addr_of_mut};
 use bevy::prelude::*;
 use gl::types::{GLenum, GLuint};
 use gltf::mesh::util::ReadIndices;
 
 use crate::{
-    audio::spawn_audio_thread, blockinfo::Blocks, game::{
+    audio::spawn_audio_thread, blockinfo::Blocks, cmd::Cmd, game::{
         Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
-        LAST_ENTERED_SERVERADDRESS, load_misc, load_or_initialize_statics, MISCSETTINGS, save_lesa,
+        load_misc, load_or_initialize_statics, save_lesa, LAST_ENTERED_SERVERADDRESS, MISCSETTINGS
     }, texture::Texture
 };
 
@@ -54,6 +54,7 @@ pub struct WindowAndKeyContext {
     pub width: u32,
     pub height: u32,
     pub game: Option<Game>,
+    pub cmd: Cmd,
 
     pub previous_time: Instant,
     pub delta_time: f32,
@@ -228,6 +229,7 @@ impl WindowAndKeyContext {
             width,
             height,
             game: None,
+            cmd: Cmd::new(),
             previous_time: Instant::now(),
             delta_time: 0.0,
             glfw,
@@ -515,8 +517,6 @@ impl WindowAndKeyContext {
 
         let mut main_menu = false;
 
-       
-
         unsafe {
             match DECIDEDSPORMP {
                 false => {
@@ -587,6 +587,16 @@ impl WindowAndKeyContext {
                             let image_pos_x = (available_width - scaled_size[0]) / 2.0;
                             let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - screen_height * 0.2;
 
+                            // commands dont work in menu yet
+                            // if self.cmd.cmd_open {
+                            //     ui.set_cursor_pos([0f32, 0f32]);
+                            //     if ui.input_text("##", &mut self.cmd.cmd_text)
+                            //     .enter_returns_true(true)
+                            //     .build() {
+                            //         self.cmd.run(self.game.as_mut().unwrap());
+                            //     }
+                            // }
+
                             ui.set_cursor_pos([image_pos_x, image_pos_y]);
 
                             draw_3d_menu_button(
@@ -647,91 +657,8 @@ impl WindowAndKeyContext {
                     // Render the ImGui frame
                     self.guirenderer.render(&mut self.imgui);
 
-                    let io = self.imgui.io_mut();
-                    for (_, event) in glfw::flush_messages(&self.events) {
-                        match event {
-                            glfw::WindowEvent::MouseButton(mousebutton, action, _) => {
-                                let index = match mousebutton {
-                                    glfw::MouseButton::Button1 => 0,
-                                    glfw::MouseButton::Button2 => 1,
-                                    glfw::MouseButton::Button3 => 2,
-                                    glfw::MouseButton::Button4 => 3,
-                                    glfw::MouseButton::Button5 => 4,
-                                    glfw::MouseButton::Button6 => 5,
-                                    glfw::MouseButton::Button7 => 6,
-                                    glfw::MouseButton::Button8 => 7,
-                                };
-                                io.mouse_down[index] = action == glfw::Action::Press;
-                            }
-                            glfw::WindowEvent::FramebufferSize(wid, hei) => {
-                                self.width = wid as u32;
-                                self.height = hei as u32;
-                                gl::Viewport(0, 0, wid, hei);
-                                WINDOWHEIGHT = hei;
-                                WINDOWWIDTH = wid;
-                                let cam = &mut self.menu_camera;
-                                let cfov = cam.fov;
-                                cam.update_fov(cfov);
-                            }
-                            glfw::WindowEvent::CursorPos(xpos, ypos) => {
-                                io.mouse_pos = [xpos as f32, ypos as f32];
-                            }
-                            glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => {
-                                let pressed =
-                                    action == glfw::Action::Press || action == glfw::Action::Repeat;
-                                io.keys_down[key as usize] = pressed;
-
-                                if action == glfw::Action::Press {
-                                    match key {
-                                        glfw::Key::LeftShift | glfw::Key::RightShift => {
-                                            io.key_shift = true
-                                        }
-                                        glfw::Key::LeftControl | glfw::Key::RightControl => {
-                                            io.key_ctrl = true
-                                        }
-                                        glfw::Key::LeftAlt | glfw::Key::RightAlt => {
-                                            io.key_alt = true
-                                        }
-                                        glfw::Key::LeftSuper | glfw::Key::RightSuper => {
-                                            io.key_super = true
-                                        }
-                                        glfw::Key::Backspace => {
-                                            io.keys_down[glfw::Key::Backspace as usize] = true;
-                                            io.add_input_character('\u{8}');
-                                        }
-                                        _ => {}
-                                    }
-                                } else if action == glfw::Action::Release {
-                                    match key {
-                                        glfw::Key::LeftShift | glfw::Key::RightShift => {
-                                            io.key_shift = false
-                                        }
-                                        glfw::Key::LeftControl | glfw::Key::RightControl => {
-                                            io.key_ctrl = false
-                                        }
-                                        glfw::Key::LeftAlt | glfw::Key::RightAlt => {
-                                            io.key_alt = false
-                                        }
-                                        glfw::Key::LeftSuper | glfw::Key::RightSuper => {
-                                            io.key_super = false
-                                        }
-                                        glfw::Key::Backspace => {
-                                            io.keys_down[glfw::Key::Backspace as usize] = false
-                                        }
-                                        _ => {}
-                                    }
-                                }
-                            }
-                            glfw::WindowEvent::Char(char) => {
-                                io.add_input_character(char);
-                            }
-                            glfw::WindowEvent::Scroll(x, y) => {
-                                io.mouse_wheel_h += x as f32;
-                                io.mouse_wheel += y as f32;
-                            }
-                            _ => {}
-                        }
-                    }
+                    // avoid borrow checker
+                    (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
                 }
                 true => {
                     match self.game.as_mut() {
@@ -1153,226 +1080,48 @@ impl WindowAndKeyContext {
                                         // Render the ImGui frame
                                         self.guirenderer.render(&mut self.imgui);
                                     }
-                                }
+                                    else {
+                                        let (width, height) =
+                                            self.window.read().get_framebuffer_size();
+                                        self.imgui.io_mut().display_size =
+                                            [width as f32, height as f32];
 
-                                let io = self.imgui.io_mut();
-                                for (_, event) in glfw::flush_messages(&self.events) {
-                                    match event {
-                                        glfw::WindowEvent::MouseButton(mousebutton, action, _) => {
-                                            if LISTENINGFORREBIND {
-                                                match &*addr_of!(ABOUTTOREBIND) {
-                                                    Some(atr) => {
-                                    
-                                                        match atr.key {
-                                                            crate::keybinds::Rebindable::Key(_oldscan) => {
-                                                                
-                                                            },
-                                                            crate::keybinds::Rebindable::MouseButton(mb) => {
-                                                                if !MISCSETTINGS.mousebinds.contains_key(&format!("{:?}", mousebutton)) {
-                                                                    MISCSETTINGS.mousebinds.remove(&format!("{:?}", mb));
-                                                                    MISCSETTINGS.mousebinds.insert(format!("{:?}", mousebutton), atr.action.clone());
-                                                                    g.button_command("bindingsmenu".into());
-                                                                }
-                                                                
-                                                                LISTENINGFORREBIND = false;
-                                                            },
-                                                        }
-                                                        
-                                                    }
-                                                    None => {
-                                                        
-                                                    }
-                                                }
-                                            } else {
-                                                let index = match mousebutton {
-                                                    glfw::MouseButton::Button1 => 0,
-                                                    glfw::MouseButton::Button2 => 1,
-                                                    glfw::MouseButton::Button3 => 2,
-                                                    glfw::MouseButton::Button4 => 3,
-                                                    glfw::MouseButton::Button5 => 4,
-                                                    glfw::MouseButton::Button6 => 5,
-                                                    glfw::MouseButton::Button7 => 6,
-                                                    glfw::MouseButton::Button8 => 7,
-                                                };
-                                                io.mouse_down[index] =
-                                                    action == glfw::Action::Press;
+                                        // Start the ImGui frame
+                                        let ui = self.imgui.frame();
 
-                                                // println!("Got a m.o.u.s.e. event");
-                                                //         println!("io.want_capture_mouse: {}, gmenuopen: {}",
-                                                //         io.want_capture_mouse,
-                                                //         gmenuopen);
+                                        let window_flags = WindowFlags::NO_DECORATION
+                                            | WindowFlags::NO_MOVE
+                                            | WindowFlags::NO_RESIZE
+                                            | WindowFlags::NO_SCROLLBAR
+                                            | WindowFlags::NO_TITLE_BAR
+                                            | WindowFlags::NO_BACKGROUND;
 
-                                                if !io.want_capture_mouse && !gmenuopen {
-                                                    if mousebutton == glfw::MouseButtonLeft {
-                                                        if !io.want_capture_mouse {
-                                                            if !gmenuopen && !gchestopen {
-                                                                self.window
-                                                                    .write()
-                                                                    .set_cursor_mode(
-                                                                        glfw::CursorMode::Disabled,
-                                                                    );
-                                                                g.set_mouse_focused(true);
-                                                            }
-                                                        }
-                                                    }
-                                                    #[cfg(feature = "glfw")]
-                                                    g.mouse_button(mousebutton, action);
-                                                }
-                                            }
-                                        }
-                                        glfw::WindowEvent::FramebufferSize(wid, hei) => {
-                                            self.width = wid as u32;
-                                            self.height = hei as u32;
-                                            gl::Viewport(0, 0, wid, hei);
-                                            WINDOWHEIGHT = hei;
-                                            WINDOWWIDTH = wid;
-                                            let cam = CAMERA.as_ref().unwrap();
-                                            let mut c = cam.lock();
-                                            let cfov = c.fov;
-                                            c.update_fov(cfov);
-                                            let cam = &mut self.menu_camera;
-                                            let cfov = cam.fov;
-                                            cam.update_fov(cfov);
-                                        }
-                                        glfw::WindowEvent::CursorPos(xpos, ypos) => {
-                                            g.cursor_pos(xpos, ypos);
-                                            if !g.vars.mouse_focused {
-                                                io.mouse_pos = [xpos as f32, ypos as f32];
-                                            }
-                                        }
-                                        glfw::WindowEvent::Key(
-                                            key,
-                                            scancode,
-                                            action,
-                                            _modifiers,
-                                        ) => {
-                                            if LISTENINGFORREBIND {
-                                                let keyscan = key.get_scancode().unwrap_or(0);
+                                        let window_size = (700.0, 700.0);
+                                        let window_pos = [0f32, 0f32];
 
-                                                match &*addr_of!(ABOUTTOREBIND) {
-                                                    Some(atr) => {
-                                    
-                                                        match atr.key {
-                                                            crate::keybinds::Rebindable::Key(oldscan) => {
-                                                                if !MISCSETTINGS.keybinds.contains_key(&keyscan) {
-                                                                    MISCSETTINGS.keybinds.remove(&oldscan);
-                                                                    MISCSETTINGS.keybinds.insert(keyscan, atr.action.clone());
-                                                                    g.button_command("bindingsmenu".into());
-                                                                }
-                                                                
-                                                                LISTENINGFORREBIND = false;
-                                                            },
-                                                            crate::keybinds::Rebindable::MouseButton(_mb) => {
-                                    
-                                                            },
-                                                        }
-                                                        
-                                                    }
-                                                    None => {
-                                                        
+                                        ui.window("Command Line")
+                                            .size([window_size.0, window_size.1], Condition::Always)
+                                            .position(window_pos, Condition::Always)
+                                            .flags(window_flags)
+                                            .build(|| {
+                                                if self.cmd.cmd_open {
+                                                    ui.set_keyboard_focus_here();
+                                                    ui.set_cursor_pos([0f32, 0f32]);
+                                                    if ui.input_text("##", &mut self.cmd.cmd_text)
+                                                    .enter_returns_true(true)
+                                                    .build() {
+                                                        self.cmd.run(self.game.as_mut().unwrap());
                                                     }
                                                 }
-                                            } else {
-                                                let pressed = action == glfw::Action::Press
-                                                    || action == glfw::Action::Repeat;
-                                                io.keys_down[scancode as usize] = pressed;
-                                                // println!("Got a kb event");
-                                                // println!("io.want_capture_keyboard: {}, io.want_text_input: {}, gmenuopen: {}",
-                                                // io.want_capture_keyboard,
-                                                // io.want_text_input,
-                                                // gmenuopen);
+                                            });
 
-                                                if gcraftopen
-                                                    && pressed
-                                                    && MISCSETTINGS
-                                                        .keybinds
-                                                        .get(&key.get_scancode().unwrap())
-                                                        .unwrap_or(&"Blah".to_string())
-                                                        == "Craft"
-                                                {
-                                                    //println!("SHould close craft");
-                                                    // g.crafting_open = false;
-                                                    // self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
-                                                    // g.set_mouse_focused(true);
-
-                                                    g.crafting_open = false;
-
-                                                    self.window.write().set_cursor_mode(
-                                                        glfw::CursorMode::Disabled,
-                                                    );
-                                                    g.set_mouse_focused(true);
-                                                    UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                   
-                                                } else {
-                                                    if gmenuopen
-                                                        && pressed
-                                                        && MISCSETTINGS
-                                                            .keybinds
-                                                            .get(&key.get_scancode().unwrap())
-                                                            .unwrap_or(&"Blah".to_string())
-                                                            == "Exit/Menu"
-                                                    {
-                                                        g.vars.menu_open = false;
-                                                        self.window.write().set_cursor_mode(
-                                                            glfw::CursorMode::Disabled,
-                                                        );
-                                                        g.set_mouse_focused(true);
-                                                        UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                    }
-
-                                                    if (!io.want_capture_keyboard
-                                                        && !io.want_text_input)
-                                                        && !gmenuopen
-                                                    {
-                                                        #[cfg(feature = "glfw")]
-                                                        g.keyboard(key, action);
-
-                                                        if key == Key::Escape {
-                                                            if g.vars.menu_open {
-                                                                self.window
-                                                                    .write()
-                                                                    .set_cursor_mode(
-                                                                        glfw::CursorMode::Normal,
-                                                                    );
-                                                                g.set_mouse_focused(false);
-                                                            } else {
-                                                                g.vars.menu_open = false;
-                                                                self.window
-                                                                    .write()
-                                                                    .set_cursor_mode(
-                                                                        glfw::CursorMode::Disabled,
-                                                                    );
-                                                                g.set_mouse_focused(true);
-                                                            }
-                                                        }
-                                                    } else {
-                                                        //println!()
-                                                    }
-
-                                                    match key {
-                                                        Key::F11 => {
-                                                            if action == Action::Press {
-                                                                let wind = self.window.write();
-                                                                toggle_fullscreen(wind.window_ptr())
-                                                            }
-                                                        }
-                                                        _ => {}
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        glfw::WindowEvent::Scroll(x, y) => {
-                                            io.mouse_wheel_h += x as f32;
-                                            io.mouse_wheel += y as f32;
-
-                                            if !gmenuopen {
-                                                #[cfg(feature = "glfw")]
-                                                g.scroll(y);
-                                            }
-                                        }
-                                        _ => {}
+                                        // Render the ImGui frame
+                                        self.guirenderer.render(&mut self.imgui);
                                     }
                                 }
+
+                                // avoid borrow checker
+                                (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
                             }
                         }
                         None => {
@@ -1450,100 +1199,301 @@ impl WindowAndKeyContext {
                         // Render the ImGui frame
                         self.guirenderer.render(&mut self.imgui);
 
-                        let io = self.imgui.io_mut();
-                        for (_, event) in glfw::flush_messages(&self.events) {
-                            match event {
-                                glfw::WindowEvent::MouseButton(mousebutton, action, _) => {
-                                    let index = match mousebutton {
-                                        glfw::MouseButton::Button1 => 0,
-                                        glfw::MouseButton::Button2 => 1,
-                                        glfw::MouseButton::Button3 => 2,
-                                        glfw::MouseButton::Button4 => 3,
-                                        glfw::MouseButton::Button5 => 4,
-                                        glfw::MouseButton::Button6 => 5,
-                                        glfw::MouseButton::Button7 => 6,
-                                        glfw::MouseButton::Button8 => 7,
-                                    };
-                                    io.mouse_down[index] = action == glfw::Action::Press;
-                                }
-                                glfw::WindowEvent::FramebufferSize(wid, hei) => {
-                                    self.width = wid as u32;
-                                    self.height = hei as u32;
-                                    gl::Viewport(0, 0, wid, hei);
-                                    WINDOWHEIGHT = hei;
-                                    WINDOWWIDTH = wid;
-                                    let cam = CAMERA.as_ref().unwrap();
-                                    let mut c = cam.lock();
-                                    let cfov = c.fov;
-                                    c.update_fov(cfov);
-                                    let cam = &mut self.menu_camera;
-                                    let cfov = cam.fov;
-                                    cam.update_fov(cfov);
-                                }
-                                glfw::WindowEvent::CursorPos(xpos, ypos) => {
-                                    io.mouse_pos = [xpos as f32, ypos as f32];
-                                }
-                                glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => {
-                                    let pressed = action == glfw::Action::Press
-                                        || action == glfw::Action::Repeat;
-
-                                    if (key as usize) < 512 {
-                                        io.keys_down[key as usize] = pressed;
-                                    }
-
-                                    if action == glfw::Action::Press {
-                                        match key {
-                                            glfw::Key::LeftShift | glfw::Key::RightShift => {
-                                                io.key_shift = true
-                                            }
-                                            glfw::Key::LeftControl | glfw::Key::RightControl => {
-                                                io.key_ctrl = true
-                                            }
-                                            glfw::Key::LeftAlt | glfw::Key::RightAlt => {
-                                                io.key_alt = true
-                                            }
-                                            glfw::Key::LeftSuper | glfw::Key::RightSuper => {
-                                                io.key_super = true
-                                            }
-                                            _ => {}
-                                        }
-                                    } else if action == glfw::Action::Release {
-                                        match key {
-                                            glfw::Key::LeftShift | glfw::Key::RightShift => {
-                                                io.key_shift = false
-                                            }
-                                            glfw::Key::LeftControl | glfw::Key::RightControl => {
-                                                io.key_ctrl = false
-                                            }
-                                            glfw::Key::LeftAlt | glfw::Key::RightAlt => {
-                                                io.key_alt = false
-                                            }
-                                            glfw::Key::LeftSuper | glfw::Key::RightSuper => {
-                                                io.key_super = false
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                }
-                                // glfw::WindowEvent::CharModifiers(char, _modifiers) => {
-                                //     println!("{:?}", char);
-                                // }
-                                glfw::WindowEvent::Char(char) => {
-                                    io.add_input_character(char);
-                                }
-                                glfw::WindowEvent::Scroll(x, y) => {
-                                    io.mouse_wheel_h += x as f32;
-                                    io.mouse_wheel += y as f32;
-                                }
-                                _ => {}
-                            }
-                        }
+                        // avoid borrow checker
+                        (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
                     }
                 }
             }
         }
 
         self.window.write().swap_buffers();
+    }
+
+    fn handle_events(&mut self, io: &mut Io) {
+        for (_, event) in glfw::flush_messages(&self.events) {
+            match event {
+                glfw::WindowEvent::MouseButton(mousebutton, action, _) => {
+                    if unsafe { !LISTENINGFORREBIND } {
+                        let index = match mousebutton {
+                            glfw::MouseButton::Button1 => 0,
+                            glfw::MouseButton::Button2 => 1,
+                            glfw::MouseButton::Button3 => 2,
+                            glfw::MouseButton::Button4 => 3,
+                            glfw::MouseButton::Button5 => 4,
+                            glfw::MouseButton::Button6 => 5,
+                            glfw::MouseButton::Button7 => 6,
+                            glfw::MouseButton::Button8 => 7,
+                        };
+                        io.mouse_down[index] = action == glfw::Action::Press;
+                    }
+
+                    match self.game.as_mut() {
+                        Some(g) => {
+                            if unsafe { LISTENINGFORREBIND } {
+                                match unsafe{ &*addr_of!(ABOUTTOREBIND) } {
+                                    Some(atr) => {
+                    
+                                        match atr.key {
+                                            crate::keybinds::Rebindable::Key(_oldscan) => {
+                                                
+                                            },
+                                            crate::keybinds::Rebindable::MouseButton(mb) => {
+                                                unsafe {
+                                                    if !MISCSETTINGS.mousebinds.contains_key(&format!("{:?}", mousebutton)) {
+                                                        MISCSETTINGS.mousebinds.remove(&format!("{:?}", mb));
+                                                        MISCSETTINGS.mousebinds.insert(format!("{:?}", mousebutton), atr.action.clone());
+                                                        g.button_command("bindingsmenu".into());
+                                                    }
+                                                    
+                                                    LISTENINGFORREBIND = false;
+                                                }
+                                            },
+                                        }
+                                        
+                                    }
+                                    None => {}
+                                }
+                            } else {
+                                if !io.want_capture_mouse && !g.vars.menu_open {
+                                    if mousebutton == glfw::MouseButtonLeft {
+                                        if !io.want_capture_mouse {
+                                            if !g.vars.menu_open && !g.hud.chest_open {
+                                                self.window
+                                                    .write()
+                                                    .set_cursor_mode(
+                                                        glfw::CursorMode::Disabled,
+                                                    );
+                                                g.set_mouse_focused(true);
+                                            }
+                                        }
+                                    }
+                                    #[cfg(feature = "glfw")]
+                                    g.mouse_button(mousebutton, action);
+                                }
+                            }
+                        }
+                        None => {}
+                    }
+                }
+                glfw::WindowEvent::FramebufferSize(wid, hei) => {
+                    self.width = wid as u32;
+                    self.height = hei as u32;
+                    unsafe {
+                        gl::Viewport(0, 0, wid, hei);
+                        WINDOWHEIGHT = hei;
+                        WINDOWWIDTH = wid;
+                        if self.game.is_some(){
+                            let cam = CAMERA.as_ref().unwrap();
+                            let mut c = cam.lock();
+                            let cfov = c.fov;
+                            c.update_fov(cfov);
+                        }
+                        let cam = &mut self.menu_camera;
+                        let cfov = cam.fov;
+                        cam.update_fov(cfov);
+                    }
+                }
+                glfw::WindowEvent::CursorPos(xpos, ypos) => {
+                    match self.game.as_mut() {
+                        Some(g) => {
+                            g.cursor_pos(xpos, ypos);
+                            if !g.vars.mouse_focused {
+                                io.mouse_pos = [xpos as f32, ypos as f32];
+                            }
+                        }
+                        None => {
+                            io.mouse_pos = [xpos as f32, ypos as f32];
+                        }
+                    }
+                }
+                glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => {
+                    let pressed = action == glfw::Action::Press
+                    || action == glfw::Action::Repeat;
+
+                    if unsafe { !LISTENINGFORREBIND } {
+                        if (key as usize) < 512 {
+                            io.keys_down[key as usize] = action != glfw::Action::Release;
+                        }
+                    }
+
+                    match self.game.as_mut() {
+                        Some(g) => {
+                            if unsafe { LISTENINGFORREBIND } {
+                                let keyscan = key.get_scancode().unwrap_or(0);
+
+                                match unsafe { &*addr_of!(ABOUTTOREBIND) } {
+                                    Some(atr) => {
+                    
+                                        match atr.key {
+                                            crate::keybinds::Rebindable::Key(oldscan) => {
+                                                unsafe {
+                                                    if !MISCSETTINGS.keybinds.contains_key(&keyscan) {
+                                                        MISCSETTINGS.keybinds.remove(&oldscan);
+                                                        MISCSETTINGS.keybinds.insert(keyscan, atr.action.clone());
+                                                        g.button_command("bindingsmenu".into());
+                                                    }
+                                                    
+                                                    LISTENINGFORREBIND = false;
+                                                }
+                                            },
+                                            crate::keybinds::Rebindable::MouseButton(_mb) => {
+                    
+                                            },
+                                        }
+                                        
+                                    }
+                                    None => {}
+                                }
+                            } else {
+                                if g.crafting_open
+                                    && pressed
+                                    && unsafe { MISCSETTINGS
+                                        .keybinds
+                                        .get(&key.get_scancode().unwrap())
+                                        .unwrap_or(&"Blah".to_string())
+                                        == "Craft"
+                                    }
+                                {
+                                    //println!("SHould close craft");
+                                    // g.crafting_open = false;
+                                    // self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
+                                    // g.set_mouse_focused(true);
+
+                                    g.crafting_open = false;
+
+                                    self.window.write().set_cursor_mode(
+                                        glfw::CursorMode::Disabled,
+                                    );
+                                    g.set_mouse_focused(true);
+                                    unsafe { UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed); }
+                                
+                                } else {
+                                    if g.vars.menu_open
+                                        && pressed
+                                        && unsafe { MISCSETTINGS
+                                            .keybinds
+                                            .get(&key.get_scancode().unwrap())
+                                            .unwrap_or(&"Blah".to_string())
+                                            == "Exit/Menu"
+                                        }
+                                    {
+                                        g.vars.menu_open = false;
+                                        self.window.write().set_cursor_mode(
+                                            glfw::CursorMode::Disabled,
+                                        );
+                                        g.set_mouse_focused(true);
+                                        unsafe { UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed); }
+                                    }
+
+                                    if (!io.want_capture_keyboard
+                                        && !io.want_text_input)
+                                        && !g.vars.menu_open
+                                    {
+                                        #[cfg(feature = "glfw")]
+                                        g.keyboard(key, action);
+
+                                        if key == Key::Escape {
+                                            if g.vars.menu_open {
+                                                self.window
+                                                    .write()
+                                                    .set_cursor_mode(
+                                                        glfw::CursorMode::Normal,
+                                                    );
+                                                g.set_mouse_focused(false);
+                                            } else {
+                                                g.vars.menu_open = false;
+                                                self.window
+                                                    .write()
+                                                    .set_cursor_mode(
+                                                        glfw::CursorMode::Disabled,
+                                                    );
+                                                g.set_mouse_focused(true);
+                                            }
+                                        }
+                                    } else {
+                                        //println!()
+                                    }
+                                }
+                            }
+                        }
+                        None => {
+                            if action == glfw::Action::Press {
+                                match key {
+                                    glfw::Key::LeftShift | glfw::Key::RightShift => {
+                                        io.key_shift = true
+                                    }
+                                    glfw::Key::LeftControl | glfw::Key::RightControl => {
+                                        io.key_ctrl = true
+                                    }
+                                    glfw::Key::LeftAlt | glfw::Key::RightAlt => {
+                                        io.key_alt = true
+                                    }
+                                    glfw::Key::LeftSuper | glfw::Key::RightSuper => {
+                                        io.key_super = true
+                                    }
+                                    _ => {}
+                                }
+                            } else if action == glfw::Action::Release {
+                                match key {
+                                    glfw::Key::LeftShift | glfw::Key::RightShift => {
+                                        io.key_shift = false
+                                    }
+                                    glfw::Key::LeftControl | glfw::Key::RightControl => {
+                                        io.key_ctrl = false
+                                    }
+                                    glfw::Key::LeftAlt | glfw::Key::RightAlt => {
+                                        io.key_alt = false
+                                    }
+                                    glfw::Key::LeftSuper | glfw::Key::RightSuper => {
+                                        io.key_super = false
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    match key {
+                        Key::F11 => {
+                            if action == Action::Press {
+                                let wind = self.window.write();
+                                toggle_fullscreen(wind.window_ptr())
+                            }
+                        }
+                        Key::GraveAccent => {
+                            if action == Action::Press {
+                                self.cmd.cmd_open = !self.cmd.cmd_open;
+                                unsafe { UNCAPKB.store(!self.cmd.cmd_open, std::sync::atomic::Ordering::Relaxed); }
+                                if self.game.is_some() {
+                                    self.game.as_mut().unwrap().set_mouse_focused(!self.cmd.cmd_open);
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                // glfw::WindowEvent::CharModifiers(char, _modifiers) => {
+                //     println!("{:?}", char);
+                // }
+                glfw::WindowEvent::Char(char) => {
+                    io.add_input_character(char);
+                }
+                glfw::WindowEvent::Scroll(x, y) => {
+                    io.mouse_wheel_h += x as f32;
+                    io.mouse_wheel += y as f32;
+
+                    match self.game.as_mut() {
+                        Some(g) => {
+                            if !g.vars.menu_open {
+                                #[cfg(feature = "glfw")]
+                                g.scroll(y);
+                            }
+                        }
+                        None => {}
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     // TODO: create better abstractions around glfw/imgui input
