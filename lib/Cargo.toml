@@ -48,6 +48,7 @@ lib = "0.0.0"
 hashbrown = "0.14.5"
 sled = "0.34.7"
 arrayvec = "0.7.6"
+logos = "0.14.2"
 
 
 [features]

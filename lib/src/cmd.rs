@@ -1,4 +1,23 @@
 use crate::game::Game;
+use logos::Logos;
+
+#[derive(Logos, Debug, PartialEq)]
+#[logos(skip r"[ \t\n\f]+")] // Ignore this regex pattern between tokens
+enum Token {
+    // Tokens can be literal strings, of any length.
+    #[token("timeset")]
+    TimeSet,
+    
+    // Match a sequence of digits (i.e., u32)
+    #[regex(r"\d+", |lex| lex.slice().parse::<u32>().unwrap_or(0))] // 0 if it doesnt unwrap for now, might need to change this
+    Number(u32),  
+
+    #[token("day")]
+    Day,
+
+    #[token("night")]
+    Night
+}
 
 pub struct Cmd {
     pub cmd_open: bool,
@@ -15,17 +34,31 @@ impl Cmd {
 
     pub fn run(&mut self, game: &mut Game) {
         self.cmd_open = false;
-        match self.cmd_text.as_str() {
-            "day" => {
+
+
+        let mut lexer = Token::lexer(self.cmd_text.as_str());
+
+        match lexer.next() {
+            Some(Ok(Token::TimeSet)) => {
                 let mut tod = game.timeofday.lock();
-                *tod = 450f32;
+                match lexer.next() {
+                    Some(Ok(Token::Number(num))) => {
+                        *tod = num as f32;
+                    }
+                    _ => {}
+                }
             }
-            "night" => {
+            Some(Ok(Token::Day)) => {
                 let mut tod = game.timeofday.lock();
-                *tod = 0f32;
+                *tod = 450.0;
+            }
+            Some(Ok(Token::Night)) => {
+                let mut tod = game.timeofday.lock();
+                *tod = 0.0;
             }
             _ => {}
         }
+        
         self.cmd_text.clear();
         game.set_mouse_focused(true);
     }
