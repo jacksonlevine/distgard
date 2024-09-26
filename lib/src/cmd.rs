@@ -1,4 +1,4 @@
-use crate::game::Game;
+use crate::game::{Game, WEATHERTYPE};
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
@@ -16,7 +16,19 @@ enum Token {
     Day,
 
     #[token("night")]
-    Night
+    Night,
+
+    #[token("weather")]
+    Weather,
+
+    #[token("snow")]
+    Snow,
+
+    #[token("rain")]
+    Rain,
+
+    #[token("clear")]
+    Clear,
 }
 
 pub struct Cmd {
@@ -44,6 +56,20 @@ impl Cmd {
                 match lexer.next() {
                     Some(Ok(Token::Number(num))) => {
                         *tod = num as f32;
+                    }
+                    _ => {}
+                }
+            }
+            Some(Ok(Token::Weather)) => {
+                match lexer.next() {
+                    Some(Ok(Token::Snow)) => {
+                        unsafe { WEATHERTYPE = 1.0 };
+                    }
+                    Some(Ok(Token::Rain)) => {
+                        unsafe { WEATHERTYPE = 2.0 };
+                    }
+                    Some(Ok(Token::Clear)) => {
+                        unsafe { WEATHERTYPE = 0.0 };
                     }
                     _ => {}
                 }
