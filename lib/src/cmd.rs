@@ -1,4 +1,4 @@
-use crate::game::{Game, WEATHERTYPE};
+use crate::game::{Game, CAMERA, WEATHERTYPE};
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
@@ -29,6 +29,12 @@ enum Token {
 
     #[token("clear")]
     Clear,
+
+    #[token("give")]
+    Give,
+
+    #[regex("block_.*")]
+    Block,
 }
 
 pub struct Cmd {
@@ -87,6 +93,21 @@ impl Cmd {
             Some(Ok(Token::Night)) => {
                 let mut tod = game.timeofday.lock();
                 *tod = 0.0;
+            }
+            Some(Ok(Token::Give)) => {
+                match lexer.next() {
+                    Some(Ok(Token::Number(id))) => {
+                        match lexer.next() {
+                            Some(Ok(Token::Number(amt))) => {
+                                game.drops.add_drop(unsafe { CAMERA.as_ref().unwrap().lock().position }, id, amt)
+                            }
+                            _ => {
+                                game.drops.add_drop(unsafe { CAMERA.as_ref().unwrap().lock().position }, id, 1)
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
