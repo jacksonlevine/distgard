@@ -955,8 +955,8 @@ pub fn attend_needed_spots(
 
                             // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
                             let adjusted_user_cpos = IVec2 {
-                                x: (user_cpos.x as f32 + (user_dir.x * 12.0)).round() as i32,
-                                y: (user_cpos.y as f32 + (user_dir.y * 12.0)).round() as i32,
+                                x: (user_cpos.x as f32 + (user_dir.x * 10.0)).round() as i32,
+                                y: (user_cpos.y as f32 + (user_dir.y * 10.0)).round() as i32,
                             };
                 
                             let radius = {
