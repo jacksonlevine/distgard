@@ -904,9 +904,6 @@ pub fn attend_chunk_queues() {
 pub fn attend_needed_spots(
 ) {
 
-    static mut LAST_USER_C_POS: IVec2 = IVec2{x:99999,y:99999};
-
-    
 
     let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref()};
     let cam_arc = unsafe { CAMERA.as_ref() };
@@ -935,24 +932,31 @@ pub fn attend_needed_spots(
                 
                         static mut TIME_SINCE_LAST_CHECK: f32 = 2.0;
                 
-                        let user_c_pos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
-                            vec3.x.floor() as i32,
-                            vec3.y.floor() as i32,
-                            vec3.z.floor() as i32,
-                        ));
+                        
+                        let user_dir: Vec2 = Vec2 {
+                            x: camclone.direction.x,
+                            y: camclone.direction.z,
+                        };
                 
                         if
                         /*user_c_pos != *last_user_c_pos &&*/
                         TIME_SINCE_LAST_CHECK >= 2.0 {
-                            LAST_USER_C_POS = user_c_pos;
+                            
                 
                             TIME_SINCE_LAST_CHECK = 0.0;
                 
                             let mut neededspots: Vec<IVec2> = Vec::new();
                 
-                            let user_cpos = IVec2 {
-                                x: (camclone.position.x / 15.0).floor() as i32,
-                                y: (camclone.position.z / 15.0).floor() as i32,
+                            let  user_cpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+                                vec3.x.floor() as i32,
+                                vec3.y.floor() as i32,
+                                vec3.z.floor() as i32,
+                            ));
+
+                            // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
+                            let adjusted_user_cpos = IVec2 {
+                                x: (user_cpos.x as f32 + (user_dir.x * 12.0)).round() as i32,
+                                y: (user_cpos.y as f32 + (user_dir.y * 12.0)).round() as i32,
                             };
                 
                             let radius = {
@@ -966,8 +970,8 @@ pub fn attend_needed_spots(
                 
                                     let tcarc = csys_arc.takencare.clone();
                                     let this_spot = IVec2 {
-                                        x: user_cpos.x + i as i32,
-                                        y: user_cpos.y + k as i32,
+                                        x: adjusted_user_cpos.x + i as i32,
+                                        y: adjusted_user_cpos.y + k as i32,
                                     };
                                     if !tcarc.contains_key(&this_spot) {
                                         neededspots.push(this_spot);
@@ -994,8 +998,8 @@ pub fn attend_needed_spots(
                                     if !chunk.used {
                                         true
                                     } else {
-                                        let dist = (chunk.pos.x - user_cpos.x).abs()
-                                            + (chunk.pos.y - user_cpos.y).abs();
+                                        let dist = (chunk.pos.x - adjusted_user_cpos.x).abs()
+                                            + (chunk.pos.y - adjusted_user_cpos.y).abs();
                                         dist >= radius as i32 * 2
                                     }
                                 });
@@ -1005,8 +1009,8 @@ pub fn attend_needed_spots(
                             //info!("Neededspots size: {}", neededspots.len());
                 
                             neededspots.sort_by(|a, b| {
-                                let dist_a = (a.x - user_c_pos.x).pow(2) + (a.y - user_c_pos.y).pow(2);
-                                let dist_b = (b.x - user_c_pos.x).pow(2) + (b.y - user_c_pos.y).pow(2);
+                                let dist_a = (a.x - user_cpos.x).pow(2) + (a.y - user_cpos.y).pow(2);
+                                let dist_b = (b.x - user_cpos.x).pow(2) + (b.y - user_cpos.y).pow(2);
                                 dist_a.cmp(&dist_b)
                             });
                 
