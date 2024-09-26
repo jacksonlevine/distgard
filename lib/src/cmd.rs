@@ -58,11 +58,9 @@ impl Cmd {
                         *tod = num as f32;
                     }
                     Some(Ok(Token::Day)) => {
-                        let mut tod = game.timeofday.lock();
                         *tod = 450.0;
                     }
                     Some(Ok(Token::Night)) => {
-                        let mut tod = game.timeofday.lock();
                         *tod = 0.0;
                     }
                     _ => {}
