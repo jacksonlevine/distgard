@@ -9,6 +9,7 @@ pub mod collisioncage;
 pub mod cube;
 pub mod fader;
 pub mod game;
+pub mod cmd;
 pub mod packedvertex;
 pub mod shader;
 pub mod texture;
