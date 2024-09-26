@@ -639,6 +639,7 @@ impl WindowAndKeyContext {
                                 }
                                 SINGLEPLAYER = true;
                                 DECIDEDSPORMP = true;
+                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                             }
 
                             static mut ELEMENT1MOUSED: bool = false;
@@ -752,6 +753,7 @@ impl WindowAndKeyContext {
                                     .update_delta_time(Duration::from_secs_f32(self.delta_time));
 
                                 if UNCAPKB.load(std::sync::atomic::Ordering::Relaxed) {
+                                    //println!("Uncapping kb and mouse");
                                     self.imgui.io_mut().want_capture_keyboard = false;
                                     self.imgui.io_mut().want_text_input = false;
                                     self.imgui.io_mut().want_capture_mouse = false;
@@ -1140,11 +1142,14 @@ impl WindowAndKeyContext {
                                         let window_size = (700.0, 700.0);
                                         let window_pos = [0f32, 0f32];
 
-                                        ui.window("Command Line")
+                                        if self.cmd.cmd_open {
+
+                                            ui.window("Command Line")
                                             .size([window_size.0, window_size.1], Condition::Always)
                                             .position(window_pos, Condition::Always)
                                             .flags(window_flags)
                                             .build(|| {
+                                               
                                                 if self.cmd.cmd_open {
                                                     ui.set_keyboard_focus_here();
                                                     ui.set_cursor_pos([0f32, 0f32]);
@@ -1155,6 +1160,9 @@ impl WindowAndKeyContext {
                                                     }
                                                 }
                                             });
+                                        }
+
+                                        
 
                                         // Render the ImGui frame
                                         self.guirenderer.render(&mut self.imgui);
@@ -1504,6 +1512,7 @@ impl WindowAndKeyContext {
                         Key::GraveAccent => {
                             if action == Action::Press {
                                 self.cmd.cmd_open = !self.cmd.cmd_open;
+                                
                                 unsafe { UNCAPKB.store(!self.cmd.cmd_open, std::sync::atomic::Ordering::Relaxed); }
                                 if self.game.is_some() {
                                     self.game.as_mut().unwrap().set_mouse_focused(!self.cmd.cmd_open);
