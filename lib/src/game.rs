@@ -4646,7 +4646,7 @@ impl Game {
                 let dir = Blocks::get_direction_bits(blockbitsunderfeet);
                 //println!("Dir: {}", dir);
 
-                let multiplier = 2.4;
+                let multiplier = 4.4;
                 //println!("MUltiplier: {}", multiplier);
                 {
                     let vel = (DIRS[dir as usize] * 70.0 * multiplier) * self.delta_time;
