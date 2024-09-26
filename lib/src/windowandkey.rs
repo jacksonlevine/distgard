@@ -2,6 +2,7 @@ use std::ptr::{addr_of, addr_of_mut};
 use bevy::prelude::*;
 use gl::types::{GLenum, GLuint};
 use gltf::mesh::util::ReadIndices;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     audio::spawn_audio_thread, blockinfo::Blocks, cmd::Cmd, game::{
@@ -130,7 +131,15 @@ fn toggle_fullscreen(window_ptr: *mut glfw::ffi::GLFWwindow) {
 
 // use steamworks::{restart_app_if_necessary, AppId, Client, SingleClient};
 
-pub static MAINMENUSONG: &str = path!("assets/music/dd2dd3.mp3");
+pub static MAINMENUSONG: Lazy<&str> = Lazy::new(|| {
+    let mut rng = StdRng::from_entropy();
+    if rng.gen_range(0..2) == 0 {
+        path!("assets/music/dd2dd3.mp3")
+    } else {
+        path!("assets/music/dd2dd3.mp3") //could add alternative menu themes here but not yet
+        
+    }
+} );
 
 impl WindowAndKeyContext {
 
@@ -539,7 +548,7 @@ impl WindowAndKeyContext {
                         #[cfg(feature = "audio")]
                         {
                             spawn_audio_thread();
-                            AUDIOPLAYER.play_in_head(MAINMENUSONG);
+                            AUDIOPLAYER.play_in_head(*MAINMENUSONG);
                             PLAY_SONG = false;
                         }
                         

@@ -188,7 +188,9 @@ pub static mut MOUSED_SLOT: SlotIndexType = SlotIndexType::None;
 
 pub static mut CROUCHING: bool = false;
 
-pub static mut SONGS: [&'static str; 9] = [
+pub static mut SONGS: [&'static str; 11] = [
+    path!("assets/music/dd3.mp3"),
+    path!("assets/music/dd4.mp3"),
     path!("assets/music/qv2.mp3"),
     path!("assets/music/Farfromhome.mp3"),
     path!("assets/music/ifol.mp3"),
@@ -5184,6 +5186,8 @@ impl Game {
     #[cfg(feature = "glfw")]
     pub fn draw(&self) {
         // use crate::chunk::CH_W;
+
+        use crate::chunk::CH_W;
         
         let campitch = {
             let cam = unsafe { CAMERA.as_ref().unwrap() };
@@ -5321,7 +5325,7 @@ impl Game {
                     cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                     cmemlock.memories[ready.geo_index].pos = ready.newpos;
                     cmemlock.memories[ready.geo_index].used = true;
-                    //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                    cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
                     //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                     //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -5398,7 +5402,7 @@ impl Game {
                                 cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
                                 cmemlock.memories[ready.geo_index].pos = ready.newpos;
                                 cmemlock.memories[ready.geo_index].used = true;
-                                //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                                //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0; //dont do this for user updates because they should be seamless (timebeendrawn going to 0 will cause begining animation to happen)
 
                                 //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
                                 //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
@@ -5593,52 +5597,53 @@ impl Game {
                 unsafe {
                     gl::Uniform2f(C_POS_LOC, cfl.pos.x as f32, cfl.pos.y as f32);
 
-                    // if cfl.timebeendrawn < 1.0 {
-                    //     #[cfg(feature = "audio")]
-                    //     if cfl.timebeendrawn == 0.0 {
+                    if cfl.timebeendrawn < 1.0 {
+                        
+                        if cfl.timebeendrawn == 0.0 {
 
-                    //         let playerpos = Vec3::new(
-                    //             PLAYERPOS.pos.0.load(Ordering::Relaxed),
-                    //             PLAYERPOS.pos.1.load(Ordering::Relaxed),
-                    //             PLAYERPOS.pos.2.load(Ordering::Relaxed),
-                    //         );
-                    //         let s = Vec3::new(
-                    //             (cfl.pos.x * CH_W) as f32,
-                    //             playerpos.y + 5.0,
-                    //             (cfl.pos.y * CH_W) as f32,
-                    //         );
+                            let playerpos = Vec3::new(
+                                PLAYERPOS.pos.0.load(Ordering::Relaxed),
+                                PLAYERPOS.pos.1.load(Ordering::Relaxed),
+                                PLAYERPOS.pos.2.load(Ordering::Relaxed),
+                            );
+                            let s = Vec3::new(
+                                (cfl.pos.x * CH_W) as f32,
+                                playerpos.y + 5.0,
+                                (cfl.pos.y * CH_W) as f32,
+                            );
 
-                    //         if s
-                    //         .distance(
-                    //             playerpos
-                    //         ) < 50.0
-                    //         {
-                    //             let _ = AUDIOPLAYER.play_next_in_series(
-                    //                 "bubbles",
-                    //                 &s,
-                    //                 &Vec3::ZERO,
-                    //                 1.0,
-                    //             );
+                            if s
+                            .distance(
+                                playerpos
+                            ) < 50.0
+                            {
+                                #[cfg(feature = "audio")]
+                                let _ = AUDIOPLAYER.play_next_in_series(
+                                    "bubbles",
+                                    &s,
+                                    &Vec3::ZERO,
+                                    1.0,
+                                );
 
-                    //             //if cfl.tlength > 0 {
-                    //                 // let _ = AUDIOPLAYER.play_next_in_series(
-                    //                 //     "slides",
-                    //                 //     &s,
-                    //                 //     &Vec3::ZERO,
-                    //                 //     1.0,
-                    //                 // );
-                    //             //}
-                    //         }
-                    //     }
-                    //     cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
-                    // }
+                                //if cfl.tlength > 0 {
+                                    // let _ = AUDIOPLAYER.play_next_in_series(
+                                    //     "slides",
+                                    //     &s,
+                                    //     &Vec3::ZERO,
+                                    //     1.0,
+                                    // );
+                                //}
+                            }
+                        }
+                        cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+                    }
 
                     gl::Uniform1f(
                         gl::GetUniformLocation(
                             self.shader0.shader_id,
                             b"elapsedFade\0".as_ptr() as *const i8,
                         ),
-                        5.0,
+                        cfl.timebeendrawn,
                     );
 
                     let error = gl::GetError();
@@ -5688,7 +5693,7 @@ impl Game {
                                 self.shader0.shader_id,
                                 b"elapsedFade\0".as_ptr() as *const i8,
                             ),
-                            5.0,
+                            cfl.timebeendrawn,
                         );
 
                     let error = gl::GetError();
