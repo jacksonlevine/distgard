@@ -3,6 +3,7 @@ use crate::{chunk::LightColor, cube::CubeSide};
 pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
 pub struct Blocks {}
 
+pub const BLOCK_COUNT: u32 = 52;
 
 static BREAKTIMES: [f32; 52] = [
     0.1,
@@ -129,6 +130,18 @@ static TEXS: [[(u8, u8); 3]; 52] = [
             [(7, 5), (7, 0), (8, 5)],  // 50 snow leaves
             [(1, 7), (1, 7), (1, 7)],  // 51 ice
         ];
+
+
+use std::collections::HashMap;
+
+pub static BLOCK_NAME_TO_ID: std::sync::LazyLock::<HashMap<String, u32>> = std::sync::LazyLock::new(|| { 
+    let mut map = HashMap::new();
+    for i in 0..BLOCK_COUNT {
+        map.insert(Blocks::get_name(i).to_string(), i);
+        map.insert(Blocks::get_name(i).to_ascii_lowercase().replace(" ", "_"), i);
+    }
+    map
+});
 
 
 impl Blocks {
