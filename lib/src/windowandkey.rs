@@ -6,7 +6,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     audio::spawn_audio_thread, blockinfo::Blocks, cmd::Cmd, game::{
-        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, DECIDEDWORLD, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
+        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, DECIDEDWORLD, MOUSEX, MOUSEY, PLAYER_DECIDED_SEED, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         load_misc, load_or_initialize_statics, save_lesa, LAST_ENTERED_SERVERADDRESS, MISCSETTINGS
     }, texture::Texture
@@ -758,7 +758,7 @@ impl WindowAndKeyContext {
                             let available_height = window_size[1];
 
                             let pos_x = (available_width - button_width) / 2.0;
-                            let pos_y = (available_height - (button_height) - 10.0) / 2.0;
+                            let pos_y = (available_height - (button_height) - 20.0) / 2.0;
 
                             // Adjust the image size and position
                             let scaled_size = [
@@ -788,6 +788,8 @@ impl WindowAndKeyContext {
                             );
 
 
+                            
+
 
                             // ui.set_cursor_pos([pos_x - screen_width * 0.04, pos_y - screen_height * 0.08]);
                             // ui.text_colored([1.0, 0.0, 0.0, 1.0], "Welcome! Please choose an option.");
@@ -796,75 +798,58 @@ impl WindowAndKeyContext {
                             ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.02]);
 
                             // Make button invisible but functional
-                            let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
+                            //let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
 
-                            // World 1 button
-                            if ui.button_with_size("World 1", [button_width, button_height]) {
-                                #[cfg(feature="audio")]
-                                {
-                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                            static mut moused: [bool; 5] = [false; 5];
+
+                            static seeds: [u32; 5] = [
+                                932942034,
+                                2375439,
+                                5694834,
+                                56956492,
+                                49459223
+                            ];
+
+
+                            for worldindex in 0..5 {
+                                ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * worldindex as f32)]);
+                                // World 1 button
+                                if ui.button_with_size(format!("World {}", worldindex + 1), [button_width, button_height]) {
+                                    #[cfg(feature="audio")]
+                                    {
+                                        AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                    }
+                                    
+                                    PLAYER_DECIDED_SEED = seeds[worldindex];
+                                    DECIDEDWORLD = true;
+
+                                    
+                                    UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                 }
-                                
 
-                                DECIDEDWORLD = true;
-                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                                let hovered = ui.is_item_hovered();
+
+                                if hovered != unsafe { moused[worldindex] } {
+                                    unsafe {
+                                        moused[worldindex] = hovered;
+                                    }
+                                    #[cfg(feature="audio")]
+                                    {
+                                        AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
+                                    }
+                                }
+
+                                draw_3d_menu_button(
+                                    &self.modelshader, &self.menu_camera, 
+                                    &self.gltf_vaos, &self.gltf_textures, 
+                                    &self.gltf_counts, &self.gltf_drawmodes,
+                                    hovered, Vec3::new(0.0, 4.0 - (0.6 * worldindex as f32), 0.0), 4
+                                );
                             }
 
-                            static mut ELEMENT1MOUSED: bool = false;
-                            let hovered = ui.is_item_hovered();
-
-                            if hovered != unsafe { ELEMENT1MOUSED } {
-                                unsafe {
-                                    ELEMENT1MOUSED = hovered;
-                                }
-                                #[cfg(feature="audio")]
-                                {
-                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
-                                }
-                            }
-
-                            draw_3d_menu_button(
-                                &self.modelshader, &self.menu_camera, 
-                                &self.gltf_vaos, &self.gltf_textures, 
-                                &self.gltf_counts, &self.gltf_drawmodes,
-                                hovered, Vec3::new(0.0, 2.75, 0.0), 4
-                            );
-
-                                    ui.set_cursor_pos([pos_x, pos_y + screen_height * 0.08  - screen_height * 0.01]);
-
-                            // World 2 button
-                            if ui.button_with_size("World 2", [button_width, button_height]) {
-                                #[cfg(feature="audio")]
-                                {
-                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
-                                }
-                                
-
-                                DECIDEDWORLD = true;
-                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                            }
-
-                            static mut ELEMENT2MOUSED: bool = false;
-                            let hovered = ui.is_item_hovered();
-
-                            if hovered != unsafe { ELEMENT2MOUSED } {
-                                unsafe {
-                                    ELEMENT2MOUSED = hovered;
-                                }
-                                #[cfg(feature="audio")]
-                                {
-                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
-                                }
-                            }
-                            draw_3d_menu_button(
-                                &self.modelshader, &self.menu_camera, 
-                                &self.gltf_vaos, &self.gltf_textures, 
-                                &self.gltf_counts, &self.gltf_drawmodes,
-                                hovered, Vec3::new(0.0, 2.0, 0.0), 2
-                            );
 
                             // Pop the button style after use
-                            sttok1.pop();
+                            //sttok1.pop();
                         });
                     // Render the ImGui frame
                     self.guirenderer.render(&mut self.imgui);

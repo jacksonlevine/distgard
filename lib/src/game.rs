@@ -64,6 +64,8 @@ pub static mut BUILD_VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
 
 pub static mut BUILD_MODEL_OFFSET: IVec3 = IVec3::new(0, 0, 0);
 
+pub static mut PLAYER_DECIDED_SEED: u32 = 0;
+
 pub static TILEWID: f32 =  0.10;
 
 use crate::camera::Camera;
@@ -1215,7 +1217,7 @@ impl Game {
 
         //let randseed = 63920910; //dont worry, ignore this cool seed
 
-        let mut csys = ChunkSystem::new(10, randseed, 0, headless);
+        let mut csys = ChunkSystem::new(10, unsafe { PLAYER_DECIDED_SEED }, 0, headless);
 
         unsafe {
             BUILD_VOXEL_MODELS = vec![
