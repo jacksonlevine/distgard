@@ -6,7 +6,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     audio::spawn_audio_thread, blockinfo::Blocks, cmd::Cmd, game::{
-        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
+        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSPORMP, DECIDEDWORLD, MOUSEX, MOUSEY, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         load_misc, load_or_initialize_statics, save_lesa, LAST_ENTERED_SERVERADDRESS, MISCSETTINGS
     }, texture::Texture
@@ -297,6 +297,7 @@ impl WindowAndKeyContext {
             wak.load_model(path!("assets/models/menubuttontop.gltf"));
             wak.load_model(path!("assets/models/menubuttonbottom.gltf"));
             wak.load_model(path!("assets/models/skybox.gltf"));
+            wak.load_model(path!("assets/models/button.gltf"));
             wak.create_model_vbos();
         }
 
@@ -533,26 +534,28 @@ impl WindowAndKeyContext {
         }
 
         let mut main_menu = false;
+        static mut PLAY_SONG: bool = true;
 
+                    
+                    
+                    
+        unsafe {
+            if PLAY_SONG {
+                #[cfg(feature = "audio")]
+                {
+                    spawn_audio_thread();
+                    AUDIOPLAYER.play_in_head(*MAINMENUSONG);
+                    PLAY_SONG = false;
+                }
+                
+            }
+        }
+                    
         unsafe {
             match DECIDEDSPORMP {
                 false => {
 
-                    static mut PLAY_SONG: bool = true;
-
                     
-                    
-                    
-
-                    if PLAY_SONG {
-                        #[cfg(feature = "audio")]
-                        {
-                            spawn_audio_thread();
-                            AUDIOPLAYER.play_in_head(*MAINMENUSONG);
-                            PLAY_SONG = false;
-                        }
-                        
-                    }
 
                     self.imgui
                         .io_mut()
@@ -712,481 +715,640 @@ impl WindowAndKeyContext {
                     (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
                 }
                 true => {
-                    match self.game.as_mut() {
-                        Some(g) => {
-                            let gmenuopen = g.vars.menu_open;
-
-                            let gcraftopen = g.crafting_open;
-
-                            #[cfg(feature = "glfw")]
-                            let gchestopen = g.hud.chest_open;
-
-                            #[cfg(not(feature = "glfw"))]
-                            let gchestopen = false;
-
-                            if g.vars.main_menu {
-                                main_menu = true;
-                            } else {
-                                if g.loadedworld.load(std::sync::atomic::Ordering::Relaxed) {
-                                    g.update();
-
-                                    // if MISCSETTINGS.controllersupport == true {
-                                    //     let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
-
-                                    //     static mut lastx: f64 = 0.0;
-                                    //     static mut lasty: f64 = 0.0;
-
-                                    //     static mut x: f64 = 0.0;
-                                    //     static mut y: f64 = 0.0;
-
-                                    //     let axes = state.get_axes();
-
-                                    //     if axes.len() >= 2 {
-                                    //         unsafe {
-                                    //             x += axes[0] as f64;
-                                    //             y += axes[1] as f64;
-
-                                    //             if lastx != x || lasty != y {
-                                    //                 lastx = x;
-                                    //                 lasty = y;
-                                    //                 g.cursor_pos(x, y);
-                                    //             }
-                                    //         }
-                                    //     }
-                                    // }
-                                    
-                                }
-
+                    if SINGLEPLAYER {
+                        match DECIDEDWORLD {
+                            false => {
                                 self.imgui
-                                    .io_mut()
-                                    .update_delta_time(Duration::from_secs_f32(self.delta_time));
+                        .io_mut()
+                        .update_delta_time(Duration::from_secs_f32(self.delta_time));
 
-                                if UNCAPKB.load(std::sync::atomic::Ordering::Relaxed) {
-                                    //println!("Uncapping kb and mouse");
-                                    self.imgui.io_mut().want_capture_keyboard = false;
-                                    self.imgui.io_mut().want_text_input = false;
-                                    self.imgui.io_mut().want_capture_mouse = false;
-                                    UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
+                    let (width, height) = self.window.read().get_framebuffer_size();
+                    self.imgui.io_mut().display_size = [width as f32, height as f32];
+
+                    let screen_width = width as f32;
+                    let screen_height = height as f32;
+
+                    // Start the ImGui frame
+                    let ui = self.imgui.frame();
+
+                    let window_flags = WindowFlags::NO_DECORATION
+                        | WindowFlags::NO_MOVE
+                        | WindowFlags::NO_RESIZE
+                        | WindowFlags::NO_SCROLLBAR
+                        | WindowFlags::NO_TITLE_BAR
+                        | WindowFlags::NO_BACKGROUND;
+
+                    // Scale the window and button size proportionally to the screen size
+                    let window_size = (screen_width * 0.75, screen_height * 0.75);
+                    let window_pos = [
+                        screen_width / 2.0 - (window_size.0 / 2.0),
+                        screen_height / 2.0 - (window_size.1 / 2.0) + screen_height * 0.1, // Slightly offset vertically
+                    ];
+
+                    ui.window("Transparent Window")
+                        .size([window_size.0, window_size.1], Condition::Always)
+                        .position(window_pos, Condition::Always)
+                        .flags(window_flags)
+                        .build(|| {
+                            let button_width = screen_width * 0.15; // Scale button width by 15% of screen width
+                            let button_height = screen_height * 0.07; // Scale button height by 7% of screen height
+                            let window_size = ui.window_size();
+
+                            let available_width = window_size[0];
+                            let available_height = window_size[1];
+
+                            let pos_x = (available_width - button_width) / 2.0;
+                            let pos_y = (available_height - (button_height) - 10.0) / 2.0;
+
+                            // Adjust the image size and position
+                            let scaled_size = [
+                                (self.logo.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
+                                (self.logo.size.1 as f32 * screen_height / 720.0).round(),
+                            ];
+                            let image_pos_x = (available_width - scaled_size[0]) / 2.0;
+                            let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - screen_height * 0.2;
+
+                            // commands dont work in menu yet
+                            // if self.cmd.cmd_open {
+                            //     ui.set_cursor_pos([0f32, 0f32]);
+                            //     if ui.input_text("##", &mut self.cmd.cmd_text)
+                            //     .enter_returns_true(true)
+                            //     .build() {
+                            //         self.cmd.run(self.game.as_mut().unwrap());
+                            //     }
+                            // }
+
+                            ui.set_cursor_pos([image_pos_x, image_pos_y]);
+
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                false, Vec3::new(0.0, 0.0, 0.0), 3
+                            );
+
+
+
+                            // ui.set_cursor_pos([pos_x - screen_width * 0.04, pos_y - screen_height * 0.08]);
+                            // ui.text_colored([1.0, 0.0, 0.0, 1.0], "Welcome! Please choose an option.");
+
+                            // Center the button and adjust its size
+                            ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.02]);
+
+                            // Make button invisible but functional
+                            let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
+
+                            // World 1 button
+                            if ui.button_with_size("World 1", [button_width, button_height]) {
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
                                 }
+                                
 
-                                if gchestopen {
-                                    let ui = self.imgui.frame();
+                                DECIDEDWORLD = true;
+                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                            }
 
-                                    let window_flags = WindowFlags::NO_DECORATION
-                                        | WindowFlags::NO_MOVE
-                                        | WindowFlags::NO_RESIZE
-                                        | WindowFlags::NO_SCROLLBAR
-                                        | WindowFlags::NO_TITLE_BAR
-                                        | WindowFlags::NO_INPUTS;
+                            static mut ELEMENT1MOUSED: bool = false;
+                            let hovered = ui.is_item_hovered();
 
-                                    if SHOWTOOLTIP {
-                                        ui.window("Mouse Tooltip Window")
-                                            .size([300.0, 50.0], Condition::Always)
-                                            .position(
-                                                [MOUSEX as f32, MOUSEY as f32],
-                                                Condition::Always,
-                                            )
-                                            .flags(window_flags)
-                                            .build(|| {
-                                                ui.text(TOOLTIPNAME);
-                                            });
-                                    }
-
-                                    self.guirenderer.render(&mut self.imgui);
+                            if hovered != unsafe { ELEMENT1MOUSED } {
+                                unsafe {
+                                    ELEMENT1MOUSED = hovered;
                                 }
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
+                                }
+                            }
 
-                                if gmenuopen {
-                                    let gamecurrentbuttons = g.currentbuttons.clone();
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                hovered, Vec3::new(0.0, 2.75, 0.0), 4
+                            );
 
-                                    let (width, height) = self.window.read().get_framebuffer_size();
-                                    self.imgui.io_mut().display_size =
-                                        [width as f32, height as f32];
+                                    ui.set_cursor_pos([pos_x, pos_y + screen_height * 0.08  - screen_height * 0.01]);
 
-                                    // Start the ImGui frame
-                                    let ui = self.imgui.frame();
+                            // World 2 button
+                            if ui.button_with_size("World 2", [button_width, button_height]) {
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                }
+                                
 
-                                    let window_flags = WindowFlags::NO_DECORATION
-                                        | WindowFlags::NO_MOVE
-                                        | WindowFlags::NO_RESIZE
-                                        | WindowFlags::NO_SCROLLBAR
-                                        | WindowFlags::NO_TITLE_BAR
-                                        | WindowFlags::NO_BACKGROUND;
+                                DECIDEDWORLD = true;
+                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                            }
 
-                                    let window_size = (900.0, 700.0);
+                            static mut ELEMENT2MOUSED: bool = false;
+                            let hovered = ui.is_item_hovered();
 
-                                    let window_pos = [
-                                        width as f32 / 2.0 - (window_size.0 / 2.0),
-                                        height as f32 / 2.0 - (window_size.1 / 2.0),
-                                    ];
+                            if hovered != unsafe { ELEMENT2MOUSED } {
+                                unsafe {
+                                    ELEMENT2MOUSED = hovered;
+                                }
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
+                                }
+                            }
+                            draw_3d_menu_button(
+                                &self.modelshader, &self.menu_camera, 
+                                &self.gltf_vaos, &self.gltf_textures, 
+                                &self.gltf_counts, &self.gltf_drawmodes,
+                                hovered, Vec3::new(0.0, 2.0, 0.0), 2
+                            );
 
-                                    // unsafe {
-                                    //     UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
-                                    // }
+                            // Pop the button style after use
+                            sttok1.pop();
+                        });
+                    // Render the ImGui frame
+                    self.guirenderer.render(&mut self.imgui);
 
-                                    ui.window("Transparent Window")
-                                        .size([window_size.0, window_size.1], Condition::Always)
-                                        .position(window_pos, Condition::Always)
-                                        .flags(window_flags)
-                                        .build(|| {
-
-                                            let len = gamecurrentbuttons.len();
-
-                                            let button_height = 20.0;
-                                            let window_size = ui.window_size();
-                                            let available_width = window_size[0];
-                                            let available_height = window_size[1] + 200.0;
-                                            let mut pos_y = (available_height - (len as f32 * button_height) - 10.0 * (len as f32 - 1.0)) / 2.0;
+                    // avoid borrow checker
+                    (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
+                            }
+                            true => {
+                                match self.game.as_mut() {
+                                    Some(g) => {
+                                        let gmenuopen = g.vars.menu_open;
             
-
-                                            if gamecurrentbuttons.len() > 0 {
-
-                                                if gamecurrentbuttons[0].0 == "bindings" {
-
-                                                    
-                                                    
-                                                    for (index, (binding, glfwkey)) in gamecurrentbuttons.iter().skip(1).enumerate() {
-                                                        
-                                                        let button_width = 10.0 * 20.0;
-                                                    
-
-                                                        let pos_x = (available_width - (button_width * 2.0)) / 2.0;
-
-                                                        ui.set_cursor_pos([pos_x, pos_y + 25.0]);
-                                                        if LISTENINGFORREBIND {
-                                                            ui.text_colored([1.0, 1.0, 0.0, 1.0], "Listening for new key binding...");
-                                                        }
-    
-                                                        ui.set_cursor_pos([pos_x, pos_y]);
-    
-                                                        
-
-                                                        if index == 0 {
-                                                            if ui.button_with_size(binding, [button_width, button_height]) {
-                                                                g.button_command(glfwkey.to_string());
-                                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                            }
-                                                        } else {
-                                                            if ui.button_with_size(binding, [button_width, button_height]) {
-                                                             
-                                                            }
-    
-                                                            ui.set_cursor_pos([pos_x + button_width, pos_y]);
-                                                            
-
-                                                            // let name = if glfwkey.starts_with("Button") { glfwkey } else { 
-                                                            //     &glfw::get_key_name(None, Some(glfwkey.parse::<i32>().unwrap_or(0))).unwrap_or("Unknown key".into())
-                                                            // };
-                                                            let name = glfwkey;
-
-                                                            let int = glfwkey.parse::<i32>().unwrap_or(1);
-
-                                                        
-
-                                                            // if !glfwkey.starts_with("Button") {
-                                                            //     name = &realname;
-                                                            // }
-                                                            
-                                                            if !name.is_empty() {
-                                                                if ui.button_with_size(name, [button_width, button_height]) {
+                                        let gcraftopen = g.crafting_open;
+            
+                                        #[cfg(feature = "glfw")]
+                                        let gchestopen = g.hud.chest_open;
+            
+                                        #[cfg(not(feature = "glfw"))]
+                                        let gchestopen = false;
+            
+                                        if g.vars.main_menu {
+                                            main_menu = true;
+                                        } else {
+                                            if g.loadedworld.load(std::sync::atomic::Ordering::Relaxed) {
+                                                g.update();
+            
+                                                // if MISCSETTINGS.controllersupport == true {
+                                                //     let state = self.glfw.get_joystick(glfw::JoystickId::Joystick1);
+            
+                                                //     static mut lastx: f64 = 0.0;
+                                                //     static mut lasty: f64 = 0.0;
+            
+                                                //     static mut x: f64 = 0.0;
+                                                //     static mut y: f64 = 0.0;
+            
+                                                //     let axes = state.get_axes();
+            
+                                                //     if axes.len() >= 2 {
+                                                //         unsafe {
+                                                //             x += axes[0] as f64;
+                                                //             y += axes[1] as f64;
+            
+                                                //             if lastx != x || lasty != y {
+                                                //                 lastx = x;
+                                                //                 lasty = y;
+                                                //                 g.cursor_pos(x, y);
+                                                //             }
+                                                //         }
+                                                //     }
+                                                // }
+                                                
+                                            }
+            
+                                            self.imgui
+                                                .io_mut()
+                                                .update_delta_time(Duration::from_secs_f32(self.delta_time));
+            
+                                            if UNCAPKB.load(std::sync::atomic::Ordering::Relaxed) {
+                                                //println!("Uncapping kb and mouse");
+                                                self.imgui.io_mut().want_capture_keyboard = false;
+                                                self.imgui.io_mut().want_text_input = false;
+                                                self.imgui.io_mut().want_capture_mouse = false;
+                                                UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
+                                            }
+            
+                                            if gchestopen {
+                                                let ui = self.imgui.frame();
+            
+                                                let window_flags = WindowFlags::NO_DECORATION
+                                                    | WindowFlags::NO_MOVE
+                                                    | WindowFlags::NO_RESIZE
+                                                    | WindowFlags::NO_SCROLLBAR
+                                                    | WindowFlags::NO_TITLE_BAR
+                                                    | WindowFlags::NO_INPUTS;
+            
+                                                if SHOWTOOLTIP {
+                                                    ui.window("Mouse Tooltip Window")
+                                                        .size([300.0, 50.0], Condition::Always)
+                                                        .position(
+                                                            [MOUSEX as f32, MOUSEY as f32],
+                                                            Condition::Always,
+                                                        )
+                                                        .flags(window_flags)
+                                                        .build(|| {
+                                                            ui.text(TOOLTIPNAME);
+                                                        });
+                                                }
+            
+                                                self.guirenderer.render(&mut self.imgui);
+                                            }
+            
+                                            if gmenuopen {
+                                                let gamecurrentbuttons = g.currentbuttons.clone();
+            
+                                                let (width, height) = self.window.read().get_framebuffer_size();
+                                                self.imgui.io_mut().display_size =
+                                                    [width as f32, height as f32];
+            
+                                                // Start the ImGui frame
+                                                let ui = self.imgui.frame();
+            
+                                                let window_flags = WindowFlags::NO_DECORATION
+                                                    | WindowFlags::NO_MOVE
+                                                    | WindowFlags::NO_RESIZE
+                                                    | WindowFlags::NO_SCROLLBAR
+                                                    | WindowFlags::NO_TITLE_BAR
+                                                    | WindowFlags::NO_BACKGROUND;
+            
+                                                let window_size = (900.0, 700.0);
+            
+                                                let window_pos = [
+                                                    width as f32 / 2.0 - (window_size.0 / 2.0),
+                                                    height as f32 / 2.0 - (window_size.1 / 2.0),
+                                                ];
+            
+                                                // unsafe {
+                                                //     UNCAPKB.store(false, std::sync::atomic::Ordering::Relaxed);
+                                                // }
+            
+                                                ui.window("Transparent Window")
+                                                    .size([window_size.0, window_size.1], Condition::Always)
+                                                    .position(window_pos, Condition::Always)
+                                                    .flags(window_flags)
+                                                    .build(|| {
+            
+                                                        let len = gamecurrentbuttons.len();
+            
+                                                        let button_height = 20.0;
+                                                        let window_size = ui.window_size();
+                                                        let available_width = window_size[0];
+                                                        let available_height = window_size[1] + 200.0;
+                                                        let mut pos_y = (available_height - (len as f32 * button_height) - 10.0 * (len as f32 - 1.0)) / 2.0;
+                        
+            
+                                                        if gamecurrentbuttons.len() > 0 {
+            
+                                                            if gamecurrentbuttons[0].0 == "bindings" {
+            
                                                                 
-                                                                    LISTENINGFORREBIND = true;
-                                                                    if !glfwkey.starts_with("Button") {
-                                                                        ABOUTTOREBIND = Some(AboutToRebind {
-                                                                            key: crate::keybinds::Rebindable::Key(int),
-                                                                            action: binding.clone()
-                                                                        });
+                                                                
+                                                                for (index, (binding, glfwkey)) in gamecurrentbuttons.iter().skip(1).enumerate() {
+                                                                    
+                                                                    let button_width = 10.0 * 20.0;
+                                                                
+            
+                                                                    let pos_x = (available_width - (button_width * 2.0)) / 2.0;
+            
+                                                                    ui.set_cursor_pos([pos_x, pos_y + 25.0]);
+                                                                    if LISTENINGFORREBIND {
+                                                                        ui.text_colored([1.0, 1.0, 0.0, 1.0], "Listening for new key binding...");
+                                                                    }
+                
+                                                                    ui.set_cursor_pos([pos_x, pos_y]);
+                
+                                                                    
+            
+                                                                    if index == 0 {
+                                                                        if ui.button_with_size(binding, [button_width, button_height]) {
+                                                                            g.button_command(glfwkey.to_string());
+                                                                            UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                                                                        }
                                                                     } else {
-                                                                        ABOUTTOREBIND = Some(AboutToRebind {
-                                                                            key: crate::keybinds::Rebindable::MouseButton(
-                                                                                match glfwkey.as_str() {
-                                                                                    "Button1" => {
-                                                                                        glfw::MouseButton::Button1
-                                                                                    }
-                                                                                    "Button2" => {
-                                                                                        glfw::MouseButton::Button2
-                                                                                    }
-                                                                                    "Button3" => {
-                                                                                        glfw::MouseButton::Button3
-                                                                                    }
-                                                                                    "Button4" => {
-                                                                                        glfw::MouseButton::Button4
-                                                                                    }
-                                                                                    "Button5" => {
-                                                                                        glfw::MouseButton::Button5
-                                                                                    }
-                                                                                    "Button6" => {
-                                                                                        glfw::MouseButton::Button6
-                                                                                    }
-                                                                                    "Button7" => {
-                                                                                        glfw::MouseButton::Button7
-                                                                                    }
-                                                                                    _ => {
-                                                                                        glfw::MouseButton::Button8
-                                                                                    }
+                                                                        if ui.button_with_size(binding, [button_width, button_height]) {
+                                                                         
+                                                                        }
+                
+                                                                        ui.set_cursor_pos([pos_x + button_width, pos_y]);
+                                                                        
+            
+                                                                        // let name = if glfwkey.starts_with("Button") { glfwkey } else { 
+                                                                        //     &glfw::get_key_name(None, Some(glfwkey.parse::<i32>().unwrap_or(0))).unwrap_or("Unknown key".into())
+                                                                        // };
+                                                                        let name = glfwkey;
+            
+                                                                        let int = glfwkey.parse::<i32>().unwrap_or(1);
+            
+                                                                    
+            
+                                                                        // if !glfwkey.starts_with("Button") {
+                                                                        //     name = &realname;
+                                                                        // }
+                                                                        
+                                                                        if !name.is_empty() {
+                                                                            if ui.button_with_size(name, [button_width, button_height]) {
+                                                                            
+                                                                                LISTENINGFORREBIND = true;
+                                                                                if !glfwkey.starts_with("Button") {
+                                                                                    ABOUTTOREBIND = Some(AboutToRebind {
+                                                                                        key: crate::keybinds::Rebindable::Key(int),
+                                                                                        action: binding.clone()
+                                                                                    });
+                                                                                } else {
+                                                                                    ABOUTTOREBIND = Some(AboutToRebind {
+                                                                                        key: crate::keybinds::Rebindable::MouseButton(
+                                                                                            match glfwkey.as_str() {
+                                                                                                "Button1" => {
+                                                                                                    glfw::MouseButton::Button1
+                                                                                                }
+                                                                                                "Button2" => {
+                                                                                                    glfw::MouseButton::Button2
+                                                                                                }
+                                                                                                "Button3" => {
+                                                                                                    glfw::MouseButton::Button3
+                                                                                                }
+                                                                                                "Button4" => {
+                                                                                                    glfw::MouseButton::Button4
+                                                                                                }
+                                                                                                "Button5" => {
+                                                                                                    glfw::MouseButton::Button5
+                                                                                                }
+                                                                                                "Button6" => {
+                                                                                                    glfw::MouseButton::Button6
+                                                                                                }
+                                                                                                "Button7" => {
+                                                                                                    glfw::MouseButton::Button7
+                                                                                                }
+                                                                                                _ => {
+                                                                                                    glfw::MouseButton::Button8
+                                                                                                }
+                                                                                            }
+                                                                                        ),
+                                                                                        action: binding.clone()
+                                                                                    });
                                                                                 }
-                                                                            ),
-                                                                            action: binding.clone()
-                                                                        });
+                                                                                
+                                                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                                                                            } 
+                                                                        
+                                                                        }
+                                                                        
+                                                                    }
+                
+                                                                    
+            
+                                                                    
+                                                                    pos_y += button_height + 10.0; 
+                                                                }
+                                                            } else {
+                                                                for (buttonname, command) in gamecurrentbuttons {
+            
+                                                                    let button_width = if buttonname.starts_with("Slider") { 25.0 * 20.0  } else  { buttonname.len() as f32 * 20.0 };
+                                                                
+            
+                                                                    let pos_x = (available_width - button_width) / 2.0;
+                
+                
+                                                                    ui.set_cursor_pos([pos_x, pos_y]);
+                                                                    ui.set_next_item_width(250.0);
+                                                                    if buttonname.starts_with("Slider") {
+                                                                        let truncated_name = buttonname.split_at(6).1;
+                                                                        if buttonname == "SliderMouse Sensitivity" {
+                                                                            if ui.slider(truncated_name, 0.1, 3.0, &mut MISCSETTINGS.mouse_sense) {
+                                                                                //g.button_command(command);
+                                                                            }
+                                                                        }
+                                                                        if buttonname == "SliderMusic Volume" {
+                                                                            if ui.slider(truncated_name, 0.0, 1.0, &mut MISCSETTINGS.music_vol) {
+                                                                                //g.button_command(command);
+                                                                            }
+                                                                        }
+                                                                        if buttonname == "SliderSounds Volume" {
+                                                                            if ui.slider(truncated_name, 0.0, 1.0, &mut MISCSETTINGS.sound_vol) {
+                                                                                //g.button_command(command);
+                                                                            }
+                                                                        }
+                                                                    } else if buttonname.starts_with("Switch") {
+            
+                                                                        if buttonname == "SwitchJoystick" {
+                                                                            if ui.checkbox("Enable Joystick Support (Beta)", &mut MISCSETTINGS.controllersupport) {
+            
+                                                                            }
+                                                                        }
+            
+                                                                    } else {
+                                                                        if ui.button_with_size(buttonname, [button_width, button_height]) {
+                                                                            g.button_command(command);
+                                                                            UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                                                                        }
                                                                     }
                                                                     
-                                                                    UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                                } 
-                                                            
+                                                                    pos_y += button_height + 10.0; 
+                                                                }
+                                                        
                                                             }
-                                                            
+                                                                
+                                                           
                                                         }
-    
                                                         
-
-                                                        
-                                                        pos_y += button_height + 10.0; 
-                                                    }
-                                                } else {
-                                                    for (buttonname, command) in gamecurrentbuttons {
-
-                                                        let button_width = if buttonname.starts_with("Slider") { 25.0 * 20.0  } else  { buttonname.len() as f32 * 20.0 };
                                                     
-
-                                                        let pos_x = (available_width - button_width) / 2.0;
-    
-    
-                                                        ui.set_cursor_pos([pos_x, pos_y]);
-                                                        ui.set_next_item_width(250.0);
-                                                        if buttonname.starts_with("Slider") {
-                                                            let truncated_name = buttonname.split_at(6).1;
-                                                            if buttonname == "SliderMouse Sensitivity" {
-                                                                if ui.slider(truncated_name, 0.1, 3.0, &mut MISCSETTINGS.mouse_sense) {
-                                                                    //g.button_command(command);
-                                                                }
-                                                            }
-                                                            if buttonname == "SliderMusic Volume" {
-                                                                if ui.slider(truncated_name, 0.0, 1.0, &mut MISCSETTINGS.music_vol) {
-                                                                    //g.button_command(command);
-                                                                }
-                                                            }
-                                                            if buttonname == "SliderSounds Volume" {
-                                                                if ui.slider(truncated_name, 0.0, 1.0, &mut MISCSETTINGS.sound_vol) {
-                                                                    //g.button_command(command);
-                                                                }
-                                                            }
-                                                        } else if buttonname.starts_with("Switch") {
-
-                                                            if buttonname == "SwitchJoystick" {
-                                                                if ui.checkbox("Enable Joystick Support (Beta)", &mut MISCSETTINGS.controllersupport) {
-
-                                                                }
-                                                            }
-
-                                                        } else {
-                                                            if ui.button_with_size(buttonname, [button_width, button_height]) {
-                                                                g.button_command(command);
-                                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                                            }
-                                                        }
-                                                        
-                                                        pos_y += button_height + 10.0; 
-                                                    }
-                                            
-                                                }
-                                                    
-                                               
-                                            }
-                                            
-                                        
-                                        });
-
-                                    // Render the ImGui frame
-                                    self.guirenderer.render(&mut self.imgui);
-                                } else {
-                                    if gcraftopen {
-                                        //println!("Gcraft is open");
-                                        let cb = g.currentbuttons.clone();
-
-                                        let (width, height) =
-                                            self.window.read().get_framebuffer_size();
-                                        self.imgui.io_mut().display_size =
-                                            [width as f32, height as f32];
-
-                                        // Start the ImGui frame
-                                        let ui = self.imgui.frame();
-
-                                        let window_flags = WindowFlags::NO_DECORATION
-                                            | WindowFlags::NO_MOVE
-                                            | WindowFlags::NO_RESIZE
-                                            | WindowFlags::NO_TITLE_BAR;
-
-                                        let window_size = (700.0, 700.0);
-
-                                        let window_pos = [
-                                            width as f32 / 2.0 - (window_size.0 / 2.0),
-                                            height as f32 / 2.0 - (window_size.1 / 2.0),
-                                        ];
-                                        let mut recipeindexscrafted = Vec::new();
-
-                                        ui.window("Transparent Window")
-                                            .size([window_size.0, window_size.1], Condition::Always)
-                                            .position(window_pos, Condition::Always)
-                                            .flags(window_flags)
-                                            .build(|| {
-                                                let button_width = 200.0;
-                                                let button_height = 20.0;
-                                                let window_size = ui.window_size();
-
-                                                let available_width = window_size[0];
-                                                let available_height = window_size[1];
-
-                                                let pos_x = (available_width - button_width) / 2.0;
-                                                let mut pos_y = (available_height
-                                                    - (cb.len() as f32 * button_height)
-                                                    - 10.0 * (cb.len() as f32 - 1.0))
-                                                    / 2.0;
-
-                                                // for (buttonname, command) in cb {
-                                                //     ui.set_cursor_pos([pos_x, pos_y]);
-                                                //     if ui.button_with_size(buttonname, [button_width, button_height]) {
-                                                //         g.button_command(command);
-                                                //     }
-                                                //     pos_y += button_height + 10.0; // Add some spacing between buttons
-                                                // }
-                                                ui.text_colored(
-                                                    [1.0, 1.0, 0.0, 1.0],
-                                                    "Hold ctrl to craft all of a recipe",
-                                                );
-                                                if CROUCHING {
-                                                    ui.text_colored(
-                                                        [1.0, 1.0, 0.0, 1.0],
-                                                        "Ctrl pressed.",
-                                                    );
-                                                }
-                                                for (index, recipeent) in CURRENT_AVAIL_RECIPES
-                                                    .lock()
-                                                    .iter_mut()
-                                                    .enumerate()
-                                                {
-                                                    let recipe = recipeent.recipe.clone();
-                                                    ui.set_cursor_pos([pos_x, pos_y]);
-                                                    let str = format!(
-                                                        "{}, {}",
-                                                        Blocks::get_name(recipe.1 .0),
-                                                        recipe.1 .1
-                                                    );
-                                                    if RECIPES_DISABLED {
-                                                        ui.text_colored(
-                                                            [0.0, 0.0, 1.0, 1.0],
-                                                            str,
-                                                        );
-                                                    } else {
-                                                        if ui.button_with_size(
-                                                            str,
-                                                            [button_width, button_height],
-                                                        ) {
-                                                            recipeindexscrafted.push(index);
-                                                            //g.craft_recipe_index(index);
-                                                            recipeent.disabled = true;
-                                                            RECIPES_DISABLED = true;
-                                                        }
-                                                    }
-
-                                                    let mut costs = String::from("Using ");
-
-                                                    for (index, entry) in
-                                                        recipe.0.iter().enumerate()
-                                                    {
-                                                        costs += entry.1.to_string().as_str();
-                                                        costs += " ";
-                                                        costs += Blocks::get_name(entry.0);
-                                                        if index < (recipe.0.len() - 1) {
-                                                            costs += ", ";
-                                                        } else {
-                                                            costs += ".";
-                                                        }
-                                                    }
-
-                                                    ui.text_colored(
-                                                        [1.0, 0.0, 0.0, 1.0],
-                                                        costs,
-                                                    );
-
-                                                    pos_y += button_height + 10.0;
-                                                    // Add some spacing between buttons
-                                                }
-                                            });
-
-                                        for recipe in recipeindexscrafted {
-                                            g.craft_recipe_index(recipe, CROUCHING);
-                                        }
-                                        Game::update_avail_recipes(&g.inventory.clone());
-
-                                        if RECIPES_DISABLED {
-                                            if RECIPE_COOLDOWN_TIMER < 0.5 {
-                                                RECIPE_COOLDOWN_TIMER += self.delta_time;
+                                                    });
+            
+                                                // Render the ImGui frame
+                                                self.guirenderer.render(&mut self.imgui);
                                             } else {
-                                                RECIPES_DISABLED = false;
-                                                RECIPE_COOLDOWN_TIMER = 0.0;
-                                            }
-                                        }
-
-                                        #[cfg(feature = "glfw")]
-                                        g.update_inventory();
-
-                                        // Render the ImGui frame
-                                        self.guirenderer.render(&mut self.imgui);
-                                    }
-                                    else {
-                                        let (width, height) =
-                                            self.window.read().get_framebuffer_size();
-                                        self.imgui.io_mut().display_size =
-                                            [width as f32, height as f32];
-
-                                        // Start the ImGui frame
-                                        let ui = self.imgui.frame();
-
-                                        let window_flags = WindowFlags::NO_DECORATION
-                                            | WindowFlags::NO_MOVE
-                                            | WindowFlags::NO_RESIZE
-                                            | WindowFlags::NO_SCROLLBAR
-                                            | WindowFlags::NO_TITLE_BAR
-                                            | WindowFlags::NO_BACKGROUND;
-
-                                        let window_size = (700.0, 700.0);
-                                        let window_pos = [0f32, 0f32];
-
-                                        if self.cmd.cmd_open {
-
-                                            ui.window("Command Line")
-                                            .size([window_size.0, window_size.1], Condition::Always)
-                                            .position(window_pos, Condition::Always)
-                                            .flags(window_flags)
-                                            .build(|| {
-                                               
-                                                if self.cmd.cmd_open {
-                                                    ui.set_keyboard_focus_here();
-                                                    ui.set_cursor_pos([0f32, 0f32]);
-                                                    if ui.input_text("##", &mut self.cmd.cmd_text)
-                                                    .enter_returns_true(true)
-                                                    .build() {
-                                                        self.cmd.run(self.game.as_mut().unwrap());
+                                                if gcraftopen {
+                                                    //println!("Gcraft is open");
+                                                    let cb = g.currentbuttons.clone();
+            
+                                                    let (width, height) =
+                                                        self.window.read().get_framebuffer_size();
+                                                    self.imgui.io_mut().display_size =
+                                                        [width as f32, height as f32];
+            
+                                                    // Start the ImGui frame
+                                                    let ui = self.imgui.frame();
+            
+                                                    let window_flags = WindowFlags::NO_DECORATION
+                                                        | WindowFlags::NO_MOVE
+                                                        | WindowFlags::NO_RESIZE
+                                                        | WindowFlags::NO_TITLE_BAR;
+            
+                                                    let window_size = (700.0, 700.0);
+            
+                                                    let window_pos = [
+                                                        width as f32 / 2.0 - (window_size.0 / 2.0),
+                                                        height as f32 / 2.0 - (window_size.1 / 2.0),
+                                                    ];
+                                                    let mut recipeindexscrafted = Vec::new();
+            
+                                                    ui.window("Transparent Window")
+                                                        .size([window_size.0, window_size.1], Condition::Always)
+                                                        .position(window_pos, Condition::Always)
+                                                        .flags(window_flags)
+                                                        .build(|| {
+                                                            let button_width = 200.0;
+                                                            let button_height = 20.0;
+                                                            let window_size = ui.window_size();
+            
+                                                            let available_width = window_size[0];
+                                                            let available_height = window_size[1];
+            
+                                                            let pos_x = (available_width - button_width) / 2.0;
+                                                            let mut pos_y = (available_height
+                                                                - (cb.len() as f32 * button_height)
+                                                                - 10.0 * (cb.len() as f32 - 1.0))
+                                                                / 2.0;
+            
+                                                            // for (buttonname, command) in cb {
+                                                            //     ui.set_cursor_pos([pos_x, pos_y]);
+                                                            //     if ui.button_with_size(buttonname, [button_width, button_height]) {
+                                                            //         g.button_command(command);
+                                                            //     }
+                                                            //     pos_y += button_height + 10.0; // Add some spacing between buttons
+                                                            // }
+                                                            ui.text_colored(
+                                                                [1.0, 1.0, 0.0, 1.0],
+                                                                "Hold ctrl to craft all of a recipe",
+                                                            );
+                                                            if CROUCHING {
+                                                                ui.text_colored(
+                                                                    [1.0, 1.0, 0.0, 1.0],
+                                                                    "Ctrl pressed.",
+                                                                );
+                                                            }
+                                                            for (index, recipeent) in CURRENT_AVAIL_RECIPES
+                                                                .lock()
+                                                                .iter_mut()
+                                                                .enumerate()
+                                                            {
+                                                                let recipe = recipeent.recipe.clone();
+                                                                ui.set_cursor_pos([pos_x, pos_y]);
+                                                                let str = format!(
+                                                                    "{}, {}",
+                                                                    Blocks::get_name(recipe.1 .0),
+                                                                    recipe.1 .1
+                                                                );
+                                                                if RECIPES_DISABLED {
+                                                                    ui.text_colored(
+                                                                        [0.0, 0.0, 1.0, 1.0],
+                                                                        str,
+                                                                    );
+                                                                } else {
+                                                                    if ui.button_with_size(
+                                                                        str,
+                                                                        [button_width, button_height],
+                                                                    ) {
+                                                                        recipeindexscrafted.push(index);
+                                                                        //g.craft_recipe_index(index);
+                                                                        recipeent.disabled = true;
+                                                                        RECIPES_DISABLED = true;
+                                                                    }
+                                                                }
+            
+                                                                let mut costs = String::from("Using ");
+            
+                                                                for (index, entry) in
+                                                                    recipe.0.iter().enumerate()
+                                                                {
+                                                                    costs += entry.1.to_string().as_str();
+                                                                    costs += " ";
+                                                                    costs += Blocks::get_name(entry.0);
+                                                                    if index < (recipe.0.len() - 1) {
+                                                                        costs += ", ";
+                                                                    } else {
+                                                                        costs += ".";
+                                                                    }
+                                                                }
+            
+                                                                ui.text_colored(
+                                                                    [1.0, 0.0, 0.0, 1.0],
+                                                                    costs,
+                                                                );
+            
+                                                                pos_y += button_height + 10.0;
+                                                                // Add some spacing between buttons
+                                                            }
+                                                        });
+            
+                                                    for recipe in recipeindexscrafted {
+                                                        g.craft_recipe_index(recipe, CROUCHING);
                                                     }
+                                                    Game::update_avail_recipes(&g.inventory.clone());
+            
+                                                    if RECIPES_DISABLED {
+                                                        if RECIPE_COOLDOWN_TIMER < 0.5 {
+                                                            RECIPE_COOLDOWN_TIMER += self.delta_time;
+                                                        } else {
+                                                            RECIPES_DISABLED = false;
+                                                            RECIPE_COOLDOWN_TIMER = 0.0;
+                                                        }
+                                                    }
+            
+                                                    #[cfg(feature = "glfw")]
+                                                    g.update_inventory();
+            
+                                                    // Render the ImGui frame
+                                                    self.guirenderer.render(&mut self.imgui);
                                                 }
-                                            });
+                                                else {
+                                                    let (width, height) =
+                                                        self.window.read().get_framebuffer_size();
+                                                    self.imgui.io_mut().display_size =
+                                                        [width as f32, height as f32];
+            
+                                                    // Start the ImGui frame
+                                                    let ui = self.imgui.frame();
+            
+                                                    let window_flags = WindowFlags::NO_DECORATION
+                                                        | WindowFlags::NO_MOVE
+                                                        | WindowFlags::NO_RESIZE
+                                                        | WindowFlags::NO_SCROLLBAR
+                                                        | WindowFlags::NO_TITLE_BAR
+                                                        | WindowFlags::NO_BACKGROUND;
+            
+                                                    let window_size = (700.0, 700.0);
+                                                    let window_pos = [0f32, 0f32];
+            
+                                                    if self.cmd.cmd_open {
+                                                        
+                                                        ui.window("Command Line")
+                                                        .size([window_size.0, window_size.1], Condition::Always)
+                                                        .position(window_pos, Condition::Always)
+                                                        .flags(window_flags)
+                                                        .build(|| {
+                                                            //let tkn = ui.push_id(&mut self.cmd.cmd_text);
+                                                            ui.set_cursor_pos([0f32, 0f32]);
+                                                            ui.set_keyboard_focus_here();
+                                                            if ui.input_text("##", &mut self.cmd.cmd_text)
+                                                            .enter_returns_true(true)
+                                                            .build() {
+                                                                self.cmd.run(self.game.as_mut().unwrap());
+                                                            }
+                                                            //tkn.end()
+                                                        });
+                                                    }
+            
+                                                    // Render the ImGui frame
+                                                    self.guirenderer.render(&mut self.imgui);
+                                                }
+                                            }
+            
+                                            // avoid borrow checker
+                                            (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
                                         }
-
-                                        
-
-                                        // Render the ImGui frame
-                                        self.guirenderer.render(&mut self.imgui);
+                                    }
+                                    None => {
+                                        main_menu = true;
                                     }
                                 }
-
-                                // avoid borrow checker
-                                (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
+            
                             }
                         }
-                        None => {
-                            main_menu = true;
-                        }
                     }
-
+                    
                     if main_menu && !SINGLEPLAYER {
                         self.imgui
                             .io_mut()

@@ -125,6 +125,7 @@ pub static WINDEDLENGTH: f32 = 2.0;
 pub static mut SINGLEPLAYER: bool = false;
 
 pub static mut DECIDEDSPORMP: bool = false;
+pub static mut DECIDEDWORLD: bool = false;
 
 pub static mut MOVING: bool = false;
 
@@ -160,6 +161,7 @@ pub fn wait_for_decide_singleplayer() {
         while !DECIDEDSPORMP {
             thread::sleep(Duration::from_millis(250));
         }
+        
     }
 }
 
