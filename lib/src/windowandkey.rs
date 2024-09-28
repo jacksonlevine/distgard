@@ -1311,7 +1311,8 @@ impl WindowAndKeyContext {
                                                             .enter_returns_true(true)
                                                             .build() {
                                                                 self.cmd.run(self.game.as_mut().unwrap());
-                                                            }
+                                                                self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
+                                                }
                                                             //tkn.end()
                                                         });
                                                     }

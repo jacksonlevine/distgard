@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
-
-use crate::game::{Game, PLAYERPOS, WEATHERTYPE};
+use crate::game::{Game, CAMERA, SPAWNPOINT, PLAYERPOS, WEATHERTYPE};
 use crate::blockinfo::BLOCK_NAME_TO_ID;
 use bevy::reflect::Map;
 use logos::Logos;
@@ -34,11 +33,17 @@ enum Token {
     #[token("clear")]
     Clear,
 
+    #[token("kill")]
+    Kill,
+
+    #[token("spawn")]
+    Spawn,
+
     #[token("give")]
     Give,
 
     #[regex(r"[a-zA-Z_]*")]
-    Word
+    Word,
 }
 
 pub struct Cmd {
@@ -99,6 +104,16 @@ impl Cmd {
                 let mut tod = game.timeofday.lock();
                 *tod = 0.0;
             }
+            Some(Ok(Token::Kill)) => {
+                game.take_damage(game.health.load(std::sync::atomic::Ordering::Relaxed) as u8);
+            }
+            Some(Ok(Token::Spawn)) => {
+                let cam = unsafe { CAMERA.as_ref().unwrap() };
+                let mut camlock = cam.lock();
+                unsafe { camlock.position = SPAWNPOINT; }
+                camlock.velocity = bevy::prelude::Vec3::ZERO;
+                drop(camlock);
+            }
             Some(Ok(Token::Give)) => {
                 match lexer.next() {
                     Some(Ok(Token::Number(id))) => {
@@ -113,7 +128,15 @@ impl Cmd {
                     }
                     Some(Ok(Token::Word)) => {
                         if BLOCK_NAME_TO_ID.contains_key(lexer.slice()) {
-                            game.drops.add_drop(unsafe { PLAYERPOS.snapshot().pos.into() }, BLOCK_NAME_TO_ID[lexer.slice()], 1)
+                            let block_id = BLOCK_NAME_TO_ID[lexer.slice()];
+                            match lexer.next() {
+                                Some(Ok(Token::Number(amt))) => {
+                                    game.drops.add_drop(unsafe { PLAYERPOS.snapshot().pos.into() }, block_id, amt)
+                                }
+                                _ => {
+                                    game.drops.add_drop(unsafe { PLAYERPOS.snapshot().pos.into() }, block_id, 1)
+                                }
+                            }
                         }
                     }
                     _ => {}
