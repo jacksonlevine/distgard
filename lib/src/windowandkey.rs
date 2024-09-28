@@ -1311,7 +1311,8 @@ impl WindowAndKeyContext {
                                                             .enter_returns_true(true)
                                                             .build() {
                                                                 self.cmd.run(self.game.as_mut().unwrap());
-                                                            }
+                                                                self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
+                                                }
                                                             //tkn.end()
                                                         });
                                                     }
@@ -1668,11 +1669,26 @@ impl WindowAndKeyContext {
                         Key::GraveAccent => {
                             if action == Action::Press {
                                 self.cmd.cmd_open = !self.cmd.cmd_open;
-                                
                                 unsafe { UNCAPKB.store(!self.cmd.cmd_open, std::sync::atomic::Ordering::Relaxed); }
+                                if self.cmd.cmd_open {
+                                    self.window.write().set_cursor_mode(glfw::CursorMode::Normal);
+                                }
+                                else {
+                                    self.window.write().set_cursor_mode(glfw::CursorMode::Disabled);
+                                }
                                 if self.game.is_some() {
                                     self.game.as_mut().unwrap().set_mouse_focused(!self.cmd.cmd_open);
                                 }
+                            }
+                        }
+                        Key::Up => {
+                            if self.cmd.cmd_open && pressed {
+                                self.cmd.peek_up();
+                            }
+                        }
+                        Key::Down => {
+                            if self.cmd.cmd_open && pressed {
+                                self.cmd.peek_down();
                             }
                         }
                         _ => {}
