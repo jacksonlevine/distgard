@@ -15,3 +15,4 @@ lesa
 app.log
 *.exe
 **/target/
+/dgsaves/
