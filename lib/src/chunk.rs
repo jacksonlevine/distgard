@@ -43,6 +43,7 @@ use crate::chunkregistry::ChunkRegistry;
 use crate::cube::Cube;
 use crate::cube::CubeSide;
 
+use crate::database::UserDataMapAndMiscMap;
 #[cfg(feature = "audio")]
 use crate::game::AUDIOPLAYER;
 
@@ -315,93 +316,9 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 
 //pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
-#[derive(Clone)]
-pub struct UserDataMap(Db);
 
-impl UserDataMap {
-    pub fn get(&self, vec: &IVec3) -> Option<u32> {
-        get_udm_entry(vec)
-    }
+pub static mut USERDATAMAPANDMISCMAP: Option<UserDataMapAndMiscMap> = None;
 
-    pub fn insert(&self, vec: IVec3, block: u32) {
-        put_udm_entry(&vec, block);
-    }
-}
-
-pub static mut USERDATAMAP: Option<UserDataMap> = None;
-
-pub fn key_to_bytes(key: &IVec3) -> Result<Vec<u8>, borsh::io::Error> {
-    borsh::to_vec(&[key.x, key.y, key.z])
-}
-
-pub fn get_udm_entry(key: &IVec3) -> Option<u32>
- {
-    match unsafe { &USERDATAMAP } {
-        Some(db) => {
-            let db = db.0.clone();
-            
-            match key_to_bytes(key) {
-                Ok(key) => {
-                    match db.get(key) {
-                        Ok(value) => {
-                            match value {
-                                Some(value) => {
-                                    //println!("Got to here");
-                                    let blocktype = u32::from_le_bytes(value[0..4].try_into().unwrap_or([0; 4]));
-                                    Some(blocktype)
-                                }
-                                None => {
-                                    None
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            None
-                        }
-                    }
-                }
-                Err(e) => {
-                    None
-                }
-            }
-            
-        }
-        None => {
-            None
-        }
-    }
-
-
-    
- }
-
-pub fn put_udm_entry(key: &IVec3, block: u32) {
-    match unsafe { &USERDATAMAP } {
-        Some(db) => {
-            let db = db.0.clone();
-
-            match key_to_bytes(key) {
-                Ok(key) => {
-                    match db.insert(key, &block.to_le_bytes()) {
-                        Ok(_) => {
-                            //println!("Inserted key");
-                        }
-                        Err(e) => {
-                            println!("Error inserting key: {}", e);
-                        }
-                    };
-                }
-                Err(e) => {
-                    println!("Error converting key to bytes: {}", e);
-                }
-            }
-        }
-        None => {
-
-        }
-    }
-    
-}
 
 
 
@@ -446,7 +363,7 @@ impl ChunkSystem {
                 match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
                     Ok(db) => {
                         println!("Opened db, assigning to USERDATAMAP");
-                        USERDATAMAP = Some(UserDataMap(db));
+                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
                         println!("Opened db");
                     }
                     Err(e) => {
@@ -555,7 +472,7 @@ impl ChunkSystem {
 
         let takencare = self.takencare.clone();
 
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()}.clone();
+        let udm = unsafe {USERDATAMAPANDMISCMAP.as_ref().unwrap()}.clone();
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()}.clone();
         let per = self.perlin.clone();
         //let cam = cam.clone();
@@ -1132,7 +1049,7 @@ impl ChunkSystem {
     }
 
     pub fn set_block(&self, spot: vec::IVec3, block: u32, user_power: bool) {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let udm = unsafe {USERDATAMAPANDMISCMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
             true => {
@@ -1171,7 +1088,7 @@ impl ChunkSystem {
     }
 
     pub fn set_block_no_sound(&self, spot: vec::IVec3, block: u32, user_power: bool) {
-        let udm = unsafe {USERDATAMAP.as_ref().unwrap()};
+        let udm = unsafe {USERDATAMAPANDMISCMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
             true => {
@@ -2936,14 +2853,14 @@ impl ChunkSystem {
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         Self::_blockat(
             &nudm.clone(),
-            unsafe { &USERDATAMAP.as_ref().unwrap().clone() },
+            unsafe { &USERDATAMAPANDMISCMAP.as_ref().unwrap().clone() },
             &self.perlin.read(),
             spot,
         )
     }
     pub fn _blockat(
         nonuserdatamap: &Arc<DashMap<IVec3, u32>>,
-        userdatamap: &UserDataMap,
+        userdatamap: &UserDataMapAndMiscMap,
         perlin: &Perlin,
         spot: vec::IVec3,
     ) -> u32 {

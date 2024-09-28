@@ -7,7 +7,7 @@ use std::fs::File;
 
 use voxelland::windowandkey::{UNCAPKB, WindowAndKeyContext};
 
-use voxelland::game::{Game, DECIDEDSPORMP, DECIDEDWORLD, SHOULDRUN};
+use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, SHOULDRUN};
 
 
 
@@ -68,6 +68,14 @@ fn main() {
 
 
         while !DECIDEDWORLD {
+            if !wak_context.window.read().should_close() {
+                wak_context.run();
+            } else {
+                return ();
+            }
+        }
+
+        while !DECIDEDSEEDOREXISTS {
             if !wak_context.window.read().should_close() {
                 wak_context.run();
             } else {

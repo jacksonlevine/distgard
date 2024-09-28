@@ -50,7 +50,8 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::Blocks;
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, UserDataMap, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAP};
+use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
+use crate::database::UserDataMapAndMiscMap;
 
 pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
 
@@ -128,6 +129,7 @@ pub static mut SINGLEPLAYER: bool = false;
 
 pub static mut DECIDEDSPORMP: bool = false;
 pub static mut DECIDEDWORLD: bool = false;
+pub static mut DECIDEDSEEDOREXISTS: bool = false;
 
 pub static mut MOVING: bool = false;
 
@@ -4493,7 +4495,7 @@ impl Game {
 
     pub fn update_movement_and_physics(&mut self) {
         static mut NUDM: Lazy<Arc<DashMap<IVec3, u32>>> = Lazy::new(|| Arc::new(DashMap::new()));
-        let UDM = unsafe { &*addr_of!(USERDATAMAP) }.as_ref().unwrap();
+        let UDM = unsafe { &*addr_of!(USERDATAMAPANDMISCMAP) }.as_ref().unwrap();
         static mut PERL: Lazy<Arc<RwLock<Perlin>>> =
             Lazy::new(|| Arc::new(RwLock::new(Perlin::new(0))));
         static mut HAS_BEEN_SET: bool = false;
@@ -4505,7 +4507,7 @@ impl Game {
                 cr.perlin.clone()
             };
             
-            let udm = USERDATAMAP.as_ref().unwrap();
+            let udm = USERDATAMAPANDMISCMAP.as_ref().unwrap();
             let nudm = NONUSERDATAMAP.as_ref().unwrap();
             
             if !HAS_BEEN_SET {

@@ -24,12 +24,18 @@ pub struct MiscellaneousSettingsData {
     pub keybinds: HashMap<i32, String>,
     #[serde(with = "vectorize")]
     pub mousebinds: HashMap<String, String>,
-    #[serde(default = "contsuppdefault")]
-    pub controllersupport: bool
+    #[serde(default = "support_controller_default")]
+    pub controllersupport: bool,
+    #[serde(with = "vectorize", default = "singleplayer_worlds_default")]
+    pub singleplayer_worlds: HashMap<usize, u32>,
 }
 
-pub fn contsuppdefault() -> bool {
+pub fn support_controller_default() -> bool {
     true
+}
+
+pub fn singleplayer_worlds_default() -> HashMap<usize, u32> {
+    HashMap::new()
 }
 
 pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| MiscellaneousSettingsData {
@@ -57,7 +63,8 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
         ("Button1".into(), "Break/Attack".into()),
 
     ]),
-    controllersupport: true
+    controllersupport: true,
+    singleplayer_worlds: HashMap::new(),
 } );
 
 pub fn save_misc() {
