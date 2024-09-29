@@ -1219,9 +1219,11 @@ impl Game {
         };
 
         //let randseed = 63920910; //dont worry, ignore this cool seed
-
+        unsafe {
+            CURRSEED.store(PLAYER_DECIDED_SEED, Ordering::Relaxed);
+        }
         let mut csys = ChunkSystem::new(10, unsafe { PLAYER_DECIDED_SEED }, 0, headless);
-
+        
         unsafe {
             BUILD_VOXEL_MODELS = vec![
                 JVoxModel::new(path!("assets/voxelmodels/build1.vox")),
@@ -2522,6 +2524,7 @@ impl Game {
         }
 
         self.load_world_aspects_from_db();
+        self.load_chests_from_file();
 
         //self.static_model_entities.push(ModelEntity::new(5, Vec3::new(0.0, 25.0, 200.0), 140.0, Vec3::new(0.0, 0.0, 0.0), &self.chunksys, &self.camera));
         //self.update_model_collisions(0);
@@ -3774,6 +3777,7 @@ impl Game {
             if saveworldaspectstimer > 5.0 {
                 saveworldaspectstimer = 0.0;
                 self.save_world_aspects_to_db();
+                self.save_current_chests_to_file();
             }
         }
 
