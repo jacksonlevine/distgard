@@ -1985,6 +1985,7 @@ impl Game {
         put_misc_entry("playerposition", borsh::to_vec(unsafe { &PLAYERPOS.snapshot().pos }).unwrap());
         put_misc_entry("weather", unsafe { WEATHERTYPE.to_string().as_bytes().to_vec() });
         put_misc_entry("inventory", borsh::to_vec(&self.inventory.read().inv).unwrap());
+        put_misc_entry("health", self.health.load(Ordering::Relaxed).to_string().as_bytes().to_vec());
     }
     
     pub fn load_world_aspects_from_db(&self) {
@@ -2014,6 +2015,11 @@ impl Game {
         if let Some(inv) = inv {
             let inv = borsh::BorshDeserialize::try_from_slice(&inv).unwrap();
             *self.inventory.write() = Inventory { dirty: true, inv };
+        }
+
+        let health = get_misc_entry("health");
+        if let Some(health) = health {
+            self.health.store((&String::from_utf8(health).unwrap()).parse::<i8>().unwrap(), Ordering::Relaxed);
         }
     }
 
