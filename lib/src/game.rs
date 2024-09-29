@@ -51,7 +51,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 use crate::blockinfo::Blocks;
 use crate::blockoverlay::BlockOverlay;
 use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
-use crate::database::UserDataMapAndMiscMap;
+use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
 
 pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
 
@@ -1118,7 +1118,7 @@ impl Game {
         addressentered: &Arc<AtomicBool>,
         address: &Arc<Mutex<Option<String>>>,
     ) -> JoinHandle<Game> {
-
+        
         unsafe {
             if headless {
                 HEADLESS = true;
@@ -1133,6 +1133,7 @@ impl Game {
         unsafe {
             if SINGLEPLAYER {
                 connectonstart = false;
+                
             }
         }
 
@@ -1978,6 +1979,45 @@ impl Game {
         })
     }
 
+
+    pub fn save_world_aspects_to_db(&self) {
+        put_misc_entry("timeofday", self.timeofday.lock().to_string().as_bytes().to_vec());
+        put_misc_entry("playerposition", borsh::to_vec(unsafe { &PLAYERPOS.snapshot().pos }).unwrap());
+        put_misc_entry("weather", unsafe { WEATHERTYPE.to_string().as_bytes().to_vec() });
+        put_misc_entry("inventory", borsh::to_vec(&self.inventory.read().inv).unwrap());
+    }
+    
+    pub fn load_world_aspects_from_db(&self) {
+        let timeofday = get_misc_entry("timeofday");
+        let playerpos = get_misc_entry("playerposition");
+        let weather = get_misc_entry("weather");
+
+        if let Some(timeofday) = timeofday {
+            *self.timeofday.lock() = (&String::from_utf8(timeofday).unwrap()).parse::<f32>().unwrap();
+        }
+
+        if let Some(playerpos) = playerpos {
+            unsafe {
+                let savedpos: (f32, f32, f32) = borsh::BorshDeserialize::try_from_slice(&playerpos).unwrap();
+                let cam = CAMERA.as_mut().unwrap();
+                (*cam).lock().position = Vec3::new(savedpos.0, savedpos.1, savedpos.2);
+            }
+        }
+
+        if let Some(weather) = weather {
+            unsafe {
+                WEATHERTYPE = (&String::from_utf8(weather).unwrap()).parse::<f32>().unwrap();
+            }
+        }
+
+        let inv = get_misc_entry("inventory");
+        if let Some(inv) = inv {
+            let inv = borsh::BorshDeserialize::try_from_slice(&inv).unwrap();
+            *self.inventory.write() = Inventory { dirty: true, inv };
+        }
+    }
+
+
     pub fn update_avail_recipes(inv: &Arc<RwLock<Inventory>>) {
         unsafe {
             {
@@ -2448,12 +2488,15 @@ impl Game {
     }
 
     pub fn initialize_being_in_world(&mut self) -> JoinHandle<()> {
+
+        
         if self.vars.in_multiplayer {
             //ChunkSystem::initial_rebuild_on_main_thread(&self.chunksys.clone(), &self.shader0, &self.camera.lock().position);
             while !RECEIVED_WORLD.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
             }
         }
+        
 
         self.vars.hostile_world = false; //(self.chunksys.read().planet_type % 2) != 0;
 
@@ -2471,6 +2514,8 @@ impl Game {
             let cam = CAMERA.as_ref().unwrap();
             cam.lock().position = SPAWNPOINT;
         }
+
+        self.load_world_aspects_from_db();
 
         //self.static_model_entities.push(ModelEntity::new(5, Vec3::new(0.0, 25.0, 200.0), 140.0, Vec3::new(0.0, 0.0, 0.0), &self.chunksys, &self.camera));
         //self.update_model_collisions(0);
@@ -3715,6 +3760,15 @@ impl Game {
             let current_time = unsafe { glfwGetTime() as f32 };
             self.delta_time = (current_time - self.prev_time).min(0.05);
             self.prev_time = current_time;
+        }
+
+        static mut saveworldaspectstimer: f32 = 0.0;
+        unsafe {
+            saveworldaspectstimer += self.delta_time;
+            if saveworldaspectstimer > 5.0 {
+                saveworldaspectstimer = 0.0;
+                self.save_world_aspects_to_db();
+            }
         }
 
         #[cfg(not(feature = "glfw"))]
