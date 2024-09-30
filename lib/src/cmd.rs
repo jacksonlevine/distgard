@@ -44,6 +44,9 @@ enum Token {
 
     #[regex(r"[a-zA-Z_]*")]
     Word,
+
+    #[token("waypoint")]
+    Waypoint
 }
 
 pub struct Cmd {
@@ -141,6 +144,9 @@ impl Cmd {
                     }
                     _ => {}
                 }
+            }
+            Some(Ok(Token::Waypoint)) => {
+                //todo add waypoints
             }
             _ => {}
         }

@@ -5208,9 +5208,12 @@ impl Game {
 
                         LASTSPOT = SELECTCUBESPOT;
                     }
+
                     let hitvec3 = Vec3::new(hit.x as f32, hit.y as f32, hit.z as f32);
+
                     self.select_cube
                         .draw_at(hitvec3, &cam_clone.mvp, self.vars.walkbobtimer);
+
                     let bprog = (BREAK_TIME / Blocks::get_break_time(BLOCK_TYPE)).clamp(0.0, 1.0);
 
                     let slot_selected = self.hud.bumped_slot;
