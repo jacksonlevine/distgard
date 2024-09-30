@@ -7837,6 +7837,7 @@ impl Game {
                                 }
                             } else {
                                 self.cast_place_ray();
+                                unsafe { UPDATE_THE_BLOCK_OVERLAY = true };
                             }
                         }
                     }
