@@ -5240,6 +5240,7 @@ impl Game {
                             if !self.vars.ship_taken_off {
                                 self.cast_break_ray();
                                 //UPDATE_THE_OVERLAY = true;
+                                UPDATE_THE_BLOCK_OVERLAY = true;
                             }
                             BREAK_TIME = 0.0;
                         }
