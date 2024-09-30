@@ -325,6 +325,10 @@ pub static mut USERDATAMAPANDMISCMAP: Option<UserDataMapAndMiscMap> = None;
 pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 
+
+pub static mut GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::new());
+pub static mut LIGHT_GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::new());
+
 pub struct ChunkSystem {
     pub chunks: Vec<Arc<Mutex<ChunkFacade>>>,
     pub geobank: Vec<Arc<ChunkGeo>>,
@@ -888,15 +892,32 @@ impl ChunkSystem {
     }
     pub fn queue_geoindex_rerender(&self, geo_index: usize, user_power: bool, light: bool) {
         if light {
-            self.light_rebuild_requests.push(geo_index);
-            //info!("Pushed light rebuild request");
+            match unsafe { &LIGHT_GIS_QUEUED.get(&geo_index) } {
+                Some(_) => {}
+                None => {
+                    unsafe { &LIGHT_GIS_QUEUED.insert(geo_index, true) };
+                    self.light_rebuild_requests.push(geo_index);
+                }
+            }
         } else {
             match user_power {
                 true => {
-                    self.user_rebuild_requests.push(geo_index);
+                    match unsafe { &GIS_QUEUED.get(&geo_index) } {
+                        Some(_) => {}
+                        None => {
+                            unsafe { &GIS_QUEUED.insert(geo_index, true) };
+                            self.user_rebuild_requests.push(geo_index);
+                        }
+                    }
                 }
                 false => {
-                    self.background_rebuild_requests.push(geo_index);
+                    match unsafe { &GIS_QUEUED.get(&geo_index) } {
+                        Some(_) => {}
+                        None => {
+                            unsafe { &GIS_QUEUED.insert(geo_index, true) };
+                            self.background_rebuild_requests.push(geo_index);
+                        }
+                    }
                 }
             }
         }

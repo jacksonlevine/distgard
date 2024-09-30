@@ -5261,7 +5261,7 @@ impl Game {
     pub fn draw(&self) {
         // use crate::chunk::CH_W;
 
-        use crate::chunk::CH_W;
+        use crate::chunk::{CH_W, GIS_QUEUED, LIGHT_GIS_QUEUED};
         
         let campitch = {
             let cam = unsafe { CAMERA.as_ref().unwrap() };
@@ -5304,6 +5304,13 @@ impl Game {
                 Some(ready) => {
                     //info!("Some user queue");
                     // info!("Weird!");
+
+                    
+                            unsafe { let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index); };
+                  
+
+                            unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
+                   
 
                     let bankarc = csys.read().geobank[ready.geo_index].clone();
 
@@ -5383,6 +5390,13 @@ impl Game {
 
             match gqarc.pop() {
                 Some(ready) => {
+
+                  
+                            unsafe { let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index); };
+                  
+
+                            unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
+                    
 
                     let cs = csys.read();
                     //info!("Weird!");
