@@ -147,6 +147,7 @@ impl Cmd {
             }
             Some(Ok(Token::Waypoint)) => {
                 //todo add waypoints
+                
             }
             _ => {}
         }

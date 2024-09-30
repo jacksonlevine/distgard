@@ -194,9 +194,10 @@ pub static mut MOUSED_SLOT: SlotIndexType = SlotIndexType::None;
 
 pub static mut CROUCHING: bool = false;
 
-pub static mut SONGS: [&'static str; 11] = [
+pub static mut SONGS: [&'static str; 12] = [
     path!("assets/music/dd3.mp3"),
     path!("assets/music/dd4.mp3"),
+    path!("assets/music/dd5.mp3"),
     path!("assets/music/qv2.mp3"),
     path!("assets/music/Farfromhome.mp3"),
     path!("assets/music/ifol.mp3"),
