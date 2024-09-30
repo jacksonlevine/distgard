@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 use crate::game::{Game, CAMERA, SPAWNPOINT, PLAYERPOS, WEATHERTYPE};
 use crate::blockinfo::BLOCK_NAME_TO_ID;
+use crate::statics::MISCSETTINGS;
+use crate::vec::IVec3;
 use bevy::reflect::Map;
 use logos::Logos;
 
@@ -46,7 +48,10 @@ enum Token {
     Word,
 
     #[token("waypoint")]
-    Waypoint
+    Waypoint,
+
+    #[token("new")]
+    New
 }
 
 pub struct Cmd {
@@ -146,8 +151,30 @@ impl Cmd {
                 }
             }
             Some(Ok(Token::Waypoint)) => {
-                //todo add waypoints
                 
+                match lexer.next() {
+                    Some(Ok(Token::Word)) => {
+                        let waypointname = lexer.slice();
+                        if unsafe { MISCSETTINGS.waypoints.contains_key(waypointname) } {
+                            let cam = unsafe { CAMERA.as_ref().unwrap() };
+                            let mut camlock = cam.lock();
+                            unsafe { camlock.position = MISCSETTINGS.waypoints[waypointname].as_vec3(); }
+                            camlock.velocity = bevy::prelude::Vec3::ZERO;
+                            drop(camlock);
+                        }
+                    }
+                    Some(Ok(Token::New)) => {
+                        match lexer.next() {
+                            Some(Ok(Token::Word)) => {
+                                let waypointname = lexer.slice();
+                                let snapshot = unsafe { PLAYERPOS.snapshot() };
+                                unsafe { MISCSETTINGS.waypoints.insert(waypointname.to_string(), unsafe { bevy::math::IVec3::new( snapshot.pos.0.round() as i32, snapshot.pos.1.round() as i32, snapshot.pos.2.round() as i32) }) };
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }

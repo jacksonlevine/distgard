@@ -30,7 +30,7 @@ pub struct MiscellaneousSettingsData {
     #[serde(with = "vectorize", default = "singleplayer_worlds_default")]
     pub singleplayer_worlds: HashMap<usize, u32>,
     #[serde(with = "vectorize", default = "waypoints_default")]
-    pub waypoints: HashMap<usize, IVec3>,
+    pub waypoints: HashMap<String, IVec3>,
 
 }
 
@@ -42,7 +42,7 @@ pub fn singleplayer_worlds_default() -> HashMap<usize, u32> {
     HashMap::new()
 }
 
-pub fn waypoints_default() -> HashMap<usize, IVec3> {
+pub fn waypoints_default() -> HashMap<String, IVec3> {
     HashMap::new()
 }
 
