@@ -3,9 +3,11 @@ use std::hash::Hash;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
+use bevy::math::Vec3;
+use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy,  BorshSerialize, BorshDeserialize)]
 pub struct IVec2 {
     pub x: i32,
     pub y: i32,
@@ -35,7 +37,7 @@ impl Sub for IVec2 {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 pub struct IVec3 {
     pub x: i32,
     pub y: i32,
@@ -97,6 +99,11 @@ impl IVec3 {
             y,
             z
         }
+    }
+    pub fn as_vec3(&self) -> Vec3 {
+
+        Vec3::new(self.x as f32, self.y as f32, self.z as f32)
+
     }
 }
 

@@ -29,8 +29,7 @@ pub struct MiscellaneousSettingsData {
     pub controllersupport: bool,
     #[serde(with = "vectorize", default = "singleplayer_worlds_default")]
     pub singleplayer_worlds: HashMap<usize, u32>,
-    #[serde(with = "vectorize", default = "waypoints_default")]
-    pub waypoints: HashMap<String, IVec3>,
+
 
 }
 
@@ -73,7 +72,6 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
     ]),
     controllersupport: true,
     singleplayer_worlds: HashMap::new(),
-    waypoints: HashMap::new(),
 } );
 
 pub fn save_misc() {

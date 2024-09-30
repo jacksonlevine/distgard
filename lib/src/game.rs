@@ -1,5 +1,5 @@
 // use std::cmp::max;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::f32::consts::{self};
 use std::ptr::{addr_of, addr_of_mut};
 // use std::io::Write;
@@ -66,6 +66,8 @@ pub static mut BUILD_VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
 pub static mut BUILD_MODEL_OFFSET: IVec3 = IVec3::new(0, 0, 0);
 
 pub static mut PLAYER_DECIDED_SEED: u32 = 0;
+
+pub static mut WAYPOINTS: Lazy<HashMap<String, IVec3>> = Lazy::new(|| HashMap::new());
 
 pub static TILEWID: f32 =  0.10;
 
@@ -1989,12 +1991,14 @@ impl Game {
         put_misc_entry("weather", unsafe { WEATHERTYPE.to_string().as_bytes().to_vec() });
         put_misc_entry("inventory", borsh::to_vec(&self.inventory.read().inv).unwrap());
         put_misc_entry("health", self.health.load(Ordering::Relaxed).to_string().as_bytes().to_vec());
+        put_misc_entry("waypoints", borsh::to_vec(unsafe { &(*WAYPOINTS) }).unwrap());
     }
     
     pub fn load_world_aspects_from_db(&self) {
         let timeofday = get_misc_entry("timeofday");
         let playerpos = get_misc_entry("playerposition");
         let weather = get_misc_entry("weather");
+        let waypoints = get_misc_entry("waypoints");
 
         if let Some(timeofday) = timeofday {
             *self.timeofday.lock() = (&String::from_utf8(timeofday).unwrap()).parse::<f32>().unwrap();
@@ -2023,6 +2027,12 @@ impl Game {
         let health = get_misc_entry("health");
         if let Some(health) = health {
             self.health.store((&String::from_utf8(health).unwrap()).parse::<i8>().unwrap(), Ordering::Relaxed);
+        }
+
+        if let Some(waypoints) = waypoints {
+            unsafe {
+                *WAYPOINTS = borsh::BorshDeserialize::try_from_slice(&waypoints).unwrap();
+            }
         }
     }
 
