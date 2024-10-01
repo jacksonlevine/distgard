@@ -164,13 +164,25 @@ pub fn get_vox_mod_from_treetype(treetype: TreeType) -> Option<ArrayVec<VoxelMod
 
 
 
-//get climate based on temperature and humidity 0.0-1.0
+//get climate based on temperature and humidity -1.0 thru 1.0
 pub fn get_climate(temp: f32, hum: f32) -> &'static Climate {
-    let temp = temp.clamp(0.0, 1.0);
-    let hum = hum.clamp(0.0, 1.0);
-    let temp = (temp * 3.0) as usize;
-    let hum = (hum * 3.0) as usize;
-    &CLIMATE_GRID[(temp * 3 + hum).clamp(0, 8)]
+    // Clamp temp and humidity to the range [-1.0, 1.0]
+    let temp_clamped = temp.clamp(-1.0, 1.0);
+    let hum_clamped = hum.clamp(-1.0, 1.0);
+
+    // Map the clamped values to indices
+    let temp_idx = ((temp_clamped + 1.0) * 1.5).floor() as usize; // Maps to [0, 2]
+    let hum_idx = ((hum_clamped + 1.0) * 1.5).floor() as usize; // Maps to [0, 2]
+
+    // Ensure indices are within the bounds
+    let temp_idx = temp_idx.min(2); // Ensure it's at most 2
+    let hum_idx = hum_idx.min(2); // Ensure it's at most 2
+
+    // Calculate the flat index
+    let index = temp_idx * 3 + hum_idx; // GRID_SIZE is 3
+
+    // Return the climate from the flat grid
+    &CLIMATE_GRID[index]
 }
 
 //get tree types based on climate
@@ -184,12 +196,13 @@ pub fn get_tree_types(climate: &Climate) -> ArrayVec<TreeType, MAX_TREES_PER_CLI
         Climate::BorealForest => {
             let mut v = ArrayVec::new();
             v.push(TreeType::Pine);
-            v.push(TreeType::ArticWillow);
+            
             v
         },
         Climate::WetTundra => {
             let mut v = ArrayVec::new();
             v.push(TreeType::ArticWillowDwarfShrub);
+            v.push(TreeType::ArticWillow);
             v
         },
         Climate::TemperateGrassland => {
@@ -205,12 +218,13 @@ pub fn get_tree_types(climate: &Climate) -> ArrayVec<TreeType, MAX_TREES_PER_CLI
         },
         Climate::TemperateRainforest => {
             let mut v = ArrayVec::new();
+            v.push(TreeType::Cedar);
             v.push(TreeType::Maple);
             v
         },
         Climate::HotDesert => {
             let mut v = ArrayVec::new();
-            v.push(TreeType::Cedar);
+            v.push(TreeType::Joshua);
             v
         },
         Climate::Savannah => {
@@ -220,7 +234,7 @@ pub fn get_tree_types(climate: &Climate) -> ArrayVec<TreeType, MAX_TREES_PER_CLI
         },
         Climate::TropicalRainforest => {
             let mut v = ArrayVec::new();
-            v.push(TreeType::Joshua);
+            v.push(TreeType::Rubber);
             v
         },
     }

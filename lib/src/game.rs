@@ -5761,6 +5761,13 @@ impl Game {
                         ),
                         cfl.timebeendrawn,
                     );
+                    gl::Uniform1f(
+                        gl::GetUniformLocation(
+                            self.shader0.shader_id,
+                            b"grassRedChange\0".as_ptr() as *const i8,
+                        ),
+                        (cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ),
+                    );
 
                     let error = gl::GetError();
                     if error != gl::NO_ERROR {
@@ -5810,6 +5817,13 @@ impl Game {
                                 b"elapsedFade\0".as_ptr() as *const i8,
                             ),
                             cfl.timebeendrawn,
+                        );
+                        gl::Uniform1f(
+                            gl::GetUniformLocation(
+                                self.shader0.shader_id,
+                                b"grassRedChange\0".as_ptr() as *const i8,
+                            ),
+                            (cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ),
                         );
 
                     let error = gl::GetError();

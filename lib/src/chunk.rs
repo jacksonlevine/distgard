@@ -2718,18 +2718,17 @@ impl ChunkSystem {
 
         let y = 20;
 
-        let noise1 = f64::max(
-            0.0,
+        let noise1 = 
+
             perlin.get([
                 spot.x as f64 / XZDIVISOR1,
                 y as f64,
                 spot.y as f64 / XZDIVISOR1,
-            ]),
-        );
+            ]);
 
         //println!("Temp noise: {}", noise1);
-
-        noise1 * 10.0
+       // println!("Temp noise: {}", noise1 * 10.0);
+        noise1 * 4.0
     }
     pub fn humidity_noise(&self, spot: vec::IVec2) -> f64 {
         return Self::_humidity_noise(&self.perlin.read(), spot);
@@ -2739,16 +2738,15 @@ impl ChunkSystem {
 
         let y = 600;
 
-        let noise1 = f64::max(
-            0.0,
-            perlin.get([
+
+        let noise1 =     perlin.get([
                 spot.x as f64 / XZDIVISOR1,
                 y as f64,
                 spot.y as f64 / XZDIVISOR1,
-            ]),
-        );
+            ]);
 
-        noise1
+        //println!("Humidity noise: {}", noise1*10.0);
+        noise1 * 4.0
     }
     pub fn ore_noise(&self, spot: vec::IVec3) -> f64 {
         return Self::_ore_noise(&self.perlin.read(), spot);
