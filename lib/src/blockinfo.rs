@@ -1,11 +1,13 @@
+use bevy::math::Vec3;
+
 use crate::{chunk::LightColor, cube::CubeSide};
 
 pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
 pub struct Blocks {}
 
-pub const BLOCK_COUNT: u32 = 52;
+pub const BLOCK_COUNT: u32 = 63;
 
-static BREAKTIMES: [f32; 52] = [
+static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.1,
     0.5,
     0.7,
@@ -60,10 +62,21 @@ static BREAKTIMES: [f32; 52] = [
     1.0,
     0.3,
     0.7,
-    1.0
+    1.0,
+    0.7,
+    1.0,
+    1.0,
+    0.5,
+    1.5,
+    0.7,
+    1.0,
+    0.7,
+    1.5,
+    0.9,
+    0.7
 ];
 
-static TEXS: [[(u8, u8); 3]; 52] = [
+static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
             //sides   //bot   //top
             [(0, 0), (0, 0), (0, 0)],  // 0
             [(1, 0), (1, 0), (1, 0)],  // 1 sand
@@ -129,6 +142,17 @@ static TEXS: [[(u8, u8); 3]; 52] = [
             [(9,4),(9,4),(9,4)], // 49, torch
             [(7, 5), (7, 0), (8, 5)],  // 50 snow leaves
             [(1, 7), (1, 7), (1, 7)],  // 51 ice
+            [(1, 12), (1, 12), (1, 12)],  // 52 Artic Willow Dwarf Shrub
+            [(3, 6), (3, 7), (3, 7)],  // 53 Pine Wood
+            [(3, 8), (3, 8), (3, 8)],  // 54 Pine Leaves
+            [(2, 12), (2, 12), (2, 12)],  // 55 Artic Willow Leaves
+            [(4, 6), (4, 7), (4, 7)],  // 56 Cedar Wood
+            [(4, 8), (4, 8), (4, 8)],  // 57 Cedar Leaves
+            [(5, 6), (5, 7), (5, 7)],  // 58 Palm Wood
+            [(5, 8), (5, 8), (5, 8)],  // 59 Palm Leaves
+            [(6, 6), (6, 7), (6, 7)],  // 60 Joshua Wood
+            [(6, 8), (6, 8), (6, 8)],  // 61 Joshua Leaves
+            [(0, 9),(1,0),(8,5)], // 61, snowy sand
         ];
 
 
@@ -203,6 +227,17 @@ impl Blocks {
             49 => {"Torch"}
             50 => {"Snowy Leaves"}
             51 => {"Ice"}
+            52 => {"Artic Willow Dwarf Shrub"}
+            53 => {"Pine Wood"}
+            54 => {"Pine Leaves"}
+            55 => {"Artic Willow Leaves"}
+            56 => {"Cedar Wood"}
+            57 => {"Cedar Leaves"}
+            58 => {"Palm Wood"}
+            59 => {"Palm Leaves"}
+            60 => {"Joshua Wood"}
+            61 => {"Joshua Leaves"}
+            62 => {"Snowy Sand"}
             _ => {
                 "Unknown Item"
             }
@@ -288,8 +323,8 @@ impl Blocks {
         return CLIMBABLES.contains(&id);
     }
     pub fn is_semi_transparent(id: u32) -> bool {
-        static SEMI_TRANSPARENTS: [u32; 10] = [
-            7, 11, 19, 20, 21, 22, 23, 31, 44, 50
+        static SEMI_TRANSPARENTS: [u32; 15] = [
+            7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59
         ];
         return SEMI_TRANSPARENTS.contains(&id);
     }
@@ -339,16 +374,16 @@ impl Blocks {
     }
     pub fn get_walk_series(id: u32) -> &'static str {
         match id {
-            3 | 48 => {
+            3 | 48 | 54 => {
                 "grassstepseries"
             }
-            34 => {
+            34 | 52 => {
                 "mulchstepseries"
             }
             7 => {
                 "plantplaceseries"
             }
-            11 => {
+            11 | 57 | 59 => {
                 "plantplaceseries"
             }
             1 => {
@@ -360,7 +395,7 @@ impl Blocks {
             4 => {
                 "dirtstepseries"
             }
-            10 => {
+            10 | 53 | 56 | 58 => {
                 "woodstepseries"
             }
             22 => {
@@ -376,13 +411,13 @@ impl Blocks {
     }
     pub fn get_place_series(id: u32) -> &'static str {
         match id {
-            3 | 48 => {
+            3 | 48 | 54 => {
                 "grassstepseries"
             }
             34 => {
                 "mulchstepseries"
             }
-            7 => {
+            7 | 52 | 57 | 59 => {
                 "plantplaceseries"
             }
             8 | 51 => {
@@ -415,6 +450,15 @@ impl Blocks {
             }
             _ => {
                 0.01
+            }
+        }
+    }
+
+    //for reusing textures
+    pub fn get_block_tint(id: u32) -> Option<Vec3>{
+        match id {
+            _ => {
+                None
             }
         }
     }

@@ -51,6 +51,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 use crate::blockinfo::Blocks;
 use crate::blockoverlay::BlockOverlay;
 use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
+use crate::climates::VOX_MODEL_PATHS;
 use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
 
 pub static mut LIST_OF_PREVIEWED_SPOTS: Vec<(IVec3, u32)> = Vec::new();
@@ -158,6 +159,12 @@ pub const SPRINTFOV: f32 = 83.0;
 pub const FALLFOV: f32 = 93.0;
 
 pub static mut CURRSEED: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
+
+
+
+
+
+
 
 #[cfg(feature = "audio")]
 pub static mut AUDIOPLAYER: Lazy<AudioPlayer> = Lazy::new(|| AudioPlayer::new().unwrap());
@@ -1239,26 +1246,28 @@ impl Game {
                 JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
             ]
         };
-        let voxel_models = vec![
-            JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tree1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tree2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rock1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rock2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tree3.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tree4.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tree5.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/bamboo1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/bamboo2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tallgrass1.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tallgrass2.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/tallgrass3.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
-            //0-13
-            JVoxModel::new(path!("assets/voxelmodels/ptree.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/redrock.vox")),
-            JVoxModel::new(path!("assets/voxelmodels/crystal1.vox")), //14 - 16
-        ];
+        let voxel_models: Vec<JVoxModel> = VOX_MODEL_PATHS.iter().map(|path| JVoxModel::new(path)).collect();
+
+        // let voxel_models = vec![
+        //     JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tree1.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tree2.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/rock1.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/rock2.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tree3.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tree4.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tree5.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/bamboo1.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/bamboo2.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tallgrass1.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tallgrass2.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/tallgrass3.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
+        //     //0-13
+        //     JVoxModel::new(path!("assets/voxelmodels/ptree.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/redrock.vox")),
+        //     JVoxModel::new(path!("assets/voxelmodels/crystal1.vox")), //14 - 16
+        // ];
 
         //csys.load_world_from_file(String::from("saves/world1"));
 
@@ -5275,6 +5284,10 @@ impl Game {
     #[cfg(feature = "glfw")]
     pub fn draw(&self) {
         // use crate::chunk::CH_W;
+         // Enable MSAA in OpenGL
+    // unsafe {
+    //     gl::Enable(gl::MULTISAMPLE);
+    // }
 
         use crate::chunk::{CH_W, GIS_QUEUED, LIGHT_GIS_QUEUED};
         

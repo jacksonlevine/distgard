@@ -159,6 +159,8 @@ impl WindowAndKeyContext {
         }
 
         let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
+
+        //glfw.window_hint(glfw::WindowHint::Samples(Some(8)));  // 8x MSAA
         let (mut window, events) = glfw
             .create_window(width, height, windowname, glfw::WindowMode::Windowed)
             .expect("Failed to create GLFW window.");

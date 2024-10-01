@@ -7,3 +7,4 @@ pub mod tallgrass;
 pub mod crafttable;
 pub mod conveyor;
 pub mod torch;
+pub mod awds;

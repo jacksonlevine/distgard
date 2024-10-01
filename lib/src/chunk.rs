@@ -40,6 +40,10 @@ use noise::{NoiseFn, Perlin};
 use crate::camera::Camera;
 use crate::chunkregistry::ChunkMemory;
 use crate::chunkregistry::ChunkRegistry;
+use crate::climates;
+use crate::climates::get_climate;
+use crate::climates::get_floor_block_based_on_climate;
+use crate::climates::get_vox_mod_from_treetype;
 use crate::cube::Cube;
 use crate::cube::CubeSide;
 
@@ -56,6 +60,7 @@ use crate::game::WEATHERTYPE;
 use crate::packedvertex::PackedVertex;
 use crate::planetinfo::Planets;
 use crate::shader::Shader;
+use crate::specialblocks::awds::AwdsInfo;
 use crate::specialblocks::chest::ChestInfo;
 use crate::specialblocks::conveyor::ConveyorInfo;
 use crate::specialblocks::crafttable::CraftTableInfo;
@@ -1732,6 +1737,42 @@ impl ChunkSystem {
                             }
 
                             uvdata.extend_from_slice(&ConveyorInfo::get_conveyor_uvs());
+                        } else if block == 52 {
+                            let direction = Blocks::get_direction_bits(flags);
+
+                            let modelindex: i32 = direction as i32;
+
+                            let _blocklightval = 0.0;
+
+                            let lmlock = self.lightmap.lock();
+                            let blocklighthere = match lmlock.get(&spot) {
+                                Some(k) => k.sum(),
+                                None => LightColor::ZERO,
+                            };
+
+                            let packedrgb = PackedVertex::pack_rgb(
+                                blocklighthere.x,
+                                blocklighthere.y,
+                                blocklighthere.z,
+                            );
+
+                            let prgb: u32 =
+                                0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
+                            drop(lmlock);
+
+                            for vert in AwdsInfo::awds_model_from_index(modelindex as usize)
+                                .chunks(5)
+                            {
+                                vdata.extend_from_slice(&[
+                                    vert[0] + spot.x as f32,
+                                    vert[1] + spot.y as f32,
+                                    vert[2] + spot.z as f32,
+                                    f32::from_bits(prgb),
+                                    vert[4],
+                                ])
+                            }
+
+                            uvdata.extend_from_slice(&AwdsInfo::get_awds_uvs());
                         } else if block == 49 {
                             let direction = Blocks::get_direction_bits(flags);
 
@@ -1927,7 +1968,7 @@ impl ChunkSystem {
                                             let amb_change = amb_spots
                                                 .iter()
                                                 .map(|vec| self.blockatmemo(*vec + spot, &mut memo))
-                                                .filter(|&result| result != 0)
+                                                .filter(|&result| result != 0 && !Blocks::is_semi_transparent(result))
                                                 .count();
 
                                             let base_light: i32 =
@@ -2061,7 +2102,7 @@ impl ChunkSystem {
                                             let amb_change = amb_spots
                                                 .iter()
                                                 .map(|vec| self.blockatmemo(*vec + spot, &mut memo))
-                                                .filter(|&result| result != 0)
+                                                .filter(|&result| result != 0 && !Blocks::is_semi_transparent(result))
                                                 .count();
 
                                             let base_light: i32 =
@@ -2563,10 +2604,16 @@ impl ChunkSystem {
         let mut implicated: HashSet<vec::IVec2> = HashSet::new();
 
         let should_break = false;
+        let climate = get_climate(self.temp_noise(IVec2::new(cpos.x * CH_W, cpos.y * CH_W)) as f32, self.humidity_noise(IVec2::new(cpos.x * CH_W, cpos.y * CH_W)) as f32);
+        let floorblock = climates::get_floor_block_based_on_climate(
+            &climate
+        );
 
-        let dim_floors = Planets::get_floor_blocks(self.planet_type as u32);
+        //let dim_floors = Planets::get_floor_blocks(self.planet_type as u32);
 
-        let dim_range = Planets::get_voxel_model_index_range(self.planet_type as u32);
+        //let dim_range = Planets::get_voxel_model_index_range(self.planet_type as u32);
+
+        let treetypes = climates::get_tree_types(climate);
 
         //Two rng per chunk!
         //let spot: u32 = rng.gen_range(0..(CW as u32 * CW as u32)*(CH-40) as u32);
@@ -2579,25 +2626,39 @@ impl ChunkSystem {
                 for y in (0..CH_H - 40).rev() {
                     let coord = IVec3::new(cpos.x * CH_W + x, y, cpos.y * CH_W + z);
                     //if index == spot {
-                    if dim_floors.contains(&self.natural_blockat(coord)) {
+                    if floorblock == self.natural_blockat(coord) && self.natural_blockat(coord + IVec3::new(0, 1, 0)) == 0 {
                         let featnoise = self.feature_noise(IVec2 {
                             x: coord.x * 20,
                             y: coord.z * 20,
                         }) * 20.0;
                         if featnoise > 0.0 {
-                            let item: u32 = (featnoise as u32 - dim_range.0 as u32) as u32;
-                            let item2: u32 = rng.gen_range(0..128);
+                            let item = rng.gen_range(0..treetypes.len());
 
-                            if item <= dim_range.1 as u32
-                                && item >= dim_range.0 as u32
-                                && item2 >= 127 as u32
-                            {
-                                self.stamp_here(
-                                    &coord,
-                                    &self.voxel_models.as_ref().unwrap()[item as usize],
-                                    Some(&mut implicated),
-                                );
+                            let treetype = &treetypes[item];
+                            let voxmodels = get_vox_mod_from_treetype(*treetype);
+
+                            match voxmodels {
+                                Some(vox) => {
+
+                                    let decidedvox = &vox[rng.gen_range(0..vox.len())];
+
+                                    let decidedjvox = &self.voxel_models.as_ref().unwrap()[(*decidedvox) as usize];
+
+                                    let item2: u32 = rng.gen_range(0..128);
+
+                                    if item2 >= 127 as u32
+                                    {
+                                        self.stamp_here(
+                                            &coord,
+                                            decidedjvox,
+                                            Some(&mut implicated),
+                                        );
+                                    }
+                                   
+                                }
+                                None => {}
                             }
+                            
                         }
 
                         // should_break = true;
@@ -2637,6 +2698,46 @@ impl ChunkSystem {
         const XZDIVISOR1: f64 = 100.35 * 4.0;
 
         let y = 20;
+
+        let noise1 = f64::max(
+            0.0,
+            perlin.get([
+                spot.x as f64 / XZDIVISOR1,
+                y as f64,
+                spot.y as f64 / XZDIVISOR1,
+            ]),
+        );
+
+        noise1 * 10.0
+    }
+    pub fn temp_noise(&self, spot: vec::IVec2) -> f64 {
+        return Self::_temp_noise(&self.perlin.read(), spot);
+    }
+    pub fn _temp_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
+        const XZDIVISOR1: f64 = 100.35 * 4.0;
+
+        let y = 20;
+
+        let noise1 = f64::max(
+            0.0,
+            perlin.get([
+                spot.x as f64 / XZDIVISOR1,
+                y as f64,
+                spot.y as f64 / XZDIVISOR1,
+            ]),
+        );
+
+        //println!("Temp noise: {}", noise1);
+
+        noise1 * 10.0
+    }
+    pub fn humidity_noise(&self, spot: vec::IVec2) -> f64 {
+        return Self::_humidity_noise(&self.perlin.read(), spot);
+    }
+    pub fn _humidity_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
+        const XZDIVISOR1: f64 = 100.35 * 4.0;
+
+        let y = 600;
 
         let noise1 = f64::max(
             0.0,
@@ -2918,6 +3019,11 @@ impl ChunkSystem {
             return 15;
         }
 
+        let floorblock = get_floor_block_based_on_climate(climates::get_climate(
+            Self::_temp_noise(per, IVec2 { x: spot.x, y: spot.z }) as f32,
+            Self::_humidity_noise(per, IVec2 { x: spot.x, y: spot.z }) as f32,
+        ));
+
         let ret = match 0 {
             // 1 => {
             //     if self.noise_func2(spot) > 10.0 {
@@ -2949,23 +3055,13 @@ impl ChunkSystem {
                     },
                 );
 
-                let mut underdirt = 5;
-                let mut surface = 3;
-                let mut undersurface = 4;
-                let mut liquid = 2;
-                let mut beach = 1;
+                let underdirt = 5;
+                let surface = floorblock;
+                let undersurface = if floorblock == 1 { 1 } else { 4 };
+                let liquid = 2;
+                let beach = if floorblock == 62 { 62 } else { 1 };
 
-                if biomenum > 0.0 {
-                    underdirt = 1;
-                    surface = 1;
-                    undersurface = 1;
-                    liquid = 2;
-                    beach = 1;
-                } else {
-                    if biomenum2 > 0.0 {
-                        surface = 34;
-                    }
-                }
+                
 
                 if Self::_noise_func(per, spot) > 10.0 {
                     if Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 10, z: 0 }) > 10.0 {
