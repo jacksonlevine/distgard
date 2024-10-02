@@ -133,8 +133,12 @@ void main()
     vertexColor = vec3(min((bright/16.0f) + color.r, 1.0), min((bright/16.0f) + color.g, 1.0), min((bright/16.0f) + color.b, 1.0) );
     
     if(isgrass == 1.0) {
-        grassColor = vec3(grassRedChange, 0.0, 0.0);
-
+        
+        if(grassRedChange < 0.0) {
+            grassColor = vec3(0.0, 0.0, -0.2 * grassRedChange);
+        } else {
+            grassColor = vec3(grassRedChange, 0.0, 0.0);
+        }
     } else {
         grassColor = vec3(0.0, 0.0, 0.0);
     }

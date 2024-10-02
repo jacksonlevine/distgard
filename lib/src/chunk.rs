@@ -509,6 +509,10 @@ impl ChunkSystem {
                         match takencare.get(&poshere) {
                             Some(c) => {
                                 let c = c.value();
+                                let temp = ChunkSystem::_temp_noise(&per.read(), poshere);
+                                let humidity = ChunkSystem::_humidity_noise(&per.read(), poshere);
+                                let climatehere = get_climate(temp as f32, humidity as f32);
+
                                 for i in 0..CH_W {
                                     for k in 0..CH_W {
                                         // let hit_block = false;
@@ -651,7 +655,7 @@ impl ChunkSystem {
                                                             }
                                                         }
                                                         51 => {
-                                                            if WEATHERTYPE != 1.0 {
+                                                            if WEATHERTYPE != 1.0 && temp > 0.0 {
                                                                 
                                                                 if rng.gen_range(0..100) == 9 {
                                                                     AUTOMATA_QUEUED_CHANGES
@@ -2714,7 +2718,7 @@ impl ChunkSystem {
         return Self::_temp_noise(&self.perlin.read(), spot);
     }
     pub fn _temp_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
-        const XZDIVISOR1: f64 = 100.35 * 4.0;
+        const XZDIVISOR1: f64 = 900.35 * 4.0;
 
         let y = 20;
 
@@ -2734,7 +2738,7 @@ impl ChunkSystem {
         return Self::_humidity_noise(&self.perlin.read(), spot);
     }
     pub fn _humidity_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
-        const XZDIVISOR1: f64 = 100.35 * 4.0;
+        const XZDIVISOR1: f64 = 900.35 * 4.0;
 
         let y = 600;
 
@@ -3056,7 +3060,7 @@ impl ChunkSystem {
                 let underdirt = 5;
                 let surface = floorblock;
                 let undersurface = if floorblock == 1 { 1 } else { 4 };
-                let liquid = 2;
+                let liquid = if floorblock == 62 { 51 } else { 2 };
                 let beach = if floorblock == 62 { 62 } else { 1 };
 
                 
@@ -3096,7 +3100,7 @@ impl ChunkSystem {
                 }
             }
         };
-        if ret != 2 {
+        if ret != 2 && ret != 51 {
             if Self::_cave_noise(per, spot) > 0.5 {
                 return 0;
             }

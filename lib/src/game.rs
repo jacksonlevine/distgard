@@ -946,7 +946,7 @@ pub fn attend_needed_spots(
                 
                         let delta_time = current_time - LAST_TIME;
                 
-                        static mut TIME_SINCE_LAST_CHECK: f32 = 2.0;
+                        static mut TIME_SINCE_LAST_CHECK: f32 = 1.0;
                 
                         
                         let user_dir: Vec2 = Vec2 {
@@ -956,7 +956,7 @@ pub fn attend_needed_spots(
                 
                         if
                         /*user_c_pos != *last_user_c_pos &&*/
-                        TIME_SINCE_LAST_CHECK >= 2.0 {
+                        TIME_SINCE_LAST_CHECK >= 1.0 {
                             
                 
                             TIME_SINCE_LAST_CHECK = 0.0;
@@ -970,10 +970,11 @@ pub fn attend_needed_spots(
                             ));
 
                             // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
-                            let adjusted_user_cpos = IVec2 {
-                                x: (user_cpos.x as f32 + (user_dir.x * 10.0)).round() as i32,
-                                y: (user_cpos.y as f32 + (user_dir.y * 10.0)).round() as i32,
-                            };
+                            // let adjusted_user_cpos = IVec2 {
+                            //     x: (user_cpos.x as f32 + (user_dir.x * 10.0)).round() as i32,
+                            //     y: (user_cpos.y as f32 + (user_dir.y * 10.0)).round() as i32,
+                            // };
+                            let adjusted_user_cpos = user_cpos;
                 
                             let radius = {
                                 let x = csys.read().radius;
@@ -5766,7 +5767,7 @@ impl Game {
                             self.shader0.shader_id,
                             b"grassRedChange\0".as_ptr() as *const i8,
                         ),
-                        (cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ),
+                        (((cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.4 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 )) * 0.85) - 0.2,
                     );
 
                     let error = gl::GetError();
@@ -5823,7 +5824,7 @@ impl Game {
                                 self.shader0.shader_id,
                                 b"grassRedChange\0".as_ptr() as *const i8,
                             ),
-                            (cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 ),
+                            (((cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.4 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 )) * 0.85) - 0.2,
                         );
 
                     let error = gl::GetError();
