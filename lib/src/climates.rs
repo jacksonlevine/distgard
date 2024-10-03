@@ -1,8 +1,11 @@
+use std::iter::Map;
+
 use arrayvec::ArrayVec;
+use bevy::{a11y::accesskit::Tree, utils::HashMap};
 use num_enum::FromPrimitive;
+use once_cell::sync::Lazy;
 
-
-
+use crate::vec;
 
 pub const VOX_MODEL_PATHS: [&'static str; 29] = [
     "assets/voxelmodels/bush.vox",
@@ -69,25 +72,39 @@ pub enum VoxelModel {
     JoshuaTree1 = 26,
     JoshuaTree2 = 27,
     JoshuaTree3 = 28,
-    
 }
 
-
-
-
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Climate {
-    PolarDesert,        BorealForest,       WetTundra,
-    TemperateGrassland, DeciduousForest,  TemperateRainforest,
-    HotDesert,          Savannah,          TropicalRainforest,
+    PolarDesert,
+    BorealForest,
+    WetTundra,
+    TemperateGrassland,
+    DeciduousForest,
+    TemperateRainforest,
+    HotDesert,
+    Savannah,
+    TropicalRainforest,
 }
-
 
 const CLIMATE_GRID: [Climate; 9] = [
-    Climate::PolarDesert,        Climate::BorealForest,     Climate::WetTundra,
-    Climate::TemperateGrassland, Climate::DeciduousForest,  Climate::TemperateRainforest,
-    Climate::HotDesert,          Climate::Savannah,         Climate::TropicalRainforest,
+    Climate::PolarDesert,
+    Climate::BorealForest,
+    Climate::WetTundra,
+    Climate::TemperateGrassland,
+    Climate::DeciduousForest,
+    Climate::TemperateRainforest,
+    Climate::HotDesert,
+    Climate::Savannah,
+    Climate::TropicalRainforest,
 ];
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Elevation {
+    Low,
+    Mid,
+    High,
+}
 
 #[derive(Clone, Copy)]
 pub enum TreeType {
@@ -99,70 +116,70 @@ pub enum TreeType {
     Cedar,
     Palm,
     Joshua,
-    Rubber
+    Rubber,
 }
 
 pub const MAX_TREES_PER_CLIMATE: usize = 4;
 
-pub fn get_vox_mod_from_treetype(treetype: TreeType) -> Option<ArrayVec<VoxelModel, MAX_TREES_PER_CLIMATE>> {
+pub fn get_vox_mod_from_treetype(
+    treetype: TreeType,
+) -> Option<ArrayVec<VoxelModel, MAX_TREES_PER_CLIMATE>> {
     match treetype {
         TreeType::ArticWillowDwarfShrub => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Awds);
             Some(v)
-        },
+        }
         TreeType::Pine => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::PineTree1);
             v.push(VoxelModel::PineTree2);
             Some(v)
-        },
+        }
         TreeType::ArticWillow => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::ArticWillow);
             Some(v)
-        },
+        }
         TreeType::Oak => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Tree1);
             v.push(VoxelModel::Tree2);
             Some(v)
-        },
+        }
         TreeType::Maple => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Tree3);
             v.push(VoxelModel::Tree4);
             Some(v)
-        },
+        }
         TreeType::Cedar => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::CedarTree1);
             v.push(VoxelModel::CedarTree2);
             Some(v)
-        },
+        }
         TreeType::Palm => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::PalmTree1);
             v.push(VoxelModel::PalmTree2);
             v.push(VoxelModel::PalmTree3);
             Some(v)
-        },
+        }
         TreeType::Joshua => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::JoshuaTree1);
             v.push(VoxelModel::JoshuaTree2);
             v.push(VoxelModel::JoshuaTree3);
             Some(v)
-        },
+        }
         TreeType::Rubber => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::RubberTree);
             Some(v)
-        },
+        }
     }
 }
-
-
 
 //get climate based on temperature and humidity -1.0 thru 1.0
 pub fn get_climate(temp: f32, hum: f32) -> &'static Climate {
@@ -186,66 +203,80 @@ pub fn get_climate(temp: f32, hum: f32) -> &'static Climate {
 }
 
 //get tree types based on climate
-pub fn get_tree_types(climate: &Climate) -> ArrayVec<TreeType, MAX_TREES_PER_CLIMATE> {
-    match climate {
-        Climate::PolarDesert => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::ArticWillowDwarfShrub);
-            v
-        },
-        Climate::BorealForest => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Pine);
-            
-            v
-        },
-        Climate::WetTundra => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::ArticWillowDwarfShrub);
-            v.push(TreeType::ArticWillow);
-            v
-        },
-        Climate::TemperateGrassland => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Oak);
-            v
-        },
-        Climate::DeciduousForest => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Oak);
-            v.push(TreeType::Maple);
-            v
-        },
-        Climate::TemperateRainforest => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Cedar);
-            v.push(TreeType::Maple);
-            v
-        },
-        Climate::HotDesert => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Joshua);
-            v
-        },
-        Climate::Savannah => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Palm);
-            v
-        },
-        Climate::TropicalRainforest => {
-            let mut v = ArrayVec::new();
-            v.push(TreeType::Rubber);
-            v
-        },
+pub fn get_tree_types(climate: &Climate) -> &'static [TreeType] {
+    static CLIMATE_CATEGORIES: Lazy<HashMap<Climate, &'static [TreeType]>> =
+        Lazy::new(|| {
+            let mut map: hashbrown::HashMap<Climate, &'static [TreeType]> = HashMap::default();
+            map.insert(
+                Climate::PolarDesert,
+                &[
+                    TreeType::ArticWillowDwarfShrub,
+                ],
+            );
+            map.insert(
+                Climate::BorealForest,
+                &[
+                    TreeType::Pine,
+                ],
+            );
+            map.insert(
+                Climate::WetTundra,
+                &[
+                    TreeType::ArticWillow,
+                ],
+            );
+            map.insert(
+                Climate::TemperateGrassland,
+                &[
+                    TreeType::Oak,
+                ],
+            );
+            map.insert(
+                Climate::DeciduousForest,
+                &[
+                    TreeType::Oak,
+                    TreeType::Maple,
+                ],
+            );
+            map.insert(
+                Climate::TemperateRainforest,
+                &[
+                    TreeType::Maple,
+                    TreeType::Cedar,
+                ],
+            );
+            map.insert(
+                Climate::HotDesert,
+                &[
+                    TreeType::Joshua,
+                ],
+            );
+            map.insert(
+                Climate::Savannah,
+                &[
+                    TreeType::Palm
+                ],
+            );
+            map.insert(
+                Climate::TropicalRainforest,
+                &[
+                    TreeType::Rubber,
+                ],
+            );
+            map
+        });
+       
+    match CLIMATE_CATEGORIES.get(climate) {
+        Some(tree_types) => *tree_types,
+        None => &[],
     }
 }
-
 
 pub fn get_floor_block_based_on_climate(climate: &Climate) -> u32 {
     match climate {
         Climate::HotDesert => 1,
         Climate::PolarDesert => 62,
 
-        _ => 3
+        _ => 3,
     }
 }

@@ -1148,39 +1148,7 @@ impl Game {
             }
         }
 
-        thread::spawn(move || {
-            let mut app = App::new();
-            app
-            .add_plugins(MinimalPlugins)
-            ;
-            
-            //.add_systems(Update, || println!("Testeroonie"));
-            
-            if unsafe {HEADLESS} { //Headless server
-                app.add_plugins(QuintetServerPlugin::default());
-                app.add_systems(Startup, start_listening);
-                app.add_systems(Update, handle_client_messages);
-            
-            } else {
-                app.add_systems(Update, attend_needed_spots);
-                app.add_systems(Update, attend_chunk_queues);
-                if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
-                    app.init_resource::<PlayerUpdateTimer>();
-                    app.add_plugins(QuintetClientPlugin::default());
-                    app.add_systems(Startup, start_connection);
-                    app.add_systems(Update, handle_server_messages);
-                } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
-
-                } 
-            }
-            
-            
-            
-            
-            
-            
-            app.run();
-        });
+        
 
         let oldshader = Shader::new(path!("assets/oldvert.glsl"), path!("assets/oldfrag.glsl"));
         let shader0 = Shader::new(path!("assets/vert.glsl"), path!("assets/frag.glsl"));
@@ -1384,6 +1352,8 @@ impl Game {
             health.clone(),
             stamina.clone(),
         );
+
+        
 
         
         //IMPORTANT: Push the inv row slots first
@@ -1994,6 +1964,41 @@ impl Game {
         })
     }
 
+    pub fn spawn_bevy_thread() {
+        thread::spawn(move || {
+            let mut app = App::new();
+            app
+            .add_plugins(MinimalPlugins)
+            ;
+            
+            //.add_systems(Update, || println!("Testeroonie"));
+            
+            if unsafe {HEADLESS} { //Headless server
+                app.add_plugins(QuintetServerPlugin::default());
+                app.add_systems(Startup, start_listening);
+                app.add_systems(Update, handle_client_messages);
+            
+            } else {
+                app.add_systems(Update, attend_needed_spots);
+                app.add_systems(Update, attend_chunk_queues);
+                if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
+                    app.init_resource::<PlayerUpdateTimer>();
+                    app.add_plugins(QuintetClientPlugin::default());
+                    app.add_systems(Startup, start_connection);
+                    app.add_systems(Update, handle_server_messages);
+                } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
+
+                } 
+            }
+            
+            
+            
+            
+            
+            
+            app.run();
+        });
+    }
 
     pub fn save_world_aspects_to_db(&self) {
         put_misc_entry("timeofday", self.timeofday.lock().to_string().as_bytes().to_vec());
@@ -2546,6 +2551,7 @@ impl Game {
 
         self.load_world_aspects_from_db();
         self.load_chests_from_file();
+        Self::spawn_bevy_thread();
 
         //self.static_model_entities.push(ModelEntity::new(5, Vec3::new(0.0, 25.0, 200.0), 140.0, Vec3::new(0.0, 0.0, 0.0), &self.chunksys, &self.camera));
         //self.update_model_collisions(0);
@@ -5762,12 +5768,15 @@ impl Game {
                         ),
                         cfl.timebeendrawn,
                     );
+                    let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.4 ;
+                    let humfac = cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.3 ;
+                    //get the temp and humidity near the grassiest parts of the chunk, the mid area at 70-ish
                     gl::Uniform1f(
                         gl::GetUniformLocation(
                             self.shader0.shader_id,
                             b"grassRedChange\0".as_ptr() as *const i8,
                         ),
-                        (((cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.4 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 )) * 0.85) - 0.2,
+                        (( tempfac - humfac) * 0.85) - 0.2,
                     );
 
                     let error = gl::GetError();
@@ -5819,12 +5828,15 @@ impl Game {
                             ),
                             cfl.timebeendrawn,
                         );
+                        let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.4 ;
+                        let humfac = cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.3 ;
+                        //get the temp and humidity near the grassiest parts of the chunk, the mid area at 70-ish
                         gl::Uniform1f(
                             gl::GetUniformLocation(
                                 self.shader0.shader_id,
                                 b"grassRedChange\0".as_ptr() as *const i8,
                             ),
-                            (((cs.temp_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.4 ) - (cs.humidity_noise(IVec2::new(cfl.pos.x * CH_W, cfl.pos.y * CH_W)) as f32 * 0.3 )) * 0.85) - 0.2,
+                            (( tempfac - humfac) * 0.85) - 0.2,
                         );
 
                     let error = gl::GetError();
