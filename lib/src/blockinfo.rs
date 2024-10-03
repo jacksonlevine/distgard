@@ -5,7 +5,7 @@ use crate::{chunk::LightColor, cube::CubeSide};
 pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
 pub struct Blocks {}
 
-pub const BLOCK_COUNT: u32 = 63;
+pub const BLOCK_COUNT: u32 = 64;
 
 static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.1,
@@ -73,7 +73,8 @@ static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.7,
     1.5,
     0.9,
-    0.7
+    0.7,
+    1.5
 ];
 
 static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
@@ -152,7 +153,8 @@ static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
             [(5, 8), (5, 8), (5, 8)],  // 59 Palm Leaves
             [(6, 6), (6, 7), (6, 7)],  // 60 Joshua Wood
             [(6, 8), (6, 8), (6, 8)],  // 61 Joshua Leaves
-            [(0, 9),(1,0),(8,5)], // 61, snowy sand
+            [(0, 9),(1,0),(8,5)], // 62, snowy sand
+            [(13, 3),(13, 3),(13, 3)], // 63, fence
         ];
 
 
@@ -238,6 +240,7 @@ impl Blocks {
             60 => {"Joshua Wood"}
             61 => {"Joshua Leaves"}
             62 => {"Snowy Sand"}
+            63 => {"Fence"}
             _ => {
                 "Unknown Item"
             }
@@ -323,8 +326,8 @@ impl Blocks {
         return CLIMBABLES.contains(&id);
     }
     pub fn is_semi_transparent(id: u32) -> bool {
-        static SEMI_TRANSPARENTS: [u32; 15] = [
-            7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59
+        static SEMI_TRANSPARENTS: [u32; 16] = [
+            7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59, 63
         ];
         return SEMI_TRANSPARENTS.contains(&id);
     }

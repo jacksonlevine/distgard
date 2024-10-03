@@ -65,6 +65,7 @@ use crate::specialblocks::chest::ChestInfo;
 use crate::specialblocks::conveyor::ConveyorInfo;
 use crate::specialblocks::crafttable::CraftTableInfo;
 use crate::specialblocks::door::DoorInfo;
+use crate::specialblocks::fence::FenceInfo;
 use crate::specialblocks::ladder::LadderInfo;
 use crate::specialblocks::tallgrass::TallGrassInfo;
 use crate::specialblocks::torch::TorchInfo;
@@ -313,6 +314,8 @@ impl ACSet {
 }
 
 pub static mut ALREADY_QUEUED_KEYS: Lazy<DashMap<IVec2, u8>> = Lazy::new(|| DashMap::new());
+
+
 pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| VecDeque::new());
 
 
@@ -332,6 +335,7 @@ pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
 
 
 pub static mut GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::new());
+
 pub static mut LIGHT_GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::new());
 
 pub struct ChunkSystem {
@@ -1742,9 +1746,7 @@ impl ChunkSystem {
 
                             uvdata.extend_from_slice(&ConveyorInfo::get_conveyor_uvs());
                         } else if block == 52 {
-                            let direction = Blocks::get_direction_bits(flags);
 
-                            let modelindex: i32 = direction as i32;
 
                             let _blocklightval = 0.0;
 
@@ -1764,7 +1766,7 @@ impl ChunkSystem {
                                 0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
                             drop(lmlock);
 
-                            for vert in AwdsInfo::awds_model_from_index(modelindex as usize)
+                            for vert in AwdsInfo::awds_model_from_index(0)
                                 .chunks(5)
                             {
                                 vdata.extend_from_slice(&[
@@ -1777,6 +1779,43 @@ impl ChunkSystem {
                             }
 
                             uvdata.extend_from_slice(&AwdsInfo::get_awds_uvs());
+                        } else if block == 63 {
+                            
+                            //fence
+                            let _blocklightval = 0.0;
+
+                            let lmlock = self.lightmap.lock();
+                            let blocklighthere = match lmlock.get(&spot) {
+                                Some(k) => k.sum(),
+                                None => LightColor::ZERO,
+                            };
+
+                            
+
+                            let packedrgb = PackedVertex::pack_rgb(
+                                blocklighthere.x,
+                                blocklighthere.y,
+                                blocklighthere.z,
+                            );
+
+                            let prgb: u32 =
+                                0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
+                            drop(lmlock);
+
+                            for vert in FenceInfo::fence_model_from_combined(combined)
+                                .chunks(5)
+                            {
+                                vdata.extend_from_slice(&[
+                                    vert[0] + spot.x as f32,
+                                    vert[1] + spot.y as f32,
+                                    vert[2] + spot.z as f32,
+                                    f32::from_bits(prgb),
+                                    vert[4],
+                                ])
+                            }
+
+                            uvdata.extend_from_slice(&FenceInfo::fence_uvs_from_combined(combined));
+
                         } else if block == 49 {
                             let direction = Blocks::get_direction_bits(flags);
 
@@ -1972,7 +2011,10 @@ impl ChunkSystem {
                                             let amb_change = amb_spots
                                                 .iter()
                                                 .map(|vec| self.blockatmemo(*vec + spot, &mut memo))
-                                                .filter(|&result| result != 0 && !Blocks::is_semi_transparent(result))
+                                                .filter(|&result| {
+                                                    let res = result & Blocks::block_id_bits();
+                                                     res != 0 && !Blocks::is_semi_transparent(res) 
+                                                    })
                                                 .count();
 
                                             let base_light: i32 =
@@ -2106,7 +2148,10 @@ impl ChunkSystem {
                                             let amb_change = amb_spots
                                                 .iter()
                                                 .map(|vec| self.blockatmemo(*vec + spot, &mut memo))
-                                                .filter(|&result| result != 0 && !Blocks::is_semi_transparent(result))
+                                                .filter(|&result| {
+                                                    let res = result & Blocks::block_id_bits();
+                                                     res != 0 && !Blocks::is_semi_transparent(res) 
+                                                    })
                                                 .count();
 
                                             let base_light: i32 =

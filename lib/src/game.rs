@@ -7031,6 +7031,8 @@ impl Game {
 
     #[cfg(feature = "glfw")]
     pub fn cast_place_ray(&mut self) {
+        use crate::specialblocks::fence::{CONNECT_NEGX_BIT, CONNECT_NEGZ_BIT, CONNECT_X_BIT, CONNECT_Z_BIT};
+
         let slot_selected = self.hud.bumped_slot;
         let slot = self.inventory.read().inv[slot_selected];
 
@@ -7056,7 +7058,7 @@ impl Game {
                 Some((tip, block_hit)) => {
                     let mut blockbitshere = csys.read().blockat(block_hit);
                     let blockidhere = blockbitshere & Blocks::block_id_bits();
-
+                    //FIRST WE CHECK IF THE PLAYER "RIGHT-CLICKED" A BLOCK THAT HAS SOME ACTION E.G. CHEST OR CRAFTING TABLE
                     if blockidhere == 19 {
                         let top = DoorInfo::get_door_top_bit(blockbitshere);
                         let otherhalf;
@@ -7114,7 +7116,10 @@ impl Game {
                             .write()
                             .set_cursor_mode(glfw::CursorMode::Normal);
                         openedcraft = true;
-                    } else if slot.0 != 0 && slot.1 > 0 {
+
+                    } else 
+                    //NO SPECIAL ACTION BLOCK RIGHT CLICKED, LETS ACTUALLY THINK ABOUT ATTACHING A BLOCK TO HERE NOW:
+                    if slot.0 != 0 && slot.1 > 0 {
                         let id = slot.0;
                         let diff = (tip + Vec3::new(-0.5, -0.5, -0.5))
                             - (Vec3::new(
@@ -7483,6 +7488,93 @@ impl Game {
                                     place_point,
                                     chest_id,
                                     false,
+                                    true,
+                                    false,
+                                );
+                            }
+                        } else if id == 63 {
+                            //Fence shit
+
+                            let mut fence_id = id;
+
+                            static NEIGHBS: [vec::IVec3; 4] = [
+                                vec::IVec3::new(1, 0, 0),
+                                vec::IVec3::new(-1, 0, 0),
+                                vec::IVec3::new(0, 0, 1),
+                                vec::IVec3::new(0, 0, -1),
+                            ];
+
+                            let mut anyneighbs = false;
+
+                            let neighb1 = csys.read().blockat(place_point + NEIGHBS[0]);
+                            let neighb2 = csys.read().blockat(place_point + NEIGHBS[1]);
+                            let neighb3 = csys.read().blockat(place_point + NEIGHBS[2]);
+                            let neighb4 = csys.read().blockat(place_point + NEIGHBS[3]);
+
+                            let xbit = match (neighb1 & Blocks::block_id_bits()) {
+                                63 => {
+                                    anyneighbs = true;
+                                    let previouscombinedhere = neighb1;
+                                    let newcombinedhere = previouscombinedhere | CONNECT_NEGX_BIT;
+                                    csys.read().set_block_no_sound(place_point + NEIGHBS[0], newcombinedhere, true);
+                                    CONNECT_X_BIT
+                                }
+                                _ => {0}
+                            };
+                            let negxbit = match (neighb2 & Blocks::block_id_bits()) {
+                                63 => {
+                                    anyneighbs = true;
+                                    let previouscombinedhere = neighb2;
+                                    let newcombinedhere = previouscombinedhere | CONNECT_X_BIT;
+                                    csys.read().set_block_no_sound(place_point + NEIGHBS[1], newcombinedhere, true);
+                                    CONNECT_NEGX_BIT
+                                }
+                                _ => {0}
+                            };
+                            let zbit = match (neighb3 & Blocks::block_id_bits()) {
+                                63 => {
+                                    anyneighbs = true;
+                                    let previouscombinedhere = neighb3;
+                                    let newcombinedhere = previouscombinedhere | CONNECT_NEGZ_BIT;
+                                    csys.read().set_block_no_sound(place_point + NEIGHBS[2], newcombinedhere, true);
+                                    CONNECT_Z_BIT
+                                }
+                                _ => {0}
+                            };
+                            let negzbit = match (neighb4 & Blocks::block_id_bits()) {
+                                63 => {
+                                    anyneighbs = true;
+                                    let previouscombinedhere = neighb4;
+                                    let newcombinedhere = previouscombinedhere | CONNECT_Z_BIT;
+                                    csys.read().set_block_no_sound(place_point + NEIGHBS[3], newcombinedhere, true);
+                                    CONNECT_NEGZ_BIT
+                                }
+                                _ => {0}
+                            };
+
+                            let combined_bits = fence_id | xbit | negxbit | zbit | negzbit;
+
+                            if self.vars.in_multiplayer {
+                                // let message = Message::new(
+                                //     MessageType::BlockSet,
+                                //     Vec3::new(
+                                //         place_point.x as f32,
+                                //         place_point.y as f32,
+                                //         place_point.z as f32,
+                                //     ),
+                                //     0.0,
+                                //     chest_id,
+                                // );
+
+                                // self.netconn.send(&message);
+                            } else {
+                                if anyneighbs {
+
+                                }
+                                csys.read().set_block_and_queue_rerender(
+                                    place_point,
+                                    combined_bits,
+                                    anyneighbs,
                                     true,
                                     false,
                                 );

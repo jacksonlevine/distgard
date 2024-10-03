@@ -1,0 +1,65 @@
+import bpy
+import bmesh
+
+def export_model(filepath, flip_winding=False):
+    # Get the active object (ensure it is a mesh)
+    obj = bpy.context.active_object
+    if obj.type != 'MESH':
+        raise ValueError("Active object is not a mesh")
+
+    mesh = obj.data
+    
+    # Create a new BMesh from the mesh data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    
+    # Recalculate normals to ensure they face outward
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    
+    # Triangulate all faces
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    
+    # Write back to the mesh
+    bm.to_mesh(mesh)
+    bm.free()
+
+    vertices = []
+    uvs = []
+
+    uv_layer = mesh.uv_layers.active.data if mesh.uv_layers.active else None
+
+    for face in mesh.polygons:
+        vert_indices = list(face.vertices)
+        
+        if len(vert_indices) == 3:
+            # Reverse the winding order if flip_winding is True
+            if flip_winding:
+                vert_indices = [vert_indices[0], vert_indices[2], vert_indices[1]]
+            
+            for vert_idx in vert_indices:
+                vert = mesh.vertices[vert_idx]
+                vertices.extend([vert.co.x, vert.co.z, vert.co.y, 0.0, 14.0])
+
+            if uv_layer:
+                for loop_idx in face.loop_indices:
+                    uv = uv_layer[loop_idx].uv
+                    uvs.extend([uv.x, 1.0 - uv.y, 0.0, 0.0])  # Invert the Y coordinate
+            else:
+                for _ in range(3):  # Default UV if none exist
+                    uvs.extend([0.0, 0.0, 0.0, 0.0])
+
+    with open(filepath, 'w') as f:
+        f.write("# Vertices\n")
+        for i in range(0, len(vertices), 5):
+            f.write(f"{vertices[i]}, {vertices[i+1]}, {vertices[i+2]}, {vertices[i+3]}, {vertices[i+4]},\n")
+
+        f.write("# UVs\n")
+        for i in range(0, len(uvs), 4):
+            f.write(f"{uvs[i]}, {uvs[i+1]}, {uvs[i+2]}, {uvs[i+3]},\n")
+
+# Specify the output file path
+output_path = "C:/Users/jack/output_file.txt"
+
+# Set flip_winding to True to reverse the winding order
+export_model(output_path, flip_winding=True)
+print(f"Model exported to {output_path}")
