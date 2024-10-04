@@ -77,6 +77,9 @@ use crate::textureface::TEXTURE_WIDTH;
 use crate::vec::IVec3;
 use crate::vec::{self, IVec2};
 
+use cpq::ConcurrentPriorityQueue;
+
+
 use arrayvec::ArrayVec;
 
 use tracing::info;
@@ -100,6 +103,11 @@ pub struct LightRay {
 pub struct LightSegment {
     pub rays: ArrayVec<LightRay, 16>,
 }
+
+
+
+
+
 
 impl LightSegment {
     pub fn sum(&self) -> LightColor {
@@ -142,8 +150,23 @@ pub struct ChunkGeo {
     pub wvdata: Mutex<Vec<f32>>,
     pub wuvdata: Mutex<Vec<f32>>,
 }
+
+pub static CHUNK_REBUILD_QUEUE: Lazy<ConcurrentPriorityQueue<(usize, u8), RebuildPriority>> = Lazy::new(|| ConcurrentPriorityQueue::new());
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum RebuildPriority {
+    UserTop = 0,
+    FeatureMid = 1,
+    BackgroundLow = 2
+}
+
+pub const USER_RB: u8 = 0b0000_0001;
+pub const LIGHT_RB: u8 = 0b0000_0010;
+
 impl ChunkGeo {
     pub fn new() -> ChunkGeo {
+
+
         let mut vbo32: gl::types::GLuint = 0;
         let mut vbo8: gl::types::GLuint = 0;
         let mut tvbo32: gl::types::GLuint = 0;
@@ -346,10 +369,10 @@ pub struct ChunkSystem {
     pub takencare: Arc<DashMap<vec::IVec2, ChunkFacade>>,
     pub finished_user_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
     pub finished_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
-    pub user_rebuild_requests: lockfree::queue::Queue<usize>,
-    pub gen_rebuild_requests: lockfree::queue::Queue<usize>,
-    pub light_rebuild_requests: lockfree::queue::Queue<usize>,
-    pub background_rebuild_requests: lockfree::queue::Queue<usize>,
+    // pub user_rebuild_requests: lockfree::queue::Queue<usize>,
+    // pub gen_rebuild_requests: lockfree::queue::Queue<usize>,
+    // pub light_rebuild_requests: lockfree::queue::Queue<usize>,
+    // pub background_rebuild_requests: lockfree::queue::Queue<usize>,
     
     // pub userdatamap: Arc<DashMap<vec::IVec3, u32>>,
     // pub nonuserdatamap: Arc<DashMap<vec::IVec3, u32>>,
@@ -394,10 +417,7 @@ impl ChunkSystem {
             takencare: Arc::new(DashMap::new()),
             finished_user_geo_queue: Arc::new(lockfree::queue::Queue::new()),
             finished_geo_queue: Arc::new(lockfree::queue::Queue::new()),
-            user_rebuild_requests: lockfree::queue::Queue::new(),
-            gen_rebuild_requests: lockfree::queue::Queue::new(),
-            light_rebuild_requests: lockfree::queue::Queue::new(),
-            background_rebuild_requests: lockfree::queue::Queue::new(),
+
            // userdatamap: Arc::new(DashMap::new()),
            // nonuserdatamap: Arc::new(DashMap::new()),
             justcollisionmap: DashMap::new(),
@@ -789,9 +809,9 @@ impl ChunkSystem {
         info!("After clearing takencare");
         while let Some(_) = self.finished_geo_queue.pop() {}
         while let Some(_) = self.finished_user_geo_queue.pop() {}
-        while let Some(_) = self.user_rebuild_requests.pop() {}
-        while let Some(_) = self.gen_rebuild_requests.pop() {}
-        while let Some(_) = self.background_rebuild_requests.pop() {}
+        // while let Some(_) = self.user_rebuild_requests.pop() {}
+        // while let Some(_) = self.gen_rebuild_requests.pop() {}
+        // while let Some(_) = self.background_rebuild_requests.pop() {}
         info!("After that whole popping thing");
         //self.userdatamap.clear();
         //self.nonuserdatamap.clear();
@@ -946,7 +966,12 @@ impl ChunkSystem {
                 Some(_) => {}
                 None => {
                     unsafe { &LIGHT_GIS_QUEUED.insert(geo_index, true) };
-                    self.light_rebuild_requests.push(geo_index);
+                    let mut flags = LIGHT_RB;
+                    if user_power {
+                        flags |= USER_RB;
+                    }
+
+                    CHUNK_REBUILD_QUEUE.push((geo_index, flags), if user_power { RebuildPriority::UserTop } else { RebuildPriority::BackgroundLow });
                 }
             }
         } else {
@@ -956,7 +981,8 @@ impl ChunkSystem {
                         Some(_) => {}
                         None => {
                             unsafe { &GIS_QUEUED.insert(geo_index, true) };
-                            self.user_rebuild_requests.push(geo_index);
+
+                            CHUNK_REBUILD_QUEUE.push((geo_index, USER_RB), RebuildPriority::UserTop);
                         }
                     }
                 }
@@ -965,7 +991,8 @@ impl ChunkSystem {
                         Some(_) => {}
                         None => {
                             unsafe { &GIS_QUEUED.insert(geo_index, true) };
-                            self.background_rebuild_requests.push(geo_index);
+
+                            CHUNK_REBUILD_QUEUE.push((geo_index, 0), RebuildPriority::BackgroundLow);
                         }
                     }
                 }
@@ -1542,7 +1569,8 @@ impl ChunkSystem {
         for c in implicated.iter() {
             match self.takencare.get(&c) {
                 Some(cf) => {
-                    self.user_rebuild_requests.push(cf.geo_index);
+                    //self.user_rebuild_requests.push(cf.geo_index);
+                    CHUNK_REBUILD_QUEUE.push((cf.geo_index, USER_RB), RebuildPriority::UserTop);
                 }
                 None => {}
             }
@@ -2614,7 +2642,7 @@ impl ChunkSystem {
             for c in implicated_chunks.iter() {
                 match self.takencare.get(&c) {
                     Some(cf) => {
-                        self.background_rebuild_requests.push(cf.geo_index);
+                        CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::BackgroundLow);
                     }
                     None => {}
                 }
@@ -2760,7 +2788,8 @@ impl ChunkSystem {
         for c in implicated.iter() {
             match self.takencare.get(&c) {
                 Some(cf) => {
-                    self.gen_rebuild_requests.push(cf.geo_index);
+
+                    CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::FeatureMid);
                 }
                 None => {}
             }
