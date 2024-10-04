@@ -2,7 +2,8 @@ use bevy::math::Vec3;
 
 use crate::{chunk::LightColor, cube::CubeSide};
 
-pub const BLOCK_DIRECTION_BITS: u32 = 0b0000_0000_0000_0011_0000_0000_0000_0000;
+pub const BLOCK_DIRECTION_BITS: u32 =       0b0000_0000_0000_0011_0000_0000_0000_0000;
+pub const BLOCK_MARKED_FOR_DELETION: u32 = 0b0000_0000_0000_0100_0000_0000_0000_0000;
 pub struct Blocks {}
 
 pub const BLOCK_COUNT: u32 = 64;
@@ -179,8 +180,8 @@ impl Blocks {
             3 => {"Grass"}
             4 => {"Dirt"}
             5 => {"Cobblestone"}
-            6 => {"Wood"}
-            7 => {"Leaves"}
+               6 => {"Wood"}
+        7 => {"Leaves"}
             8 => {"Glass"}
             9 => {"Stone"}
             10 => {"Wood Planks"}
@@ -227,18 +228,18 @@ impl Blocks {
             47 => {"Metal Plate Block"}
             48 => {"Snowy Grass Block"}
             49 => {"Torch"}
-            50 => {"Snowy Leaves"}
+        50 => {"Snowy Leaves"}
             51 => {"Ice"}
             52 => {"Artic Willow Dwarf Shrub"}
-            53 => {"Pine Wood"}
-            54 => {"Pine Leaves"}
+              53 => {"Pine Wood"}
+        54 => {"Pine Leaves"}
             55 => {"Artic Willow Leaves"}
-            56 => {"Cedar Wood"}
-            57 => {"Cedar Leaves"}
-            58 => {"Palm Wood"}
-            59 => {"Palm Leaves"}
-            60 => {"Joshua Wood"}
-            61 => {"Joshua Leaves"}
+              56 => {"Cedar Wood"}
+        57 => {"Cedar Leaves"}
+              58 => {"Palm Wood"}
+        59 => {"Palm Leaves"}
+              60 => {"Joshua Wood"}
+        61 => {"Joshua Leaves"}
             62 => {"Snowy Sand"}
             63 => {"Fence"}
             _ => {

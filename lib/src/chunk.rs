@@ -37,6 +37,7 @@ use parking_lot::{Mutex, RwLock};
 
 use noise::{NoiseFn, Perlin};
 
+use crate::blockinfo::BLOCK_MARKED_FOR_DELETION;
 use crate::camera::Camera;
 use crate::chunkregistry::ChunkMemory;
 use crate::chunkregistry::ChunkRegistry;
@@ -501,8 +502,8 @@ impl ChunkSystem {
             let mut instant = std::time::Instant::now();
 
             loop {
-                if instant.elapsed().as_secs_f32() < 10.0 {
-                    thread::sleep(Duration::from_secs(10));
+                if instant.elapsed().as_secs_f32() < 5.0 {
+                    thread::sleep(Duration::from_secs(5));
                 }
                 else{
 
@@ -517,13 +518,15 @@ impl ChunkSystem {
                 //let camposx = pcpos.x;
                 //let camposz = pcpos.y;
 
-                for i in -4..4 {
-                    for j in -4..4 {
+                for i in -6..6 {
+                    for j in -6..6 {
                         let poshere = pcpos + IVec2::new(i, j);
                         match takencare.get(&poshere) {
                             Some(c) => {
                                 let c = c.value();
                                 
+
+                                let cdist = (c.pos - poshere).length() as i32;
 
                                 for i in 0..CH_W {
                                     for k in 0..CH_W {
@@ -534,14 +537,17 @@ impl ChunkSystem {
                                                 y: j,
                                                 z: (c.pos.y * CH_W) + k,
                                             };
-                                            let temp = ChunkSystem::_temp_noise(&per.read(), spot) as f32;
-                                            let hum = ChunkSystem::_humidity_noise(&per.read(), spot) as f32;
-                                            let climate = get_climate(temp, hum);
-                                                
 
-                                            if rng.gen_range(0..10) == 9 {
                                             
+                                           
+
+
+                                            if rng.gen_range(0..((cdist*2)+10)) == 0 {
                                             
+                                            let temp = ChunkSystem::_temp_noise(&per.read(), spot) as f32;
+                                           // let hum = ChunkSystem::_humidity_noise(&per.read(), spot) as f32;
+                                            //let climate = get_climate(temp, hum);
+                                                    
 
                                             let combined =
                                                 Self::_blockat(&nudm, &udm, &per.read(), spot);
@@ -551,6 +557,22 @@ impl ChunkSystem {
                                                 //println!("weathertype: {}", WEATHERTYPE);
                                                 if true {
                                                     //WEATHERTYPE == 1.0 {
+
+                                                    if (combined & BLOCK_MARKED_FOR_DELETION) != 0 {
+                                                        AUTOMATA_QUEUED_CHANGES.push_back(ACSet::new(
+                                                            1,
+                                                            [AutomataChange::new(
+                                                                combined,
+                                                                spot,
+                                                                0,
+                                                            ),
+                                                            AutomataChange::new(
+                                                                block,
+                                                                spot,
+                                                                0,
+                                                            )],
+                                                        ));
+                                                    }
 
                                                     match block {
                                                         3 => {

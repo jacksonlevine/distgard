@@ -95,10 +95,10 @@ impl Camera {
         delta: &f32,
         speed_mult: f32,
     ) -> Vec3 {
-        let mut xz_speed_mult = 2.2 * 3.0;
+        let mut xz_speed_mult = 2.74 * 1.5;
         unsafe {
             if SPRINTING {
-                xz_speed_mult = 2.74 * 3.0;
+                xz_speed_mult = 2.2 * 3.0;
             }
         }
 

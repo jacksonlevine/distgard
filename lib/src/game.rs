@@ -4,6 +4,7 @@ use std::f32::consts::{self};
 use std::ptr::{addr_of, addr_of_mut};
 // use std::io::Write;
 
+use arrayvec::ArrayVec;
 use atomic_float::AtomicF32;
 use noise::Perlin;
 use once_cell::sync::Lazy;
@@ -48,7 +49,7 @@ use crate::audio::AudioPlayer;
 
 pub const PLAYERSCALE: f32 = 1.0;
 
-use crate::blockinfo::Blocks;
+use crate::blockinfo::{Blocks, BLOCK_MARKED_FOR_DELETION};
 use crate::blockoverlay::BlockOverlay;
 use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
 use crate::climates::VOX_MODEL_PATHS;
@@ -203,10 +204,11 @@ pub static mut MOUSED_SLOT: SlotIndexType = SlotIndexType::None;
 
 pub static mut CROUCHING: bool = false;
 
-pub static mut SONGS: [&'static str; 12] = [
+pub static mut SONGS: [&'static str; 13] = [
     path!("assets/music/dd3.mp3"),
     path!("assets/music/dd4.mp3"),
     path!("assets/music/dd5.mp3"),
+    path!("assets/music/dd6.mp3"),
     path!("assets/music/qv2.mp3"),
     path!("assets/music/Farfromhome.mp3"),
     path!("assets/music/ifol.mp3"),
@@ -502,418 +504,95 @@ enum FaderNames {
 }
 
 
-
-pub fn attend_chunk_queues() {
-
-    let csys = unsafe {(*addr_of!(CHUNKSYS)).as_ref()};
-
-    match csys {
-        Some(csys) => {
-            unsafe {
-                let mut implic = HashSet::new();
-                let mut more = true;
-                
-                let csys_arc = csys.read();
-                while more {
-                    
-                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                        Some(comm) => {
-                            //println!("Poppin one");
-                            for comm in comm.changes {
-        
-                            
-        
-            
-                                if (csys_arc.blockat(comm.spot))
-                                    == comm.expectedhere
-                                {
-        
-        
-                                    // println!("Settin");
-                                    // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                    // csys_arc.queue_rerender_with_key(
-                                    //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                    //     false,
-                                    //     false,
-                                    // );
-                                    //csys_arc.rebuild_index(comm.geo_index, false, false);
-        
-                                    csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                    implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-        
-        
-                                } else {
-                                    // println!(
-                                    //     "Expected {} here but its {} for this change",
-                                    //     comm.expectedhere,
-                                    //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                    // );
-                                }
-                            }
-                        }
-                        None => {
-                            more = false;
-                        }
-                    }
-                }
-                for imp in implic {
-                    csys_arc.queue_rerender_with_key(
-                        imp,
-                        true,
-                        false,
-                    );
-                }
-                
-            }
-        
-            let mut lightstuff = true;
-            while lightstuff {
-                
-                let csys_arc = csys.read();
-        
-                match csys_arc.light_rebuild_requests.pop() {
-                    Some(index) => {
-                        csys_arc.rebuild_index(index, true, true);
-                        //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                        unsafe {
-                            let mut implic = HashSet::new();
-                            let mut more = true;
-                           // let csys_arc = csys_arc.read();
-                            while more {
-                                
-                                match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                    Some(comm) => {
-                                        //println!("Poppin one");
-                                        for comm in comm.changes {
-                
-                                        
-                
-                        
-                                            if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                == comm.expectedhere
-                                            {
-                
-                
-                                                // println!("Settin");
-                                                // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                // csys_arc.queue_rerender_with_key(
-                                                //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                //     false,
-                                                //     false,
-                                                // );
-                                                //csys_arc.rebuild_index(comm.geo_index, false, false);
-                
-                                                csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                
-                
-                                            } else {
-                                                // println!(
-                                                //     "Expected {} here but its {} for this change",
-                                                //     comm.expectedhere,
-                                                //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                // );
-                                            }
-                                        }
-                                    }
-                                    None => {
-                                        more = false;
-                                    }
-                                }
-                            }
-                            for imp in implic {
-                                csys_arc.queue_rerender_with_key(
-                                    imp,
-                                    true,
-                                    false,
-                                );
-                            }
-                            
-                        }
-                
-                    }
-                    None => {
-                        lightstuff = false;
-                    }
-                }
-            }
-        
-            let mut userstuff = true;
-            while userstuff {
-                let csys_arc = csys.read();
-        
-                match csys_arc.user_rebuild_requests.pop() {
-                    Some(index) => {
-                        //info!("Popping stuff USER {}", rng.gen_range(0..255));
-                        csys_arc.rebuild_index(index, true, false);
-        
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
-                                                    }
-                                                }
-                                            }
-                                            None => {
-                                                more = false;
-                                            }
-                                        }
-                                    }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
-                                }
-                        
-                            }
-                            None => {}
-                        }
-                    }
-                    None => {
-                        userstuff = false;
-                    }
-                }
-            }
-            let mut genstuff = true;
-            while genstuff {
-                let csys_arc = csys.read();
-        
-                match csys_arc.gen_rebuild_requests.pop() {
-                    Some(index) => {
-                        csys_arc.rebuild_index(index, true, false);
-                        // info!("Popping stuff GEN {}", rng.gen_range(0..255));
-                        match csys_arc.user_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                            }
-                            None => {}
-                        }
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
-                                                    }
-                                                }
-                                            }
-                                            None => {
-                                                more = false;
-                                            }
-                                        }
-                                    }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
-                                }
-                        
-                            }
-                            None => {}
-                        }
-                    }
-                    None => {
-                        genstuff = false;
-                    }
-                }
-            }
-        
-            let mut backgroundstuff = true;
-            while backgroundstuff {
-                
-                let csys_arc = csys.read();
-        
-                match csys_arc.background_rebuild_requests.pop() {
-                    Some(index) => {
-                        // info!("Popping stuff BACKGROUND {}", rng.gen_range(0..255));
-                        csys_arc.rebuild_index(index, false, false);
-        
-                        match csys_arc.user_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                                let _userstuff = true;
-                            }
-                            None => {}
-                        }
-        
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
-                                                    }
-                                                }
-                                            }
-                                            None => {
-                                                more = false;
-                                            }
-                                        }
-                                    }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
-                                }
-                        
-                            }
-                            None => {}
-                        }
-        
-                        match csys_arc.gen_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff GEN {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                                let mut genstuff = true;
-                                while genstuff {
-                                    match csys_arc.gen_rebuild_requests.pop() {
-                                        Some(index) => {
-                                            csys_arc.rebuild_index(index, true, false);
-                                        }
-                                        None => {
-                                            genstuff = false;
-                                        }
-                                    }
-                                }
-                            }
-                            None => {}
-                        }
-                    }
-                    None => {
-                        backgroundstuff = false;
-                    }
-                }
-            }
+pub fn popuserstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.user_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, true, false);
+            return true;
         }
         None => {
-
+            return false;
         }
     }
+}
+pub fn poplightstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.light_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, true, true);
+            return true;
+        }
+        None => {
+            return false;
+        }
+    }
+}
+pub fn popbackroundstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.gen_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, false, false);
+            return true;
+        }
+        None => {
+            return false;
+        }
+    }
+}
+pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
+    unsafe {
+        let mut wassome = false;
+        let mut implic = HashSet::new();
+        for _ in 0..32 {
+            match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                Some(comm) => {
+                    wassome = true;
+                    for i in 0..comm.count {
+                        let comm = &comm.changes[i];
+                        if (csys_arc.blockat(comm.spot))
+                            == comm.expectedhere
+                        {
+                            csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                            implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                        }
+                    }
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+        for imp in implic {
+            csys_arc.queue_rerender_with_key(
+                imp,
+                true,
+                false,
+            );
+        }
+        return wassome;
+    }
+}
 
+
+
+pub fn attend_chunk_queues() {
+    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    match csys_arc {
+        Some(csys) => {
+            let cs = csys.read();
+            if popuserstuff(&cs) {
+                return;
+            }
+            if poplightstuff(&cs) {
+                return;
+            }
+            if popbackroundstuff(&cs) {
+                return;
+            }
+            if popautomatastuff(&cs) {
+                return;
+            }
+        }
+        None => {}
+    }
 }
 
 //previously chunk_thread_inner_function
@@ -1034,36 +713,11 @@ pub fn attend_needed_spots(
                             for (index, ns) in neededspots.iter().enumerate() {
                                 let csys_arc = csys.read();
                                 //Also check the queues from this thread or else it will hog the lock
-
-                                match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                    Some(comm) => {
-                                        AUTOMATA_QUEUED_CHANGES.push_back(comm);
-                                        break;
-                                    }
-                                    None => {
-                                        
-                                    }
+                                if popuserstuff(&csys_arc) {
+                                    return;
                                 }
-                
-                                match csys_arc.user_rebuild_requests.pop() {
-                                    Some(index) => {
-                                        csys_arc.rebuild_index(index, true, false);
-                                        break;
-                                    }
-                                    None => {}
-                                }
-                                match csys_arc.light_rebuild_requests.pop() {
-                                    Some(index) => {
-                                        csys_arc.rebuild_index(index, true, true);
-                                        break;
-                                    }
-                                    None => {}
-                                }
-                                match csys_arc.gen_rebuild_requests.pop() {
-                                    Some(index) => {
-                                        csys_arc.rebuild_index(index, true, false);
-                                    }
-                                    None => {}
+                                if poplightstuff(&csys_arc) {
+                                    return;
                                 }
                                 
                                 csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
@@ -6316,22 +5970,25 @@ impl Game {
         }
         save_misc();
     }
-    pub fn delete_block_recursively(
+
+    pub fn set_block_recursively(
         chunksys: &Arc<RwLock<ChunkSystem>>,
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
-    ) {
+        target: u32
+    ) -> usize {
         let mut stack = vec![at]; // Initialize stack with initial position
-
+        let mut count = 0;
         while let Some(current) = stack.pop() {
             // Check if the block at the current position is already deleted
 
             let chunksys = chunksys.read();
 
-            if chunksys.blockat(current) != 0 {
+            if chunksys.blockat(current) != target {
                 // Set the block at the current position
-                chunksys.set_block(current, 0, true);
+                chunksys.set_block(current, target, true);
+                count += 1;
                 let key = ChunkSystem::spot_to_chunk_pos(&current);
                 set.insert(key);
                 // Add neighbors to the stack if they have the same id
@@ -6343,6 +6000,86 @@ impl Game {
                 }
             }
         }
+        return count;
+    }
+
+    pub fn set_block_recursively_locked(
+        chunksys: &parking_lot::lock_api::RwLockReadGuard<'_, parking_lot::RawRwLock, ChunkSystem>,
+        id: u32,
+        at: IVec3,
+        set: &mut HashSet<IVec2>,
+        target: u32
+    ) -> usize {
+        let mut stack = vec![at]; // Initialize stack with initial position
+        let mut count = 0;
+        while let Some(current) = stack.pop() {
+            // Check if the block at the current position is already deleted
+
+
+
+            if chunksys.blockat(current) != target {
+                // Set the block at the current position
+                chunksys.set_block(current, target, true);
+                count += 1;
+                let key = ChunkSystem::spot_to_chunk_pos(&current);
+                set.insert(key);
+                // Add neighbors to the stack if they have the same id
+                for neighbor in Cube::get_neighbors() {
+                    let neighbor_pos = *neighbor + current;
+                    if chunksys.blockat(neighbor_pos) == id {
+                        stack.push(neighbor_pos);
+                    }
+                }
+            }
+        }
+        return count;
+    }
+    
+    //return amount of blocks it broke
+    pub fn delete_block_recursively(
+        chunksys: &Arc<RwLock<ChunkSystem>>,
+        id: u32,
+        at: IVec3,
+        set: &mut HashSet<IVec2>,
+    ) -> usize {
+        return Game::set_block_recursively(chunksys, id, at, set, 0);
+    }
+
+    pub fn delete_block_recursively_or_leaves(
+        chunksys: &Arc<RwLock<ChunkSystem>>,
+        id: u32,
+        at: IVec3,
+        set: &mut HashSet<IVec2>,
+    ) -> usize {
+        static LEAVES: [u32; 6] = [7, 50, 54, 57, 59, 61];
+        let mut stack = vec![at]; // Initialize stack with initial position
+        let mut count = 0;
+        while let Some(current) = stack.pop() {
+            // Check if the block at the current position is already deleted
+
+            let csys  = chunksys.read();
+
+            if csys.blockat(current) != 0 {
+                // Set the block at the current position
+                csys.set_block(current, 0, true);
+                count += 1;
+                let key = ChunkSystem::spot_to_chunk_pos(&current);
+                set.insert(key);
+                // Add neighbors to the stack if they have the same id
+                for neighbor in Cube::get_neighbors() {
+                    let neighbor_pos = *neighbor + current;
+                    let tid = csys.blockat(neighbor_pos);
+                    
+                    if LEAVES.contains(&tid) {
+                        Game::set_block_recursively_locked(&csys, tid, neighbor_pos, set, tid | BLOCK_MARKED_FOR_DELETION);
+                    }
+                    if tid == id {
+                        stack.push(neighbor_pos);
+                    }
+                }
+            }
+        }
+        return count;
     }
     pub fn cast_break_ray(&mut self) {
         let cl = {
@@ -6361,48 +6098,8 @@ impl Game {
             Some((tip, block_hit)) => {
                 let blockbits = csys.read().blockat(block_hit);
                 let blockat = blockbits & Blocks::block_id_bits();
-                if blockat == 16 {
-                    let mut set: HashSet<IVec2> = HashSet::new();
-                    Game::delete_block_recursively(&csys, 16, block_hit, &mut set);
-                    for key in set {
-                        csys
-                            .read()
-                            .queue_rerender_with_key(key, true, false);
-                    }
-                    #[cfg(feature = "glfw")]
-                    self.drops.add_drop(tip, 17, 1);
-                } else if blockat == 19 {
-                    //Door stuff
-                    let top = DoorInfo::get_door_top_bit(blockbits);
-                    let other_half;
 
-                    if top == 1 {
-                        other_half = block_hit + IVec3::new(0, -1, 0);
-                    } else {
-                        other_half = block_hit + IVec3::new(0, 1, 0);
-                    }
-
-                    #[cfg(feature = "glfw")]
-                    self.drops.add_drop(tip, 19, 1);
-
-                    if self.vars.in_multiplayer {
-                        // let mut message = Message::new(
-                        //     MessageType::MultiBlockSet,
-                        //     Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
-                        //     0.0,
-                        //     0,
-                        // );
-                        // message.info2 = 0;
-                        // message.otherpos = other_half;
-
-                        // self.netconn.send(&message);
-                    } else {
-                        csys.read().set_block(block_hit, 0, true);
-                        csys
-                            .read()
-                            .set_block_and_queue_rerender(other_half, 0, true, true, false);
-                    }
-                } else {
+                let mut defaultprocedure = || {
                     if blockat != 0 {
                         #[cfg(feature = "glfw")]
                         self.drops.add_drop(tip, blockat, 1);
@@ -6421,6 +6118,86 @@ impl Game {
                         csys
                             .read()
                             .set_block_and_queue_rerender(block_hit, 0, true, true, false);
+                    }
+                };
+
+                match blockat {
+                    16 => {
+                        let mut set: HashSet<IVec2> = HashSet::new();
+                        Game::delete_block_recursively(&csys, 16, block_hit, &mut set);
+                        for key in set {
+                            csys
+                                .read()
+                                .queue_rerender_with_key(key, true, false);
+                        }
+                        #[cfg(feature = "glfw")]
+                        self.drops.add_drop(tip, 17, 1);
+                    }
+                    6 | 53 | 56 | 58 | 60 => {
+                        let nudm = unsafe { NONUSERDATAMAP.as_ref().unwrap() };
+                        if nudm.contains_key(&block_hit) {
+                            match nudm.get(&block_hit) {
+                                Some(ud) => {
+                                    match *ud  {
+                                        6 | 53 | 56 | 58 | 60 => {
+                                            let mut set: HashSet<IVec2> = HashSet::new();
+                                            let amount = Game::delete_block_recursively_or_leaves(&csys, blockat, block_hit, &mut set);
+                                            for key in set {
+                                                csys
+                                                    .read()
+                                                    .queue_rerender_with_key(key, true, false);
+                                            }
+                                            #[cfg(feature = "glfw")]
+                                            self.drops.add_drop(tip, blockat, amount as u32);
+                                        }
+                                        _ => {
+                                            defaultprocedure();
+                                        }
+                                    }
+                                }
+                                None => {
+                                    //Should be unreachable
+                                }
+                            }
+                        } else {
+                            defaultprocedure();
+                        }
+                        
+                    }
+                    19 => {
+                        //Door stuff
+                        let top = DoorInfo::get_door_top_bit(blockbits);
+                        let other_half;
+
+                        if top == 1 {
+                            other_half = block_hit + IVec3::new(0, -1, 0);
+                        } else {
+                            other_half = block_hit + IVec3::new(0, 1, 0);
+                        }
+
+                        #[cfg(feature = "glfw")]
+                        self.drops.add_drop(tip, 19, 1);
+
+                        if self.vars.in_multiplayer {
+                            // let mut message = Message::new(
+                            //     MessageType::MultiBlockSet,
+                            //     Vec3::new(block_hit.x as f32, block_hit.y as f32, block_hit.z as f32),
+                            //     0.0,
+                            //     0,
+                            // );
+                            // message.info2 = 0;
+                            // message.otherpos = other_half;
+
+                            // self.netconn.send(&message);
+                        } else {
+                            csys.read().set_block(block_hit, 0, true);
+                            csys
+                                .read()
+                                .set_block_and_queue_rerender(other_half, 0, true, true, false);
+                        }
+                    }
+                    _ => {
+                        defaultprocedure();
                     }
                 }
             }
