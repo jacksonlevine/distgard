@@ -619,78 +619,13 @@ pub fn get_sorted_chunk_facades() -> Option<ArrayVec<Arc<Mutex<ChunkFacade>>, {C
                         }
                     }
 
-                            // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
-                            // let adjusted_user_cpos = IVec2 {
-                            //     x: (user_cpos.x as f32 + (user_dir.x * 10.0)).round() as i32,
-                            //     y: (user_cpos.y as f32 + (user_dir.y * 10.0)).round() as i32,
-                            // };
-                            let adjusted_user_cpos = user_cpos;
-                
-                            let radius = {
-                                let x = csys.read().radius;
-                                x.clone()
-                            };
-                
-                            for i in -(radius as i32)..(radius as i32) {
-                                for k in -(radius as i32)..(radius as i32) {
-                                    let csys_arc = csys.read();
-                
-                                    let tcarc = csys_arc.takencare.clone();
-                                    let this_spot = IVec2 {
-                                        x: adjusted_user_cpos.x + i as i32,
-                                        y: adjusted_user_cpos.y + k as i32,
-                                    };
-                                    if !tcarc.contains_key(&this_spot) {
-                                        neededspots.push(this_spot);
-                                    }
-                                }
-                            }
-                
-                            let mut sorted_chunk_facades: Vec<ChunkFacade> = Vec::new();
-                            {
-                                let csyschunks = csys.read().chunks.clone();
-                
-                                for carc in &csyschunks {
-                                    match carc.try_lock() {
-                                        Some(cf) => {
-                                            sorted_chunk_facades.push(*cf);
-                                        }
-                                        None => {}
-                                    }
-                                }
-                            }
-                
-                            let (unused_or_distant, used_and_close): (Vec<ChunkFacade>, Vec<ChunkFacade>) =
-                                sorted_chunk_facades.drain(..).partition(|chunk| {
-                                    if !chunk.used {
-                                        true
-                                    } else {
-                                        let dist = (chunk.pos.x - adjusted_user_cpos.x).abs()
-                                            + (chunk.pos.y - adjusted_user_cpos.y).abs();
-                                        dist >= radius as i32 * 2
-                                    }
-                                });
-                
-                            sorted_chunk_facades.extend(unused_or_distant);
-                            sorted_chunk_facades.extend(used_and_close);
-                            //info!("Neededspots size: {}", neededspots.len());
-                
-                            neededspots.sort_by(|a, b| {
-                                let dist_a = (a.x - user_cpos.x).pow(2) + (a.y - user_cpos.y).pow(2);
-                                let dist_b = (b.x - user_cpos.x).pow(2) + (b.y - user_cpos.y).pow(2);
-                                dist_a.cmp(&dist_b)
-                            });
-                
-                            for (index, ns) in neededspots.iter().enumerate() {
-                                let csys_arc = csys.read();
-                                //Also check the queues from this thread or else it will hog the lock
-                                if popchunk() {
-                                    break;
-                                }
-                                
-                                csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
-                                
-                            }
+                    let (unused_or_distant, used_and_close): (
+                        Vec<Arc<Mutex<ChunkFacade>>>,
+                        Vec<Arc<Mutex<ChunkFacade>>>,
+                    ) = sorted_chunk_facades.drain(..).partition(|chunk| {
+                        let chunk = chunk.lock();
+                        if NS_QUEUED.contains_key(&chunk.pos) {
+                            return false;
                         }
                         if !chunk.used {
                             true
