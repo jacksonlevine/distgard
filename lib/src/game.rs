@@ -51,7 +51,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::{Blocks, BLOCK_MARKED_FOR_DELETION};
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, CHUNK_REBUILD_QUEUE, LIGHT_RB, NONUSERDATAMAP, USERDATAMAPANDMISCMAP, USER_RB};
+use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
 use crate::climates::VOX_MODEL_PATHS;
 use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
 
@@ -504,59 +504,36 @@ enum FaderNames {
 }
 
 
-// pub fn popuserstuff(csys_arc: &ChunkSystem) -> bool {
-//     match csys_arc.user_rebuild_requests.pop() {
-//         Some(index) => {
-//             csys_arc.rebuild_index(index, true, false);
-//             return true;
-//         }
-//         None => {
-//             return false;
-//         }
-//     }
-// }
-// pub fn poplightstuff(csys_arc: &ChunkSystem) -> bool {
-//     match csys_arc.light_rebuild_requests.pop() {
-//         Some(index) => {
-//             csys_arc.rebuild_index(index, true, true);
-//             return true;
-//         }
-//         None => {
-//             return false;
-//         }
-//     }
-// }
-// pub fn popbackroundstuff(csys_arc: &ChunkSystem) -> bool {
-//     match csys_arc.gen_rebuild_requests.pop() {
-//         Some(index) => {
-//             csys_arc.rebuild_index(index, false, false);
-//             return true;
-//         }
-//         None => {
-//             return false;
-//         }
-//     }
-// }
-
-pub fn popchunk() -> bool{
-    match CHUNK_REBUILD_QUEUE.pop() {
+pub fn popuserstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.user_rebuild_requests.pop() {
         Some(index) => {
-            let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
-            match csys_arc {
-                Some(csys_arc) => {
-                    let csys = csys_arc.read();
-                    let u_p = (index.1 & USER_RB) != 0;
-                    let lb = (index.1 & LIGHT_RB) != 0;
-                    csys.rebuild_index(index.0, u_p, lb);
-                    u_p
-                }
-                None => {
-                    false
-                }
-            }
+            csys_arc.rebuild_index(index, true, false);
+            return true;
         }
         None => {
-            false
+            return false;
+        }
+    }
+}
+pub fn poplightstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.light_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, true, true);
+            return true;
+        }
+        None => {
+            return false;
+        }
+    }
+}
+pub fn popbackroundstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.gen_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, false, false);
+            return true;
+        }
+        None => {
+            return false;
         }
     }
 }
@@ -597,13 +574,43 @@ pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
 
 
 pub fn attend_chunk_queues() {
-   popchunk();
+    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    match csys_arc {
+        Some(csys) => {
+            let cs = csys.read();
+            if popuserstuff(&cs) {
+                return;
+            }
+            if poplightstuff(&cs) {
+                return;
+            }
+        }
+        None => {}
+    }
 }
 pub fn attend_chunk_queues2() {
     let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
     match csys_arc {
         Some(csys) => {
             let cs = csys.read();
+            if popbackroundstuff(&cs) {
+                return;
+            }
+            if popautomatastuff(&cs) {
+                return;
+            }
+        }
+        None => {}
+    }
+}
+pub fn attend_chunk_queues3() {
+    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    match csys_arc {
+        Some(csys) => {
+            let cs = csys.read();
+            if popbackroundstuff(&cs) {
+                return;
+            }
             if popautomatastuff(&cs) {
                 return;
             }
@@ -730,8 +737,11 @@ pub fn attend_needed_spots(
                             for (index, ns) in neededspots.iter().enumerate() {
                                 let csys_arc = csys.read();
                                 //Also check the queues from this thread or else it will hog the lock
-                                if popchunk() {
-                                    break;
+                                if popuserstuff(&csys_arc) {
+                                    return;
+                                }
+                                if poplightstuff(&csys_arc) {
+                                    return;
                                 }
                                 
                                 csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
@@ -1650,7 +1660,7 @@ impl Game {
                 app.add_systems(Update, attend_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
                 app.add_systems(Update, attend_chunk_queues2);
-                //app.add_systems(Update, attend_chunk_queues3);
+                app.add_systems(Update, attend_chunk_queues3);
                 if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
@@ -6003,7 +6013,7 @@ impl Game {
 
             if chunksys.blockat(current) != target {
                 // Set the block at the current position
-                chunksys.set_block_no_sound(current, target, true);
+                chunksys.set_block(current, target, true);
                 count += 1;
                 let key = ChunkSystem::spot_to_chunk_pos(&current);
                 set.insert(key);
@@ -6035,7 +6045,7 @@ impl Game {
 
             if chunksys.blockat(current) != target {
                 // Set the block at the current position
-                chunksys.set_block_no_sound(current, target, true);
+                chunksys.set_block(current, target, true);
                 count += 1;
                 let key = ChunkSystem::spot_to_chunk_pos(&current);
                 set.insert(key);
@@ -6074,17 +6084,11 @@ impl Game {
             // Check if the block at the current position is already deleted
 
             let csys  = chunksys.read();
-            let comb = csys.blockat(current);
-            let bid = comb & Blocks::block_id_bits();
 
-            if bid != 0 {
+            if csys.blockat(current) != 0 {
                 // Set the block at the current position
-                csys.set_block_no_sound(current, 0, true);
-
-                if bid == id {
-                    count += 1;
-                }
-
+                csys.set_block(current, 0, true);
+                count += 1;
                 let key = ChunkSystem::spot_to_chunk_pos(&current);
                 set.insert(key);
                 // Add neighbors to the stack if they have the same id
@@ -6092,10 +6096,10 @@ impl Game {
                     let neighbor_pos = *neighbor + current;
                     let tid = csys.blockat(neighbor_pos);
                     
-                    // if LEAVES.contains(&tid) {
-                    //     Game::set_block_recursively_locked(&csys, tid, neighbor_pos, set, tid | BLOCK_MARKED_FOR_DELETION);
-                    // }
-                    if tid == id || LEAVES.contains(&tid) {
+                    if LEAVES.contains(&tid) {
+                        Game::set_block_recursively_locked(&csys, tid, neighbor_pos, set, tid | BLOCK_MARKED_FOR_DELETION);
+                    }
+                    if tid == id {
                         stack.push(neighbor_pos);
                     }
                 }

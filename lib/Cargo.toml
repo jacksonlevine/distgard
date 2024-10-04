@@ -44,11 +44,11 @@ bevy = "0.14.1"
 
 
 jeffy_quintet = { path = "../core/jeffy_quintet" }
+lib = "0.0.0"
 hashbrown = "0.14.5"
 sled = "0.34.7"
 arrayvec = "0.7.6"
 logos = "0.14.2"
-cpq = "0.2.0"
 
 
 [features]

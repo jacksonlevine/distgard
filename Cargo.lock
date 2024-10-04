@@ -1905,15 +1905,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpq"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b80f252bbbe574043aa38a998f969ff8ab5d1935f7eeb062cf79952f574c611"
-dependencies = [
- "parking_lot 0.12.3",
-]
-
-[[package]]
 name = "crc32fast"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3138,6 +3129,12 @@ dependencies = [
  "ogg",
  "tinyvec",
 ]
+
+[[package]]
+name = "lib"
+version = "0.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ab1378b5d7e2fd8273a7bcdad1669de165ba4e9b739e10e7fe55e3c9186e1b3"
 
 [[package]]
 name = "libc"
@@ -5616,7 +5613,6 @@ dependencies = [
  "borsh",
  "bytes",
  "clipboard",
- "cpq",
  "criterion",
  "crossbeam",
  "dashmap",
@@ -5628,6 +5624,7 @@ dependencies = [
  "imgui",
  "imgui-opengl-renderer",
  "jeffy_quintet",
+ "lib",
  "lockfree",
  "logos",
  "noise",
