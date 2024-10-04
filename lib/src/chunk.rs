@@ -106,6 +106,8 @@ pub struct LightSegment {
 
 
 
+pub const CHUNKAMOUNT: i32 = (10 * 2 + 5) - 1 + (10 * 2 + 5) - 1;
+
 
 
 
@@ -152,6 +154,7 @@ pub struct ChunkGeo {
 }
 
 pub static CHUNK_REBUILD_QUEUE: Lazy<ConcurrentPriorityQueue<(usize, u8), RebuildPriority>> = Lazy::new(|| ConcurrentPriorityQueue::new());
+pub static NEEDED_SPOT_QUEUE: Lazy<ConcurrentPriorityQueue<IVec2, u16>> = Lazy::new(|| ConcurrentPriorityQueue::new());
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum RebuildPriority {
@@ -364,8 +367,8 @@ pub static mut GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::ne
 pub static mut LIGHT_GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashMap::new());
 
 pub struct ChunkSystem {
-    pub chunks: Vec<Arc<Mutex<ChunkFacade>>>,
-    pub geobank: Vec<Arc<ChunkGeo>>,
+    pub chunks: ArrayVec<Arc<Mutex<ChunkFacade>>, {CHUNKAMOUNT as usize}>,
+    pub geobank: ArrayVec<Arc<ChunkGeo>, {CHUNKAMOUNT as usize}>,
     pub takencare: Arc<DashMap<vec::IVec2, ChunkFacade>>,
     pub finished_user_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
     pub finished_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
@@ -412,8 +415,8 @@ impl ChunkSystem {
                 NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
             }
         let mut cs = ChunkSystem {
-            chunks: Vec::new(),
-            geobank: Vec::new(),
+            chunks: ArrayVec::new(),
+            geobank: ArrayVec::new(),
             takencare: Arc::new(DashMap::new()),
             finished_user_geo_queue: Arc::new(lockfree::queue::Queue::new()),
             finished_geo_queue: Arc::new(lockfree::queue::Queue::new()),
@@ -446,8 +449,12 @@ impl ChunkSystem {
         //     }
         // }
         if !cs.headless {
-            for _ in 0..radius * 2 + 5 {
-                for _ in 0..radius * 2 + 5 {
+
+            {
+
+            }
+
+            for _ in 0..CHUNKAMOUNT {
                     cs.chunks.push(Arc::new(Mutex::new(ChunkFacade {
                         geo_index: cs.geobank.len(),
                         used: false,
@@ -463,7 +470,6 @@ impl ChunkSystem {
                         .lock()
                         .memories
                         .push(ChunkMemory::new(&cs.geobank[cs.geobank.len() - 1]));
-                }
             }
         }
 
@@ -2642,7 +2648,12 @@ impl ChunkSystem {
             for c in implicated_chunks.iter() {
                 match self.takencare.get(&c) {
                     Some(cf) => {
-                        CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::BackgroundLow);
+                        if unsafe { GIS_QUEUED.contains_key(&cf.geo_index) } {
+                            continue;
+                        } else {
+                            CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::FeatureMid);
+                        }
+                        
                     }
                     None => {}
                 }
@@ -2789,7 +2800,7 @@ impl ChunkSystem {
             match self.takencare.get(&c) {
                 Some(cf) => {
 
-                    CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::FeatureMid);
+                    CHUNK_REBUILD_QUEUE.push((cf.geo_index, 0), RebuildPriority::BackgroundLow);
                 }
                 None => {}
             }

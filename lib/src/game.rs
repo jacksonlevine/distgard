@@ -10,9 +10,9 @@ use noise::Perlin;
 use once_cell::sync::Lazy;
 use tracing::info;
 
+use bevy::prelude::*;
 use dashmap::DashMap;
 use gl::types::{GLenum, GLsizei, GLsizeiptr, GLuint, GLvoid};
-use bevy::prelude::*;
 use glfw::ffi::glfwGetTime;
 use glfw::{Action, Key, MouseButton, PWindow};
 use std::time::{Duration, Instant};
@@ -27,10 +27,9 @@ use uuid::Uuid;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI8, AtomicU32, Ordering};
 use std::sync::Arc;
 
-use parking_lot::{Mutex, RwLock};
 use jeffy_quintet::client::QuintetClientPlugin;
 use jeffy_quintet::server::QuintetServerPlugin;
-
+use parking_lot::{Mutex, RwLock};
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
@@ -51,7 +50,9 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::{Blocks, BLOCK_MARKED_FOR_DELETION};
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, CHUNK_REBUILD_QUEUE, LIGHT_RB, NONUSERDATAMAP, USERDATAMAPANDMISCMAP, USER_RB};
+use crate::chunk::{
+    ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, CHUNKAMOUNT, CHUNK_REBUILD_QUEUE, LIGHT_RB, NEEDED_SPOT_QUEUE, NONUSERDATAMAP, USERDATAMAPANDMISCMAP, USER_RB
+};
 use crate::climates::VOX_MODEL_PATHS;
 use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
 
@@ -71,7 +72,7 @@ pub static mut PLAYER_DECIDED_SEED: u32 = 0;
 
 pub static mut WAYPOINTS: Lazy<HashMap<String, IVec3>> = Lazy::new(|| HashMap::new());
 
-pub static TILEWID: f32 =  0.10;
+pub static TILEWID: f32 = 0.10;
 
 use crate::camera::Camera;
 use crate::collisioncage::*;
@@ -95,13 +96,13 @@ use crate::selectcube::SelectCube;
 //use crate::server_types::{Message, MessageType};
 use crate::shader::Shader;
 use crate::specialblocks::door::{self, DoorInfo};
-use crate::statics::{MISCSETTINGS, MY_MULTIPLAYER_UUID, save_misc};
+use crate::statics::{save_misc, MISCSETTINGS, MY_MULTIPLAYER_UUID};
 use crate::texture::Texture;
 use crate::textureface::TextureFace;
 use crate::tools::{get_block_material, get_tools_target_material, Material};
 use crate::vec::{self, IVec2, IVec3};
 use crate::voxmodel::JVoxModel;
-use crate::windowandkey::{UNCAPKB, MAINMENUSONG};
+use crate::windowandkey::{MAINMENUSONG, UNCAPKB};
 use crate::worldgeometry::WorldGeometry;
 
 static mut CONVEYOR_SOUND_TIMER: f32 = 0.0;
@@ -109,7 +110,6 @@ static mut CONVEYOR_SOUND_TIMER: f32 = 0.0;
 pub static TRAMPOLINE_VELOCITY_FIGURE: f32 = 10.0;
 
 pub static RECEIVED_WORLD: AtomicBool = AtomicBool::new(false);
-
 
 pub static mut MOUSEX: f64 = 0.0;
 pub static mut MOUSEY: f64 = 0.0;
@@ -161,12 +161,6 @@ pub const FALLFOV: f32 = 93.0;
 
 pub static mut CURRSEED: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
 
-
-
-
-
-
-
 #[cfg(feature = "audio")]
 pub static mut AUDIOPLAYER: Lazy<AudioPlayer> = Lazy::new(|| AudioPlayer::new().unwrap());
 
@@ -175,7 +169,6 @@ pub fn wait_for_decide_singleplayer() {
         while !DECIDEDSPORMP {
             thread::sleep(Duration::from_millis(250));
         }
-        
     }
 }
 
@@ -383,23 +376,18 @@ pub static mut PLAYERPOS: Lazy<PlayerCam> = Lazy::new(|| PlayerCam {
     pitch: AtomicF32::new(0.0),
 });
 
-
 //FREED MEMBERS TAKEN OUT OF Game AS PER BEVY MIGRATION PLAN STEP 1
 
 pub static mut CHUNKSYS: Option<Arc<RwLock<ChunkSystem>>> = None;
 pub static mut CAMERA: Option<Arc<Mutex<Camera>>> = None;
 
-
-
 pub struct Game {
-
     // Removal alert below this very line:
     // This line marks the declaration of the `chunksys` variable, an `Arc<RwLock<ChunkSystem>>`, which has been a cornerstone of our chunk data management.
     // Its removal signifies a major shift in our approach to handling this data, potentially introducing a new system or methodology.
     // This change might bring about significant challenges or complications, as indicated by the phrase "the act that started the war." This metaphorically highlights the possible upheaval or issues caused by the presence of this variable in our codebase.
     // We now hope that by removing `chunksys`, we are bringing an end to the war of development struggles and complications it may have caused. Pray for this war to now end as we remove this from the babels of history.
     // This marks a new chapter in our project's history.
-
     pub shader0: Shader,
     pub oldshader: Shader,
     pub skyshader: Shader,
@@ -407,11 +395,8 @@ pub struct Game {
     pub cloudshader: Shader,
     pub starshader: Shader,
 
-
     //Another resource moved to static. Another resource moved to static. (hey, hey)
     //pub camera: Arc<Mutex<Camera>>,
-
-
     pub run_chunk_thread: Arc<AtomicBool>,
     pub chunk_thread: Option<thread::JoinHandle<()>>,
     pub vars: GameVariables,
@@ -488,7 +473,6 @@ pub struct Game {
 
     pub mouse_slot: (u32, u32),
     //pub needtosend: Arc<Queue<Message>>,
-
     pub health: Arc<AtomicI8>,
     pub crafting_open: bool,
     pub stamina: Arc<AtomicI32>,
@@ -502,7 +486,6 @@ enum FaderNames {
     FovFader = 0,
     VisionsFader = 1,
 }
-
 
 // pub fn popuserstuff(csys_arc: &ChunkSystem) -> bool {
 //     match csys_arc.user_rebuild_requests.pop() {
@@ -538,7 +521,7 @@ enum FaderNames {
 //     }
 // }
 
-pub fn popchunk() -> bool{
+pub fn popchunk() -> bool {
     match CHUNK_REBUILD_QUEUE.pop() {
         Some(index) => {
             let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
@@ -550,14 +533,10 @@ pub fn popchunk() -> bool{
                     csys.rebuild_index(index.0, u_p, lb);
                     u_p
                 }
-                None => {
-                    false
-                }
+                None => false,
             }
         }
-        None => {
-            false
-        }
+        None => false,
     }
 }
 pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
@@ -570,9 +549,7 @@ pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
                     wassome = true;
                     for i in 0..comm.count {
                         let comm = &comm.changes[i];
-                        if (csys_arc.blockat(comm.spot))
-                            == comm.expectedhere
-                        {
+                        if (csys_arc.blockat(comm.spot)) == comm.expectedhere {
                             csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
                             implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
                         }
@@ -584,20 +561,20 @@ pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
             }
         }
         for imp in implic {
-            csys_arc.queue_rerender_with_key(
-                imp,
-                true,
-                false,
-            );
+            csys_arc.queue_rerender_with_key(imp, true, false);
         }
         return wassome;
     }
 }
 
-
-
 pub fn attend_chunk_queues() {
-   popchunk();
+    popchunk();
+}
+pub fn attend_chunk_queues3() {
+    popchunk();
+}
+pub fn attend_chunk_queues4() {
+    popchunk();
 }
 pub fn attend_chunk_queues2() {
     let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
@@ -612,58 +589,35 @@ pub fn attend_chunk_queues2() {
     }
 }
 
-//previously chunk_thread_inner_function
-pub fn attend_needed_spots(
-) {
-
-
-    let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref()};
+pub fn get_sorted_chunk_facades() -> Option<ArrayVec<Arc<Mutex<ChunkFacade>>, {CHUNKAMOUNT as usize}>> {
+    let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
     let cam_arc = unsafe { CAMERA.as_ref() };
-
 
     match csys {
         Some(csys) => {
-            match cam_arc {
-                Some(cam_arc) => {
-                    
+            
                 
-                    let camlock = cam_arc.lock();
-                    let vec3 = camlock.position;
+                    let camsnapshot = unsafe { PLAYERPOS.snapshot() };
 
-                    let camclone = camlock.clone();
-                    drop(camlock);
+                    let user_cpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+                        camsnapshot.pos.0.floor() as i32,
+                        camsnapshot.pos.1.floor() as i32,
+                        camsnapshot.pos.2.floor() as i32,
+                    ));
+                    let mut sorted_chunk_facades: ArrayVec<Arc<Mutex<ChunkFacade>>, {CHUNKAMOUNT as usize}> = ArrayVec::new();
+                    {
+                        let csyschunks = csys.read().chunks.clone();
 
-
-                
-                    static mut LAST_TIME: f32 = 0.0;
-                
-                    unsafe {
-                        let current_time = glfwGetTime() as f32;
-                
-                        let delta_time = current_time - LAST_TIME;
-                
-                        static mut TIME_SINCE_LAST_CHECK: f32 = 1.0;
-                
-                        
-                        let user_dir: Vec2 = Vec2 {
-                            x: camclone.direction.x,
-                            y: camclone.direction.z,
-                        };
-                
-                        if
-                        /*user_c_pos != *last_user_c_pos &&*/
-                        TIME_SINCE_LAST_CHECK >= 1.0 {
-                            
-                
-                            TIME_SINCE_LAST_CHECK = 0.0;
-                
-                            let mut neededspots: Vec<IVec2> = Vec::new();
-                
-                            let  user_cpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
-                                vec3.x.floor() as i32,
-                                vec3.y.floor() as i32,
-                                vec3.z.floor() as i32,
-                            ));
+                        for carc in &csyschunks {
+                            // match carc.try_lock() {
+                            //     Some(cf) => {
+                            //         sorted_chunk_facades.push(*cf);
+                            //     }
+                            //     None => {}
+                            // }
+                            sorted_chunk_facades.push(carc.clone());
+                        }
+                    }
 
                             // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
                             // let adjusted_user_cpos = IVec2 {
@@ -737,29 +691,203 @@ pub fn attend_needed_spots(
                                 csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
                                 
                             }
-                        } else {
-                            TIME_SINCE_LAST_CHECK += delta_time;
                         }
-                    }
-                
-                
+                        if !chunk.used {
+                            true
+                        } else {
+                            let dist = (chunk.pos.x - user_cpos.x).abs()
+                                + (chunk.pos.y - user_cpos.y).abs();
+                            dist >= 10 as i32 * 2
+                        }
+                    });
 
-                }
-                None => {
-
-                }
-            }
+                    sorted_chunk_facades.extend(unused_or_distant);
+                    sorted_chunk_facades.extend(used_and_close);
+                
+                    return Some(sorted_chunk_facades)
         }
         None => {
 
         }
     }
 
-
+    None
 }
 
+#[derive(Resource, Default)]
+pub struct UpdateSortedAvailableChunksTimer(Timer);
 
+pub static NS_QUEUED: Lazy<DashMap<IVec2, bool>> = Lazy::new(|| DashMap::new());
 
+pub fn attend_needed_spots(time: Res<Time>, mut update_avail_timer: ResMut<UpdateSortedAvailableChunksTimer>) {
+    println!("Attending needed spots");
+    let sortedavail = get_sorted_chunk_facades();
+    match sortedavail {
+        Some(sortedavail) => {
+            println!("There was a sortedavail");
+            let camsnapshot = unsafe { PLAYERPOS.snapshot() };
+
+                    let user_cpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+                        camsnapshot.pos.0.floor() as i32,
+                        camsnapshot.pos.1.floor() as i32,
+                        camsnapshot.pos.2.floor() as i32,
+                    ));
+
+            let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+
+            for (index, ns) in NEEDED_SPOT_QUEUE.drain(4).enumerate() {
+
+                // let manhattan_dist = (ns.x - user_cpos.x).abs() + (ns.y - user_cpos.y).abs();
+
+                // if manhattan_dist > 10 {
+                //     continue;
+                // }
+
+                
+                match csys {
+                    Some(csys) => {
+                        let csys_arc = csys.read();
+                        let geoindex =  { 
+                            let i = sortedavail[index].lock().geo_index;
+                            // sortedavail[index].lock().used = true;
+                            // sortedavail[index].lock().pos = ns.clone();
+                            i.clone()
+                        };
+                        csys_arc.move_and_rebuild(geoindex, ns);
+                    }
+                    None => {}
+                }
+            }
+            println!("Finished 8");
+        }   
+        None => {
+
+        }
+    }
+    
+}
+
+#[derive(Resource, Default)]
+pub struct NeededSpotCheckTimer(Timer);
+
+//previously chunk_thread_inner_function
+pub fn queue_needed_spots(time: Res<Time>, mut ctimer: ResMut<NeededSpotCheckTimer>) {
+    let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    let cam_arc = unsafe { CAMERA.as_ref() };
+
+    if ctimer.0.tick(time.delta()).just_finished() {
+
+        match csys {
+            Some(csys) => {
+                match cam_arc {
+                    Some(cam_arc) => {
+                        
+                            let camlock = cam_arc.lock();
+                            let vec3 = camlock.position;
+
+                            let camclone = camlock.clone();
+                            drop(camlock);
+
+                            //static mut LAST_TIME: f32 = 0.0;
+
+                            unsafe {
+                                //let current_time = glfwGetTime() as f32;
+
+                                //let delta_time = current_time - LAST_TIME;
+
+                                //static mut TIME_SINCE_LAST_CHECK: f32 = 1.0;
+
+                                // let user_dir: Vec2 = Vec2 {
+                                //     x: camclone.direction.x,
+                                //     y: camclone.direction.z,
+                                // };
+
+                                println!("Checking for needed spots");
+                                //TIME_SINCE_LAST_CHECK = 0.0;
+
+                                //let mut neededspots: Vec<IVec2> = Vec::new();
+
+                                let user_cpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+                                    vec3.x.floor() as i32,
+                                    vec3.y.floor() as i32,
+                                    vec3.z.floor() as i32,
+                                ));
+
+                                // the player's chunk pos slightly moved forward in the xz direction theyre facing, but xy since its a vec2
+                                // let adjusted_user_cpos = IVec2 {
+                                //     x: (user_cpos.x as f32 + (user_dir.x * 10.0)).round() as i32,
+                                //     y: (user_cpos.y as f32 + (user_dir.y * 10.0)).round() as i32,
+                                // };
+                                let adjusted_user_cpos = user_cpos;
+
+                                let radius = {
+                                    let x = csys.read().radius;
+                                    x.clone()
+                                };
+
+                                for i in -(radius as i32)..(radius as i32) {
+                                    for k in -(radius as i32)..(radius as i32) {
+                                        let csys_arc = csys.read();
+
+                                        let tcarc = csys_arc.takencare.clone();
+                                        let this_spot = IVec2 {
+                                            x: adjusted_user_cpos.x + i as i32,
+                                            y: adjusted_user_cpos.y + k as i32,
+                                        };
+                                        let manhattan_dist_to_this_spot = (this_spot.x - user_cpos.x).abs()
+                                            + (this_spot.y - user_cpos.y).abs();
+
+                                        if !tcarc.contains_key(&this_spot) {
+                                            NEEDED_SPOT_QUEUE.push(this_spot, manhattan_dist_to_this_spot as u16);
+                                            NS_QUEUED.insert(this_spot, true);
+                                        }
+                                    }
+                                }
+
+                                
+                                // //info!("Neededspots size: {}", neededspots.len());
+
+                                // neededspots.sort_by(|a, b| {
+                                //     let dist_a =
+                                //         (a.x - user_cpos.x).pow(2) + (a.y - user_cpos.y).pow(2);
+                                //     let dist_b =
+                                //         (b.x - user_cpos.x).pow(2) + (b.y - user_cpos.y).pow(2);
+                                //     dist_a.cmp(&dist_b)
+                                // });
+
+                                // for (index, ns) in neededspots.iter().enumerate() {
+                                    
+                                //     //Also check the queues from this thread or else it will hog the lock
+                                //     // if popchunk() {
+                                //     //     break;
+                                //     // }
+
+                                //     let csys = csys.clone();
+                                //         let sorted_chunk_facades = sorted_chunk_facades.clone();
+                                //         let index = index.clone();
+                                //         let ns = ns.clone();
+
+                                //     thread::spawn(move || {
+                                        
+
+                                //         let csys_arc = csys.read();
+                                        
+                                //         csys_arc
+                                //         .move_and_rebuild(sorted_chunk_facades[index].geo_index, ns);
+                                //     });
+                                    
+                                // }
+                                // println!("Just finished that loop");
+                            }
+                        }
+                    
+                    None => {}
+                }
+            }
+            None => {}
+        }
+    }
+}
 
 impl Game {
     #[cfg(feature = "glfw")]
@@ -770,7 +898,6 @@ impl Game {
         addressentered: &Arc<AtomicBool>,
         address: &Arc<Mutex<Option<String>>>,
     ) -> JoinHandle<Game> {
-
         Self::newold(
             &Some(window.clone()),
             connectonstart,
@@ -797,7 +924,6 @@ impl Game {
         addressentered: &Arc<AtomicBool>,
         address: &Arc<Mutex<Option<String>>>,
     ) -> JoinHandle<Game> {
-        
         unsafe {
             if headless {
                 HEADLESS = true;
@@ -812,11 +938,8 @@ impl Game {
         unsafe {
             if SINGLEPLAYER {
                 connectonstart = false;
-                
             }
         }
-
-        
 
         let oldshader = Shader::new(path!("assets/oldvert.glsl"), path!("assets/oldfrag.glsl"));
         let shader0 = Shader::new(path!("assets/vert.glsl"), path!("assets/frag.glsl"));
@@ -825,8 +948,6 @@ impl Game {
         let cam = Arc::new(Mutex::new(Camera::new()));
 
         let stamina = Arc::new(AtomicI32::new(100));
-
-        
 
         faders.write().extend(vec![
             Fader::new(83.0, 80.0, 30.0, false), //FOV fader for moving
@@ -870,7 +991,7 @@ impl Game {
             CURRSEED.store(PLAYER_DECIDED_SEED, Ordering::Relaxed);
         }
         let mut csys = ChunkSystem::new(10, unsafe { PLAYER_DECIDED_SEED }, 0, headless);
-        
+
         unsafe {
             BUILD_VOXEL_MODELS = vec![
                 JVoxModel::new(path!("assets/voxelmodels/build1.vox")),
@@ -883,7 +1004,10 @@ impl Game {
                 JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
             ]
         };
-        let voxel_models: Vec<JVoxModel> = VOX_MODEL_PATHS.iter().map(|path| JVoxModel::new(path)).collect();
+        let voxel_models: Vec<JVoxModel> = VOX_MODEL_PATHS
+            .iter()
+            .map(|path| JVoxModel::new(path))
+            .collect();
 
         // let voxel_models = vec![
         //     JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
@@ -1021,9 +1145,6 @@ impl Game {
             stamina.clone(),
         );
 
-        
-
-        
         //IMPORTANT: Push the inv row slots first
         fn add_inventory_rows(
             elements: &mut Vec<HudElement>,
@@ -1035,9 +1156,6 @@ impl Game {
             let tf = TextureFace::new(0, 14);
 
             let rh: f32 = 0.2;
-
-
-       
 
             for y in 0..rows {
                 for i in 0..rowlength {
@@ -1051,8 +1169,11 @@ impl Game {
                         SlotIndexType::None => SlotIndexType::None,
                     };
                     let invrowel = HudElement::new(
-                        Vec2::new(-(TILEWID * 3.5) + i as f32 * TILEWID, yoffset - y as f32 * rh),
-                        Vec2::new(TILEWID * 1.5,TILEWID * 1.5),
+                        Vec2::new(
+                            -(TILEWID * 3.5) + i as f32 * TILEWID,
+                            yoffset - y as f32 * rh,
+                        ),
+                        Vec2::new(TILEWID * 1.5, TILEWID * 1.5),
                         [
                             tf.blx, tf.bly, tf.brx, tf.bry, tf.trx, tf.tr_y, tf.trx, tf.tr_y,
                             tf.tlx, tf.tly, tf.blx, tf.bly,
@@ -1078,7 +1199,10 @@ impl Game {
                         SlotIndexType::None => SlotIndexType::None,
                     };
                     let invrowel = HudElement::new(
-                        Vec2::new(-(TILEWID * 3.5) + i as f32 * TILEWID, yoffset - y as f32 * rh),
+                        Vec2::new(
+                            -(TILEWID * 3.5) + i as f32 * TILEWID,
+                            yoffset - y as f32 * rh,
+                        ),
                         Vec2::new(TILEWID, TILEWID),
                         [
                             tf.blx, tf.bly, tf.brx, tf.bry, tf.trx, tf.tr_y, tf.trx, tf.tr_y,
@@ -1251,7 +1375,7 @@ impl Game {
         //let mut rng = StdRng::from_entropy();
         //let seed = rng.gen_range(0..229232);
 
-       // let server_command_queue = Arc::new(Queue::<Message>::new());
+        // let server_command_queue = Arc::new(Queue::<Message>::new());
         //let server_command_hp_queue = Arc::new(Queue::<Message>::new());
 
         let kc = Arc::new(DashMap::new());
@@ -1282,7 +1406,6 @@ impl Game {
         let window = &window.as_ref().unwrap().clone();
 
         let chest_registry = Arc::new(DashMap::new());
-
 
         //INITIALIZING PREVIOUS GAME RESOURCES HERE
 
@@ -1373,12 +1496,12 @@ impl Game {
                 &chunksys,
                 &inv,
                 connectonstart,
-               // &needtosend.clone(),
+                // &needtosend.clone(),
             ),
             inventory: inv,
             animations: Vec::new(),
             skins: Vec::new(),
-            
+
             current_time: 0.0,
             // netconn: NetworkConnector::new(
             //     &chunksys,
@@ -1428,7 +1551,7 @@ impl Game {
         #[cfg(feature = "glfw")]
         if !headless {
             g.load_model(path!("assets/models/player.glb"));
-            
+
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
             // g.load_model(path!("assets/models/monster1/scene.gltf"));
@@ -1635,50 +1758,67 @@ impl Game {
     pub fn spawn_bevy_thread() {
         thread::spawn(move || {
             let mut app = App::new();
-            app
-            .add_plugins(MinimalPlugins)
-            ;
-            
+            app.add_plugins(MinimalPlugins)
+            .insert_resource(NeededSpotCheckTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
+                .init_resource::<UpdateSortedAvailableChunksTimer>();
+
             //.add_systems(Update, || println!("Testeroonie"));
-            
-            if unsafe {HEADLESS} { //Headless server
+
+            if unsafe { HEADLESS } {
+                //Headless server
                 app.add_plugins(QuintetServerPlugin::default());
                 app.add_systems(Startup, start_listening);
                 app.add_systems(Update, handle_client_messages);
-            
             } else {
-                app.add_systems(Update, attend_needed_spots);
+                app.add_systems(Update, queue_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
                 app.add_systems(Update, attend_chunk_queues2);
+                app.add_systems(Update, attend_needed_spots);
                 //app.add_systems(Update, attend_chunk_queues3);
-                if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
+                if unsafe { !HEADLESS } && unsafe { !SINGLEPLAYER } {
+                    //Client multiplayer
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
                     app.add_systems(Startup, start_connection);
                     app.add_systems(Update, handle_server_messages);
-                } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
-
-                } 
+                } else if unsafe { !HEADLESS } && unsafe { SINGLEPLAYER } { //Client singleplayer
+                }
             }
-            
-            
-            
-            
-            
-            
+
             app.run();
         });
     }
 
     pub fn save_world_aspects_to_db(&self) {
-        put_misc_entry("timeofday", self.timeofday.lock().to_string().as_bytes().to_vec());
-        put_misc_entry("playerposition", borsh::to_vec(unsafe { &PLAYERPOS.snapshot().pos }).unwrap());
-        put_misc_entry("weather", unsafe { WEATHERTYPE.to_string().as_bytes().to_vec() });
-        put_misc_entry("inventory", borsh::to_vec(&self.inventory.read().inv).unwrap());
-        put_misc_entry("health", self.health.load(Ordering::Relaxed).to_string().as_bytes().to_vec());
-        put_misc_entry("waypoints", borsh::to_vec(unsafe { &(*WAYPOINTS) }).unwrap());
+        put_misc_entry(
+            "timeofday",
+            self.timeofday.lock().to_string().as_bytes().to_vec(),
+        );
+        put_misc_entry(
+            "playerposition",
+            borsh::to_vec(unsafe { &PLAYERPOS.snapshot().pos }).unwrap(),
+        );
+        put_misc_entry("weather", unsafe {
+            WEATHERTYPE.to_string().as_bytes().to_vec()
+        });
+        put_misc_entry(
+            "inventory",
+            borsh::to_vec(&self.inventory.read().inv).unwrap(),
+        );
+        put_misc_entry(
+            "health",
+            self.health
+                .load(Ordering::Relaxed)
+                .to_string()
+                .as_bytes()
+                .to_vec(),
+        );
+        put_misc_entry(
+            "waypoints",
+            borsh::to_vec(unsafe { &(*WAYPOINTS) }).unwrap(),
+        );
     }
-    
+
     pub fn load_world_aspects_from_db(&self) {
         let timeofday = get_misc_entry("timeofday");
         let playerpos = get_misc_entry("playerposition");
@@ -1686,12 +1826,15 @@ impl Game {
         let waypoints = get_misc_entry("waypoints");
 
         if let Some(timeofday) = timeofday {
-            *self.timeofday.lock() = (&String::from_utf8(timeofday).unwrap()).parse::<f32>().unwrap();
+            *self.timeofday.lock() = (&String::from_utf8(timeofday).unwrap())
+                .parse::<f32>()
+                .unwrap();
         }
 
         if let Some(playerpos) = playerpos {
             unsafe {
-                let savedpos: (f32, f32, f32) = borsh::BorshDeserialize::try_from_slice(&playerpos).unwrap();
+                let savedpos: (f32, f32, f32) =
+                    borsh::BorshDeserialize::try_from_slice(&playerpos).unwrap();
                 let cam = CAMERA.as_mut().unwrap();
                 (*cam).lock().position = Vec3::new(savedpos.0, savedpos.1, savedpos.2);
             }
@@ -1699,7 +1842,9 @@ impl Game {
 
         if let Some(weather) = weather {
             unsafe {
-                WEATHERTYPE = (&String::from_utf8(weather).unwrap()).parse::<f32>().unwrap();
+                WEATHERTYPE = (&String::from_utf8(weather).unwrap())
+                    .parse::<f32>()
+                    .unwrap();
             }
         }
 
@@ -1711,7 +1856,10 @@ impl Game {
 
         let health = get_misc_entry("health");
         if let Some(health) = health {
-            self.health.store((&String::from_utf8(health).unwrap()).parse::<i8>().unwrap(), Ordering::Relaxed);
+            self.health.store(
+                (&String::from_utf8(health).unwrap()).parse::<i8>().unwrap(),
+                Ordering::Relaxed,
+            );
         }
 
         if let Some(waypoints) = waypoints {
@@ -1720,7 +1868,6 @@ impl Game {
             }
         }
     }
-
 
     pub fn update_avail_recipes(inv: &Arc<RwLock<Inventory>>) {
         unsafe {
@@ -1765,7 +1912,6 @@ impl Game {
 
     pub fn save_one_chest_to_file(&self, key: IVec3) {
         let seed = {
-
             let s = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
             s.clone()
         };
@@ -1813,7 +1959,6 @@ impl Game {
 
     pub fn save_current_chests_to_file(&self) {
         let seed = {
-
             let s = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
             s.clone()
         };
@@ -2192,15 +2337,12 @@ impl Game {
     }
 
     pub fn initialize_being_in_world(&mut self) -> JoinHandle<()> {
-
-        
         if self.vars.in_multiplayer {
             //ChunkSystem::initial_rebuild_on_main_thread(&self.chunksys.clone(), &self.shader0, &self.camera.lock().position);
             while !RECEIVED_WORLD.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
             }
         }
-        
 
         self.vars.hostile_world = false; //(self.chunksys.read().planet_type % 2) != 0;
 
@@ -2844,7 +2986,7 @@ impl Game {
 
         if in_m {
             //let n = needtosend.clone();
-           // n.push(Message::invupdate(slot, newid, newcount));
+            // n.push(Message::invupdate(slot, newid, newcount));
             result = Ok(true);
         } else {
             let mut inventory = inv.write();
@@ -2876,7 +3018,7 @@ impl Game {
         let result;
 
         if in_m {
-           // let n = needtosend.clone();
+            // let n = needtosend.clone();
 
             let inventory = inv.read();
 
@@ -3149,7 +3291,7 @@ impl Game {
                                         invclone[i].0,
                                         invclone[i].1,
                                         self.vars.in_multiplayer,
-                                       // &self.needtosend,
+                                        // &self.needtosend,
                                     );
                                 }
                             }
@@ -3242,8 +3384,7 @@ impl Game {
             40 => {
                 if !self.vars.in_multiplayer {
                     let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-                    csys
-                        .read()
+                    csys.read()
                         .set_block_and_queue_rerender_no_sound(spot, 41, false, true, true);
                 } else {
                     // let mut message = Message::new(
@@ -3271,8 +3412,7 @@ impl Game {
             41 => {
                 if !self.vars.in_multiplayer {
                     let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-                    csys
-                        .read()
+                    csys.read()
                         .set_block_and_queue_rerender_no_sound(spot, 40, false, true, true);
                 } else {
                     // let mut message = Message::new(
@@ -3727,7 +3867,7 @@ impl Game {
             // }
 
             // let morestuff = true;
-            
+
             // for _ in 0..5 {
             //     match self.hp_server_command_queue.pop() {
             //         Some(comm) => {
@@ -4040,41 +4180,34 @@ impl Game {
                 let cam = unsafe { CAMERA.as_ref().unwrap() };
                 for i in self.faders.write().iter_mut().enumerate() {
                     if i.0 == (FaderNames::FovFader as usize) {
-
                         static mut HEAD_WAS_IN_WATER: bool = false;
-                        
-                            let bool = i.1.tick(self.delta_time);
-                            if self.headinwater {
-                                
-                                unsafe {
-                                    if !HEAD_WAS_IN_WATER {
-                                        
-                                        cam.lock().update_fov(i.1.value * 0.75);
-                                        HEAD_WAS_IN_WATER = true;
-                                    }
+
+                        let bool = i.1.tick(self.delta_time);
+                        if self.headinwater {
+                            unsafe {
+                                if !HEAD_WAS_IN_WATER {
+                                    cam.lock().update_fov(i.1.value * 0.75);
+                                    HEAD_WAS_IN_WATER = true;
                                 }
-                            } else {
-                                unsafe {
-                                    if HEAD_WAS_IN_WATER {
-                                        cam.lock().update_fov(i.1.value);
-                                        HEAD_WAS_IN_WATER = false;
-                                    } else {
-                                        if bool {
-                                            cam.lock().update_fov(i.1.value);
-                                        }
-                                    }
-                                    
-                                }
-                                
                             }
-                            
-                        
+                        } else {
+                            unsafe {
+                                if HEAD_WAS_IN_WATER {
+                                    cam.lock().update_fov(i.1.value);
+                                    HEAD_WAS_IN_WATER = false;
+                                } else {
+                                    if bool {
+                                        cam.lock().update_fov(i.1.value);
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         i.1.tick(self.delta_time);
                     }
                 }
             }
-                
+
             if ((self.controls.forward
                 || self.controls.back
                 || self.controls.left
@@ -4125,10 +4258,9 @@ impl Game {
             self.drops.update_and_draw_drops(&self.delta_time, &mvp);
 
             self.hud.update();
-            if unsafe {!HIDEHUD} {
+            if unsafe { !HIDEHUD } {
                 self.hud.draw();
             }
-            
 
             self.tex.update_texture(self.delta_time);
 
@@ -4256,7 +4388,9 @@ impl Game {
 
     pub fn update_movement_and_physics(&mut self) {
         static mut NUDM: Lazy<Arc<DashMap<IVec3, u32>>> = Lazy::new(|| Arc::new(DashMap::new()));
-        let UDM = unsafe { &*addr_of!(USERDATAMAPANDMISCMAP) }.as_ref().unwrap();
+        let UDM = unsafe { &*addr_of!(USERDATAMAPANDMISCMAP) }
+            .as_ref()
+            .unwrap();
         static mut PERL: Lazy<Arc<RwLock<Perlin>>> =
             Lazy::new(|| Arc::new(RwLock::new(Perlin::new(0))));
         static mut HAS_BEEN_SET: bool = false;
@@ -4267,10 +4401,10 @@ impl Game {
                 let cr = csys.read();
                 cr.perlin.clone()
             };
-            
+
             let udm = USERDATAMAPANDMISCMAP.as_ref().unwrap();
             let nudm = NONUSERDATAMAP.as_ref().unwrap();
-            
+
             if !HAS_BEEN_SET {
                 (*NUDM) = nudm.clone();
                 (*PERL) = per.clone();
@@ -4347,18 +4481,27 @@ impl Game {
         );
 
         let blockfeetin = unsafe {
-            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), feetposi) & Blocks::block_id_bits()
+            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), feetposi)
+                & Blocks::block_id_bits()
         };
         let blockfeetinlower = unsafe {
-            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), feetposi2) & Blocks::block_id_bits()
+            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), feetposi2)
+                & Blocks::block_id_bits()
         };
-        let blockbitsunderfeet =
-            unsafe { ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), underfeetposi) };
+        let blockbitsunderfeet = unsafe {
+            ChunkSystem::_blockat(
+                &*addr_of!(NUDM),
+                &*addr_of!(UDM),
+                &PERL.read(),
+                underfeetposi,
+            )
+        };
         let blockunderfeet = blockbitsunderfeet & Blocks::block_id_bits();
         // println!("BUF: {}", blockunderfeet);
 
         let blockheadin = unsafe {
-            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), headposi) & Blocks::block_id_bits()
+            ChunkSystem::_blockat(&*addr_of!(NUDM), &*addr_of!(UDM), &PERL.read(), headposi)
+                & Blocks::block_id_bits()
         };
 
         if blockheadin == 2 {
@@ -4795,10 +4938,8 @@ impl Game {
                 Some(cam) => {
                     LAST_CAM = cam.clone();
                     &*addr_of!(LAST_CAM)
-                },
-                None => {
-                    &*addr_of!(LAST_CAM)
-                },
+                }
+                None => &*addr_of!(LAST_CAM),
             };
             let c = camlock.clone();
             // dropping reference does nothing
@@ -4811,7 +4952,6 @@ impl Game {
                 cam_clone.direction.y,
                 cam_clone.direction.z,
             );
-
 
             gl::Uniform4f(T_C_LOC, top.x, top.y, top.z, top.w);
             gl::Uniform4f(B_C_LOC, bot.x, bot.y, bot.z, bot.w);
@@ -4961,18 +5101,18 @@ impl Game {
     #[cfg(feature = "glfw")]
     pub fn draw(&self) {
         // use crate::chunk::CH_W;
-         // Enable MSAA in OpenGL
-    // unsafe {
-    //     gl::Enable(gl::MULTISAMPLE);
-    // }
+        // Enable MSAA in OpenGL
+        // unsafe {
+        //     gl::Enable(gl::MULTISAMPLE);
+        // }
 
         use crate::chunk::{CH_W, GIS_QUEUED, LIGHT_GIS_QUEUED};
-        
+
         let campitch = {
             let cam = unsafe { CAMERA.as_ref().unwrap() };
             cam.lock().pitch
         };
-        
+
         //Sky
         #[cfg(feature = "glfw")]
         match self.vars.hostile_world {
@@ -5000,269 +5140,267 @@ impl Game {
             gl::UseProgram(self.shader0.shader_id);
         }
 
-            //unsafe { GLCHUNKS } {
-                let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
+        //unsafe { GLCHUNKS } {
+        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
 
-            let ugqarc = csys.read().finished_user_geo_queue.clone();
+        let ugqarc = csys.read().finished_user_geo_queue.clone();
 
-            match ugqarc.pop() {
-                Some(ready) => {
-                    //info!("Some user queue");
-                    // info!("Weird!");
+        match ugqarc.pop() {
+            Some(ready) => {
+                //info!("Some user queue");
+                // info!("Weird!");
 
-                    
-                            unsafe { let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index); };
-                  
+                unsafe {
+                    let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index);
+                };
 
-                            unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
-                   
+                unsafe {
+                    let _ = &GIS_QUEUED.remove(&ready.geo_index);
+                };
 
-                    let bankarc = csys.read().geobank[ready.geo_index].clone();
+                let bankarc = csys.read().geobank[ready.geo_index].clone();
 
-                    let cs = csys.read();
+                let cs = csys.read();
 
-                    let mut cmemlock = cs.chunk_memories.lock();
+                let mut cmemlock = cs.chunk_memories.lock();
 
-                    cmemlock.memories[ready.geo_index].length = ready.newlength;
-                    cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
-                    cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
-                    cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
-                    cmemlock.memories[ready.geo_index].pos = ready.newpos;
-                    cmemlock.memories[ready.geo_index].used = true;
-                    //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                cmemlock.memories[ready.geo_index].length = ready.newlength;
+                cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
+                cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
+                cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
+                cmemlock.memories[ready.geo_index].pos = ready.newpos;
+                cmemlock.memories[ready.geo_index].used = true;
+                //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
-                    //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
-                    //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
-                    //if num == 0 { num = 1; } else { num = 0; }
-                    //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
-                    // if num == 0 {
-                    //     bankarc.num.store(1, Ordering::Relaxed);
-                    //     num = 1;
-                    // } else {
-                    //     bankarc.num.store(0, Ordering::Relaxed);
-                    //     num = 0;
-                    // };
+                //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
+                //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
+                //if num == 0 { num = 1; } else { num = 0; }
+                //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
+                // if num == 0 {
+                //     bankarc.num.store(1, Ordering::Relaxed);
+                //     num = 1;
+                // } else {
+                //     bankarc.num.store(0, Ordering::Relaxed);
+                //     num = 0;
+                // };
 
-                    let v32 = cmemlock.memories[ready.geo_index].vbo32;
-                    let v8 = cmemlock.memories[ready.geo_index].vbo8;
-                    let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
-                    let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
-                    let vv = cmemlock.memories[ready.geo_index].vvbo;
-                    let uvv = cmemlock.memories[ready.geo_index].uvvbo;
+                let v32 = cmemlock.memories[ready.geo_index].vbo32;
+                let v8 = cmemlock.memories[ready.geo_index].vbo8;
+                let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
+                let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
+                let vv = cmemlock.memories[ready.geo_index].vvbo;
+                let uvv = cmemlock.memories[ready.geo_index].uvvbo;
 
-                    let wvv = cmemlock.memories[ready.geo_index].wvvbo;
-                    let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
+                let wvv = cmemlock.memories[ready.geo_index].wvvbo;
+                let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
 
-                    let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
-                    let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
+                let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
+                let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
 
-                    WorldGeometry::bind_geometry(
-                        v32,
-                        v8,
-                        vbo8rgb,
-                        true,
-                        &self.shader0,
-                        bankarc.solids(),
-                    );
-                    WorldGeometry::bind_geometry(
-                        tv32,
-                        tv8,
-                        tvbo8rgb,
-                        true,
-                        &self.shader0,
-                        bankarc.transparents(),
-                    );
+                WorldGeometry::bind_geometry(
+                    v32,
+                    v8,
+                    vbo8rgb,
+                    true,
+                    &self.shader0,
+                    bankarc.solids(),
+                );
+                WorldGeometry::bind_geometry(
+                    tv32,
+                    tv8,
+                    tvbo8rgb,
+                    true,
+                    &self.shader0,
+                    bankarc.transparents(),
+                );
 
-                    WorldGeometry::bind_old_geometry(
-                        vv,
-                        uvv,
-                        &bankarc.vdata.lock(),
-                        &bankarc.uvdata.lock(),
-                        &self.oldshader,
-                    );
-                    WorldGeometry::bind_old_geometry(
-                        wvv,
-                        wuvv,
-                        &bankarc.wvdata.lock(),
-                        &bankarc.wuvdata.lock(),
-                        &self.oldshader,
-                    );
-                }
-                None => {}
+                WorldGeometry::bind_old_geometry(
+                    vv,
+                    uvv,
+                    &bankarc.vdata.lock(),
+                    &bankarc.uvdata.lock(),
+                    &self.oldshader,
+                );
+                WorldGeometry::bind_old_geometry(
+                    wvv,
+                    wuvv,
+                    &bankarc.wvdata.lock(),
+                    &bankarc.wuvdata.lock(),
+                    &self.oldshader,
+                );
             }
+            None => {}
+        }
 
-            let gqarc = csys.read().finished_geo_queue.clone();
+        let gqarc = csys.read().finished_geo_queue.clone();
 
-            match gqarc.pop() {
-                Some(ready) => {
+        match gqarc.pop() {
+            Some(ready) => {
+                unsafe {
+                    let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index);
+                };
 
-                  
-                            unsafe { let _ = &LIGHT_GIS_QUEUED.remove(&ready.geo_index); };
-                  
+                unsafe {
+                    let _ = &GIS_QUEUED.remove(&ready.geo_index);
+                };
 
-                            unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
-                    
+                let cs = csys.read();
+                //info!("Weird!");
 
-                    let cs = csys.read();
-                    //info!("Weird!");
+                let bankarc = cs.geobank[ready.geo_index].clone();
 
-                    let bankarc = cs.geobank[ready.geo_index].clone();
+                let mut cmemlock = cs.chunk_memories.lock();
 
-                    
+                cmemlock.memories[ready.geo_index].length = ready.newlength;
+                cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
+                cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
+                cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
+                cmemlock.memories[ready.geo_index].pos = ready.newpos;
+                cmemlock.memories[ready.geo_index].used = true;
+                cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
 
-                    let mut cmemlock = cs.chunk_memories.lock();
+                //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
+                //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
+                //if num == 0 { num = 1; } else { num = 0; }
+                //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
+                // if num == 0 {
+                //     bankarc.num.store(1, Ordering::Relaxed);
+                //     num = 1;
+                // } else {
+                //     bankarc.num.store(0, Ordering::Relaxed);
+                //     num = 0;
+                // };
 
-                    cmemlock.memories[ready.geo_index].length = ready.newlength;
-                    cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
-                    cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
-                    cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
-                    cmemlock.memories[ready.geo_index].pos = ready.newpos;
-                    cmemlock.memories[ready.geo_index].used = true;
-                    cmemlock.memories[ready.geo_index].timebeendrawn = 0.0;
+                let v32 = cmemlock.memories[ready.geo_index].vbo32;
+                let v8 = cmemlock.memories[ready.geo_index].vbo8;
+                let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
+                let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
 
-                    //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
-                    //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
-                    //if num == 0 { num = 1; } else { num = 0; }
-                    //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
-                    // if num == 0 {
-                    //     bankarc.num.store(1, Ordering::Relaxed);
-                    //     num = 1;
-                    // } else {
-                    //     bankarc.num.store(0, Ordering::Relaxed);
-                    //     num = 0;
-                    // };
+                let vv = cmemlock.memories[ready.geo_index].vvbo;
+                let uvv = cmemlock.memories[ready.geo_index].uvvbo;
 
-                    let v32 = cmemlock.memories[ready.geo_index].vbo32;
-                    let v8 = cmemlock.memories[ready.geo_index].vbo8;
-                    let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
-                    let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
+                let wvv = cmemlock.memories[ready.geo_index].wvvbo;
+                let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
 
-                    let vv = cmemlock.memories[ready.geo_index].vvbo;
-                    let uvv = cmemlock.memories[ready.geo_index].uvvbo;
+                let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
+                let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
 
-                    let wvv = cmemlock.memories[ready.geo_index].wvvbo;
-                    let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
+                WorldGeometry::bind_geometry(
+                    v32,
+                    v8,
+                    vbo8rgb,
+                    true,
+                    &self.shader0,
+                    bankarc.solids(),
+                );
+                WorldGeometry::bind_geometry(
+                    tv32,
+                    tv8,
+                    tvbo8rgb,
+                    true,
+                    &self.shader0,
+                    bankarc.transparents(),
+                );
 
-                    let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
-                    let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
+                WorldGeometry::bind_old_geometry(
+                    vv,
+                    uvv,
+                    &bankarc.vdata.lock(),
+                    &bankarc.uvdata.lock(),
+                    &self.oldshader,
+                );
+                WorldGeometry::bind_old_geometry(
+                    wvv,
+                    wuvv,
+                    &bankarc.wvdata.lock(),
+                    &bankarc.wuvdata.lock(),
+                    &self.oldshader,
+                );
 
-                    WorldGeometry::bind_geometry(
-                        v32,
-                        v8,
-                        vbo8rgb,
-                        true,
-                        &self.shader0,
-                        bankarc.solids(),
-                    );
-                    WorldGeometry::bind_geometry(
-                        tv32,
-                        tv8,
-                        tvbo8rgb,
-                        true,
-                        &self.shader0,
-                        bankarc.transparents(),
-                    );
+                let mut userstuff = true;
+                while userstuff {
+                    match ugqarc.pop() {
+                        Some(ready) => {
+                            //info!("Some user queue");
+                            // info!("Weird!");
 
-                    WorldGeometry::bind_old_geometry(
-                        vv,
-                        uvv,
-                        &bankarc.vdata.lock(),
-                        &bankarc.uvdata.lock(),
-                        &self.oldshader,
-                    );
-                    WorldGeometry::bind_old_geometry(
-                        wvv,
-                        wuvv,
-                        &bankarc.wvdata.lock(),
-                        &bankarc.wuvdata.lock(),
-                        &self.oldshader,
-                    );
+                            let bankarc = csys.read().geobank[ready.geo_index].clone();
 
-                    let mut userstuff = true;
-                    while userstuff {
-                        match ugqarc.pop() {
-                            Some(ready) => {
-                                //info!("Some user queue");
-                                // info!("Weird!");
+                            //let mut cmemlock = self.chunksys.chunk_memories.lock();
 
-                                let bankarc = csys.read().geobank[ready.geo_index].clone();
+                            cmemlock.memories[ready.geo_index].length = ready.newlength;
+                            cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
+                            cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
+                            cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
+                            cmemlock.memories[ready.geo_index].pos = ready.newpos;
+                            cmemlock.memories[ready.geo_index].used = true;
+                            //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0; //dont do this for user updates because they should be seamless (timebeendrawn going to 0 will cause begining animation to happen)
 
-                                //let mut cmemlock = self.chunksys.chunk_memories.lock();
+                            //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
+                            //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
+                            //if num == 0 { num = 1; } else { num = 0; }
+                            //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
+                            // if num == 0 {
+                            //     bankarc.num.store(1, Ordering::Relaxed);
+                            //     num = 1;
+                            // } else {
+                            //     bankarc.num.store(0, Ordering::Relaxed);
+                            //     num = 0;
+                            // };
 
-                                cmemlock.memories[ready.geo_index].length = ready.newlength;
-                                cmemlock.memories[ready.geo_index].tlength = ready.newtlength;
-                                cmemlock.memories[ready.geo_index].vlength = ready.newvlength;
-                                cmemlock.memories[ready.geo_index].wvlength = ready.newwvlength;
-                                cmemlock.memories[ready.geo_index].pos = ready.newpos;
-                                cmemlock.memories[ready.geo_index].used = true;
-                                //cmemlock.memories[ready.geo_index].timebeendrawn = 0.0; //dont do this for user updates because they should be seamless (timebeendrawn going to 0 will cause begining animation to happen)
+                            let v32 = cmemlock.memories[ready.geo_index].vbo32;
+                            let v8 = cmemlock.memories[ready.geo_index].vbo8;
+                            let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
+                            let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
+                            let vv = cmemlock.memories[ready.geo_index].vvbo;
+                            let uvv = cmemlock.memories[ready.geo_index].uvvbo;
 
-                                //info!("Received update to {} {} {} {}", ready.newlength, ready.newtlength, ready.newpos.x, ready.newpos.y);
-                                //info!("New cmemlock values: {} {} {} {} {}", cmemlock.memories[ready.geo_index].length, cmemlock.memories[ready.geo_index].tlength, cmemlock.memories[ready.geo_index].pos.x, cmemlock.memories[ready.geo_index].pos.y, cmemlock.memories[ready.geo_index].used);
-                                //if num == 0 { num = 1; } else { num = 0; }
-                                //bankarc.num.store(num, std::sync::atomic::Ordering::Release);
-                                // if num == 0 {
-                                //     bankarc.num.store(1, Ordering::Relaxed);
-                                //     num = 1;
-                                // } else {
-                                //     bankarc.num.store(0, Ordering::Relaxed);
-                                //     num = 0;
-                                // };
+                            let wvv = cmemlock.memories[ready.geo_index].wvvbo;
+                            let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
 
-                                let v32 = cmemlock.memories[ready.geo_index].vbo32;
-                                let v8 = cmemlock.memories[ready.geo_index].vbo8;
-                                let tv32 = cmemlock.memories[ready.geo_index].tvbo32;
-                                let tv8 = cmemlock.memories[ready.geo_index].tvbo8;
-                                let vv = cmemlock.memories[ready.geo_index].vvbo;
-                                let uvv = cmemlock.memories[ready.geo_index].uvvbo;
+                            let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
+                            let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
 
-                                let wvv = cmemlock.memories[ready.geo_index].wvvbo;
-                                let wuvv = cmemlock.memories[ready.geo_index].wuvvbo;
+                            WorldGeometry::bind_geometry(
+                                v32,
+                                v8,
+                                vbo8rgb,
+                                true,
+                                &self.shader0,
+                                bankarc.solids(),
+                            );
+                            WorldGeometry::bind_geometry(
+                                tv32,
+                                tv8,
+                                tvbo8rgb,
+                                true,
+                                &self.shader0,
+                                bankarc.transparents(),
+                            );
 
-                                let vbo8rgb = cmemlock.memories[ready.geo_index].vbo8rgb;
-                                let tvbo8rgb = cmemlock.memories[ready.geo_index].tvbo8rgb;
-
-                                WorldGeometry::bind_geometry(
-                                    v32,
-                                    v8,
-                                    vbo8rgb,
-                                    true,
-                                    &self.shader0,
-                                    bankarc.solids(),
-                                );
-                                WorldGeometry::bind_geometry(
-                                    tv32,
-                                    tv8,
-                                    tvbo8rgb,
-                                    true,
-                                    &self.shader0,
-                                    bankarc.transparents(),
-                                );
-
-                                WorldGeometry::bind_old_geometry(
-                                    vv,
-                                    uvv,
-                                    &bankarc.vdata.lock(),
-                                    &bankarc.uvdata.lock(),
-                                    &self.oldshader,
-                                );
-                                WorldGeometry::bind_old_geometry(
-                                    wvv,
-                                    wuvv,
-                                    &bankarc.wvdata.lock(),
-                                    &bankarc.wuvdata.lock(),
-                                    &self.oldshader,
-                                );
-                            }
-                            None => {
-                                userstuff = false;
-                            }
+                            WorldGeometry::bind_old_geometry(
+                                vv,
+                                uvv,
+                                &bankarc.vdata.lock(),
+                                &bankarc.uvdata.lock(),
+                                &self.oldshader,
+                            );
+                            WorldGeometry::bind_old_geometry(
+                                wvv,
+                                wuvv,
+                                &bankarc.wvdata.lock(),
+                                &bankarc.wuvdata.lock(),
+                                &self.oldshader,
+                            );
+                        }
+                        None => {
+                            userstuff = false;
                         }
                     }
                 }
-                None => {}
             }
-        
+            None => {}
+        }
 
         let cam_clone = {
             let cam = unsafe { CAMERA.as_ref().unwrap() };
@@ -5391,9 +5529,7 @@ impl Game {
                     gl::Uniform2f(C_POS_LOC, cfl.pos.x as f32, cfl.pos.y as f32);
 
                     if cfl.timebeendrawn < 1.0 {
-                        
                         if cfl.timebeendrawn == 0.0 {
-
                             let playerpos = Vec3::new(
                                 PLAYERPOS.pos.0.load(Ordering::Relaxed),
                                 PLAYERPOS.pos.1.load(Ordering::Relaxed),
@@ -5405,11 +5541,7 @@ impl Game {
                                 (cfl.pos.y * CH_W) as f32,
                             );
 
-                            if s
-                            .distance(
-                                playerpos
-                            ) < 50.0
-                            {
+                            if s.distance(playerpos) < 50.0 {
                                 #[cfg(feature = "audio")]
                                 let _ = AUDIOPLAYER.play_next_in_series(
                                     "bubbles",
@@ -5419,16 +5551,17 @@ impl Game {
                                 );
 
                                 //if cfl.tlength > 0 {
-                                    // let _ = AUDIOPLAYER.play_next_in_series(
-                                    //     "slides",
-                                    //     &s,
-                                    //     &Vec3::ZERO,
-                                    //     1.0,
-                                    // );
+                                // let _ = AUDIOPLAYER.play_next_in_series(
+                                //     "slides",
+                                //     &s,
+                                //     &Vec3::ZERO,
+                                //     1.0,
+                                // );
                                 //}
                             }
                         }
-                        cfl.timebeendrawn += self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
+                        cfl.timebeendrawn +=
+                            self.delta_time * CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL;
                     }
 
                     gl::Uniform1f(
@@ -5438,15 +5571,20 @@ impl Game {
                         ),
                         cfl.timebeendrawn,
                     );
-                    let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.4 ;
-                    let humfac = cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.3 ;
+                    let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W))
+                        as f32
+                        * 0.4;
+                    let humfac =
+                        cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W))
+                            as f32
+                            * 0.3;
                     //get the temp and humidity near the grassiest parts of the chunk, the mid area at 70-ish
                     gl::Uniform1f(
                         gl::GetUniformLocation(
                             self.shader0.shader_id,
                             b"grassRedChange\0".as_ptr() as *const i8,
                         ),
-                        (( tempfac - humfac) * 0.85) - 0.2,
+                        ((tempfac - humfac) * 0.85) - 0.2,
                     );
 
                     let error = gl::GetError();
@@ -5492,22 +5630,27 @@ impl Game {
                     gl::Uniform2f(C_POS_LOC, cfl.pos.x as f32, cfl.pos.y as f32);
 
                     gl::Uniform1f(
-                            gl::GetUniformLocation(
-                                self.shader0.shader_id,
-                                b"elapsedFade\0".as_ptr() as *const i8,
-                            ),
-                            cfl.timebeendrawn,
-                        );
-                        let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.4 ;
-                        let humfac = cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W)) as f32 * 0.3 ;
-                        //get the temp and humidity near the grassiest parts of the chunk, the mid area at 70-ish
-                        gl::Uniform1f(
-                            gl::GetUniformLocation(
-                                self.shader0.shader_id,
-                                b"grassRedChange\0".as_ptr() as *const i8,
-                            ),
-                            (( tempfac - humfac) * 0.85) - 0.2,
-                        );
+                        gl::GetUniformLocation(
+                            self.shader0.shader_id,
+                            b"elapsedFade\0".as_ptr() as *const i8,
+                        ),
+                        cfl.timebeendrawn,
+                    );
+                    let tempfac = cs.temp_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W))
+                        as f32
+                        * 0.4;
+                    let humfac =
+                        cs.humidity_noise(IVec3::new(cfl.pos.x * CH_W, 70, cfl.pos.y * CH_W))
+                            as f32
+                            * 0.3;
+                    //get the temp and humidity near the grassiest parts of the chunk, the mid area at 70-ish
+                    gl::Uniform1f(
+                        gl::GetUniformLocation(
+                            self.shader0.shader_id,
+                            b"grassRedChange\0".as_ptr() as *const i8,
+                        ),
+                        ((tempfac - humfac) * 0.85) - 0.2,
+                    );
 
                     let error = gl::GetError();
                     if error != gl::NO_ERROR {
@@ -5680,9 +5823,17 @@ impl Game {
                     //gl::Enable(gl::CULL_FACE);
                     // info!("Chunk rending!");
                 }
-                let fuckingplayerchunkpos = ChunkSystem::spot_to_chunk_pos_bevyvec3(&cam_clone.position);
-                let fuckingvec2playerchunkpos = Vec2::new(fuckingplayerchunkpos.x as f32, fuckingplayerchunkpos.y as f32);
-                if unsafe { WEATHERTYPE } != 0.0 && Vec2::new(cfl.pos.x as f32, cfl.pos.y as f32).distance(fuckingvec2playerchunkpos) < 2.0 {
+                let fuckingplayerchunkpos =
+                    ChunkSystem::spot_to_chunk_pos_bevyvec3(&cam_clone.position);
+                let fuckingvec2playerchunkpos = Vec2::new(
+                    fuckingplayerchunkpos.x as f32,
+                    fuckingplayerchunkpos.y as f32,
+                );
+                if unsafe { WEATHERTYPE } != 0.0
+                    && Vec2::new(cfl.pos.x as f32, cfl.pos.y as f32)
+                        .distance(fuckingvec2playerchunkpos)
+                        < 2.0
+                {
                     WorldGeometry::bind_old_geometry_no_upload(
                         cfl.wvvbo,
                         cfl.wuvvbo,
@@ -5736,9 +5887,10 @@ impl Game {
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
         let csysarc = csys.clone();
 
-
-        #[cfg(feature="audio")]
-        unsafe {AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());}
+        #[cfg(feature = "audio")]
+        unsafe {
+            AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());
+        }
 
         //Uncomment to do automata (just snow updating grass simulation for now)
         csysarc.write().do_automata(&carc);
@@ -5904,15 +6056,14 @@ impl Game {
         // };
     }
 
-
     // pub fn chunk_thread_function(
     //     runcheck: &AtomicBool,
     //     cam_arc: Arc<Mutex<Camera>>,
     //     csys_arc: Arc<RwLock<ChunkSystem>>,
     // ) {
-        
+
     //     while runcheck.load(Ordering::Relaxed) {
-    
+
     //         Game::chunk_thread_inner_function();
     //     }
     // }
@@ -5992,7 +6143,7 @@ impl Game {
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
-        target: u32
+        target: u32,
     ) -> usize {
         let mut stack = vec![at]; // Initialize stack with initial position
         let mut count = 0;
@@ -6024,14 +6175,12 @@ impl Game {
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
-        target: u32
+        target: u32,
     ) -> usize {
         let mut stack = vec![at]; // Initialize stack with initial position
         let mut count = 0;
         while let Some(current) = stack.pop() {
             // Check if the block at the current position is already deleted
-
-
 
             if chunksys.blockat(current) != target {
                 // Set the block at the current position
@@ -6050,7 +6199,7 @@ impl Game {
         }
         return count;
     }
-    
+
     //return amount of blocks it broke
     pub fn delete_block_recursively(
         chunksys: &Arc<RwLock<ChunkSystem>>,
@@ -6073,7 +6222,7 @@ impl Game {
         while let Some(current) = stack.pop() {
             // Check if the block at the current position is already deleted
 
-            let csys  = chunksys.read();
+            let csys = chunksys.read();
             let comb = csys.blockat(current);
             let bid = comb & Blocks::block_id_bits();
 
@@ -6091,7 +6240,7 @@ impl Game {
                 for neighbor in Cube::get_neighbors() {
                     let neighbor_pos = *neighbor + current;
                     let tid = csys.blockat(neighbor_pos);
-                    
+
                     // if LEAVES.contains(&tid) {
                     //     Game::set_block_recursively_locked(&csys, tid, neighbor_pos, set, tid | BLOCK_MARKED_FOR_DELETION);
                     // }
@@ -6137,8 +6286,7 @@ impl Game {
                         // );
                         // self.netconn.send(&message);
                     } else {
-                        csys
-                            .read()
+                        csys.read()
                             .set_block_and_queue_rerender(block_hit, 0, true, true, false);
                     }
                 };
@@ -6148,9 +6296,7 @@ impl Game {
                         let mut set: HashSet<IVec2> = HashSet::new();
                         Game::delete_block_recursively(&csys, 16, block_hit, &mut set);
                         for key in set {
-                            csys
-                                .read()
-                                .queue_rerender_with_key(key, true, false);
+                            csys.read().queue_rerender_with_key(key, true, false);
                         }
                         #[cfg(feature = "glfw")]
                         self.drops.add_drop(tip, 17, 1);
@@ -6159,24 +6305,22 @@ impl Game {
                         let nudm = unsafe { NONUSERDATAMAP.as_ref().unwrap() };
                         if nudm.contains_key(&block_hit) {
                             match nudm.get(&block_hit) {
-                                Some(ud) => {
-                                    match *ud  {
-                                        6 | 53 | 56 | 58 | 60 => {
-                                            let mut set: HashSet<IVec2> = HashSet::new();
-                                            let amount = Game::delete_block_recursively_or_leaves(&csys, blockat, block_hit, &mut set);
-                                            for key in set {
-                                                csys
-                                                    .read()
-                                                    .queue_rerender_with_key(key, true, false);
-                                            }
-                                            #[cfg(feature = "glfw")]
-                                            self.drops.add_drop(tip, blockat, amount as u32);
+                                Some(ud) => match *ud {
+                                    6 | 53 | 56 | 58 | 60 => {
+                                        let mut set: HashSet<IVec2> = HashSet::new();
+                                        let amount = Game::delete_block_recursively_or_leaves(
+                                            &csys, blockat, block_hit, &mut set,
+                                        );
+                                        for key in set {
+                                            csys.read().queue_rerender_with_key(key, true, false);
                                         }
-                                        _ => {
-                                            defaultprocedure();
-                                        }
+                                        #[cfg(feature = "glfw")]
+                                        self.drops.add_drop(tip, blockat, amount as u32);
                                     }
-                                }
+                                    _ => {
+                                        defaultprocedure();
+                                    }
+                                },
                                 None => {
                                     //Should be unreachable
                                 }
@@ -6184,7 +6328,6 @@ impl Game {
                         } else {
                             defaultprocedure();
                         }
-                        
                     }
                     19 => {
                         //Door stuff
@@ -6213,8 +6356,7 @@ impl Game {
                             // self.netconn.send(&message);
                         } else {
                             csys.read().set_block(block_hit, 0, true);
-                            csys
-                                .read()
+                            csys.read()
                                 .set_block_and_queue_rerender(other_half, 0, true, true, false);
                         }
                     }
@@ -6281,7 +6423,8 @@ impl Game {
             //use {I16Vec3, U16Vec3};
 
             use crate::{
-                cube::CubeSide, packedvertex::PackedVertex,
+                cube::CubeSide,
+                packedvertex::PackedVertex,
                 // specialblocks::crafttable::CraftTableInfo,
             };
 
@@ -6719,15 +6862,11 @@ impl Game {
                     gl::GetUniformLocation(oldshader.shader_id, b"mvp\0".as_ptr() as *const i8);
                 //info!("MVP LOC: {}", MVP_LOC);
 
-                WALKBOB_LOC = gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"walkbob\0".as_ptr() as *const i8,
-                );
+                WALKBOB_LOC =
+                    gl::GetUniformLocation(oldshader.shader_id, b"walkbob\0".as_ptr() as *const i8);
 
-                CAM_POS_LOC = gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"camPos\0".as_ptr() as *const i8,
-                );
+                CAM_POS_LOC =
+                    gl::GetUniformLocation(oldshader.shader_id, b"camPos\0".as_ptr() as *const i8);
                 AMBIENT_BRIGHT_MULT_LOC = gl::GetUniformLocation(
                     oldshader.shader_id,
                     b"ambientBrightMult\0".as_ptr() as *const i8,
@@ -6740,18 +6879,12 @@ impl Game {
                     oldshader.shader_id,
                     b"underWater\0".as_ptr() as *const i8,
                 );
-                CAM_DIR_LOC = gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"camDir\0".as_ptr() as *const i8,
-                );
-                SUNSET_LOC = gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"sunset\0".as_ptr() as *const i8,
-                );
-                SUNRISE_LOC = gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"sunrise\0".as_ptr() as *const i8,
-                );
+                CAM_DIR_LOC =
+                    gl::GetUniformLocation(oldshader.shader_id, b"camDir\0".as_ptr() as *const i8);
+                SUNSET_LOC =
+                    gl::GetUniformLocation(oldshader.shader_id, b"sunset\0".as_ptr() as *const i8);
+                SUNRISE_LOC =
+                    gl::GetUniformLocation(oldshader.shader_id, b"sunrise\0".as_ptr() as *const i8);
             }
 
             gl::UniformMatrix4fv(
@@ -6781,10 +6914,7 @@ impl Game {
                 glfwGetTime() as f32,
             );
             gl::Uniform1f(
-                gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"weathertype\0".as_ptr() as *const i8,
-                ),
+                gl::GetUniformLocation(oldshader.shader_id, b"weathertype\0".as_ptr() as *const i8),
                 WEATHERTYPE,
             );
 
@@ -6792,10 +6922,7 @@ impl Game {
             gl::Uniform1f(WALKBOB_LOC, walkbobt);
             gl::Uniform1f(SUNRISE_LOC, 0.0);
             gl::Uniform1i(
-                gl::GetUniformLocation(
-                    oldshader.shader_id,
-                    b"ourTexture\0".as_ptr() as *const i8,
-                ),
+                gl::GetUniformLocation(oldshader.shader_id, b"ourTexture\0".as_ptr() as *const i8),
                 0,
             );
             gl::Uniform1i(
@@ -6842,7 +6969,9 @@ impl Game {
 
     #[cfg(feature = "glfw")]
     pub fn cast_place_ray(&mut self) {
-        use crate::specialblocks::fence::{CONNECT_NEGX_BIT, CONNECT_NEGZ_BIT, CONNECT_X_BIT, CONNECT_Z_BIT};
+        use crate::specialblocks::fence::{
+            CONNECT_NEGX_BIT, CONNECT_NEGZ_BIT, CONNECT_X_BIT, CONNECT_Z_BIT,
+        };
 
         let slot_selected = self.hud.bumped_slot;
         let slot = self.inventory.read().inv[slot_selected];
@@ -6899,9 +7028,7 @@ impl Game {
                             // message.otherpos = otherhalf;
                             // self.netconn.send(&message);
                         } else {
-                            csys
-                                .write()
-                                .set_block(otherhalf, otherhalfbits, true);
+                            csys.write().set_block(otherhalf, otherhalfbits, true);
                             csys.write().set_block_and_queue_rerender(
                                 block_hit,
                                 blockbitshere,
@@ -6927,8 +7054,7 @@ impl Game {
                             .write()
                             .set_cursor_mode(glfw::CursorMode::Normal);
                         openedcraft = true;
-
-                    } else 
+                    } else
                     //NO SPECIAL ACTION BLOCK RIGHT CLICKED, LETS ACTUALLY THINK ABOUT ATTACHING A BLOCK TO HERE NOW:
                     if slot.0 != 0 && slot.1 > 0 {
                         let id = slot.0;
@@ -7327,40 +7453,56 @@ impl Game {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb1;
                                     let newcombinedhere = previouscombinedhere | CONNECT_NEGX_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[0], newcombinedhere, true);
+                                    csys.read().set_block_no_sound(
+                                        place_point + NEIGHBS[0],
+                                        newcombinedhere,
+                                        true,
+                                    );
                                     CONNECT_X_BIT
                                 }
-                                _ => {0}
+                                _ => 0,
                             };
                             let negxbit = match (neighb2 & Blocks::block_id_bits()) {
                                 63 => {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb2;
                                     let newcombinedhere = previouscombinedhere | CONNECT_X_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[1], newcombinedhere, true);
+                                    csys.read().set_block_no_sound(
+                                        place_point + NEIGHBS[1],
+                                        newcombinedhere,
+                                        true,
+                                    );
                                     CONNECT_NEGX_BIT
                                 }
-                                _ => {0}
+                                _ => 0,
                             };
                             let zbit = match (neighb3 & Blocks::block_id_bits()) {
                                 63 => {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb3;
                                     let newcombinedhere = previouscombinedhere | CONNECT_NEGZ_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[2], newcombinedhere, true);
+                                    csys.read().set_block_no_sound(
+                                        place_point + NEIGHBS[2],
+                                        newcombinedhere,
+                                        true,
+                                    );
                                     CONNECT_Z_BIT
                                 }
-                                _ => {0}
+                                _ => 0,
                             };
                             let negzbit = match (neighb4 & Blocks::block_id_bits()) {
                                 63 => {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb4;
                                     let newcombinedhere = previouscombinedhere | CONNECT_Z_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[3], newcombinedhere, true);
+                                    csys.read().set_block_no_sound(
+                                        place_point + NEIGHBS[3],
+                                        newcombinedhere,
+                                        true,
+                                    );
                                     CONNECT_NEGZ_BIT
                                 }
-                                _ => {0}
+                                _ => 0,
                             };
 
                             let combined_bits = fence_id | xbit | negxbit | zbit | negzbit;
@@ -7379,9 +7521,7 @@ impl Game {
 
                                 // self.netconn.send(&message);
                             } else {
-                                if anyneighbs {
-
-                                }
+                                if anyneighbs {}
                                 csys.read().set_block_and_queue_rerender(
                                     place_point,
                                     combined_bits,
@@ -7754,15 +7894,11 @@ impl Game {
                                             let chunkspot = ChunkSystem::spot_to_chunk_pos(&spot);
                                             implic.insert(chunkspot);
                                             //println!("Setting a block {} at {}", block, spot);
-                                            csys
-                                                .read()
-                                                .set_block_no_sound(spot, block, true);
+                                            csys.read().set_block_no_sound(spot, block, true);
                                         }
 
                                         for imp in implic {
-                                            csys
-                                                .read()
-                                                .queue_rerender_with_key(imp, true, false);
+                                            csys.read().queue_rerender_with_key(imp, true, false);
                                         }
                                     }
                                 }
@@ -7860,9 +7996,7 @@ impl Game {
 
             if key == Key::F1 {
                 if action == Action::Press {
-                    unsafe {
-                        HIDEHUD = !HIDEHUD
-                    }
+                    unsafe { HIDEHUD = !HIDEHUD }
                 }
             }
 
