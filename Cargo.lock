@@ -3131,12 +3131,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib"
-version = "0.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ab1378b5d7e2fd8273a7bcdad1669de165ba4e9b739e10e7fe55e3c9186e1b3"
-
-[[package]]
 name = "libc"
 version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5624,7 +5618,6 @@ dependencies = [
  "imgui",
  "imgui-opengl-renderer",
  "jeffy_quintet",
- "lib",
  "lockfree",
  "logos",
  "noise",

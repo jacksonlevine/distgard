@@ -804,6 +804,7 @@ impl ChunkSystem {
 
         self.radius = radius;
         *(self.perlin.write()) = Perlin::new(seed);
+
         self.voxel_models = None;
         self.planet_type = noisetype as u8;
         unsafe { CURRSEED.store(seed, std::sync::atomic::Ordering::Relaxed) };

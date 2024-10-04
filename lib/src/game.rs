@@ -574,18 +574,411 @@ pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
 
 
 pub fn attend_chunk_queues() {
-    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
-    match csys_arc {
+    let csys = unsafe {(*addr_of!(CHUNKSYS)).as_ref()};
+    match csys {
         Some(csys) => {
-            let cs = csys.read();
-            if popuserstuff(&cs) {
-                return;
+            unsafe {
+                let mut implic = HashSet::new();
+                let mut more = true;
+                
+                let csys_arc = csys.read();
+                while more {
+                    
+                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                        Some(comm) => {
+                            //println!("Poppin one");
+                            for comm in comm.changes {
+        
+                            
+        
+            
+                                if (csys_arc.blockat(comm.spot))
+                                    == comm.expectedhere
+                                {
+        
+        
+                                    // println!("Settin");
+                                    // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                    // csys_arc.queue_rerender_with_key(
+                                    //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                    //     false,
+                                    //     false,
+                                    // );
+                                    //csys_arc.rebuild_index(comm.geo_index, false, false);
+        
+                                    csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                    implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+        
+        
+                                } else {
+                                    // println!(
+                                    //     "Expected {} here but its {} for this change",
+                                    //     comm.expectedhere,
+                                    //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                    // );
+                                }
+                            }
+                        }
+                        None => {
+                            more = false;
+                        }
+                    }
+                }
+                for imp in implic {
+                    csys_arc.queue_rerender_with_key(
+                        imp,
+                        true,
+                        false,
+                    );
+                }
+                
             }
-            if poplightstuff(&cs) {
-                return;
+        
+            let mut lightstuff = true;
+            while lightstuff {
+                
+                let csys_arc = csys.read();
+        
+                match csys_arc.light_rebuild_requests.pop() {
+                    Some(index) => {
+                        csys_arc.rebuild_index(index, true, true);
+                        //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                        unsafe {
+                            let mut implic = HashSet::new();
+                            let mut more = true;
+                           // let csys_arc = csys_arc.read();
+                            while more {
+                                
+                                match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                    Some(comm) => {
+                                        //println!("Poppin one");
+                                        for comm in comm.changes {
+                
+                                        
+                
+                        
+                                            if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                == comm.expectedhere
+                                            {
+                
+                
+                                                // println!("Settin");
+                                                // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                // csys_arc.queue_rerender_with_key(
+                                                //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                //     false,
+                                                //     false,
+                                                // );
+                                                //csys_arc.rebuild_index(comm.geo_index, false, false);
+                
+                                                csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                
+                
+                                            } else {
+                                                // println!(
+                                                //     "Expected {} here but its {} for this change",
+                                                //     comm.expectedhere,
+                                                //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                // );
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        more = false;
+                                    }
+                                }
+                            }
+                            for imp in implic {
+                                csys_arc.queue_rerender_with_key(
+                                    imp,
+                                    true,
+                                    false,
+                                );
+                            }
+                            
+                        }
+                
+                    }
+                    None => {
+                        lightstuff = false;
+                    }
+                }
+            }
+        
+            let mut userstuff = true;
+            while userstuff {
+                let csys_arc = csys.read();
+        
+                match csys_arc.user_rebuild_requests.pop() {
+                    Some(index) => {
+                        //info!("Popping stuff USER {}", rng.gen_range(0..255));
+                        csys_arc.rebuild_index(index, true, false);
+        
+                        match csys_arc.light_rebuild_requests.pop() {
+                            Some(index) => {
+                                //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, true);
+                                unsafe {
+                                    let mut implic = HashSet::new();
+                                    let mut more = true;
+                                    //let csys_arc = csys_arc.read();
+                                    while more {
+                                        
+                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                            Some(comm) => {
+                                                //println!("Poppin one");
+                                                for comm in comm.changes {
+                        
+                                                
+                        
+                                
+                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        == comm.expectedhere
+                                                    {
+                        
+                        
+                                                        // println!("Settin");
+                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                        // csys_arc.queue_rerender_with_key(
+                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                        //     false,
+                                                        //     false,
+                                                        // );
+                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
+                        
+                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                        
+                        
+                                                    } else {
+                                                        // println!(
+                                                        //     "Expected {} here but its {} for this change",
+                                                        //     comm.expectedhere,
+                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        // );
+                                                    }
+                                                }
+                                            }
+                                            None => {
+                                                more = false;
+                                            }
+                                        }
+                                    }
+                                    for imp in implic {
+                                        csys_arc.queue_rerender_with_key(
+                                            imp,
+                                            true,
+                                            false,
+                                        );
+                                    }
+                                    
+                                }
+                        
+                            }
+                            None => {}
+                        }
+                    }
+                    None => {
+                        userstuff = false;
+                    }
+                }
+            }
+            let mut genstuff = true;
+            while genstuff {
+                let csys_arc = csys.read();
+        
+                match csys_arc.gen_rebuild_requests.pop() {
+                    Some(index) => {
+                        csys_arc.rebuild_index(index, true, false);
+                        // info!("Popping stuff GEN {}", rng.gen_range(0..255));
+                        match csys_arc.user_rebuild_requests.pop() {
+                            Some(index) => {
+                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, false);
+                            }
+                            None => {}
+                        }
+                        match csys_arc.light_rebuild_requests.pop() {
+                            Some(index) => {
+                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, true);
+                                unsafe {
+                                    let mut implic = HashSet::new();
+                                    let mut more = true;
+                                    //let csys_arc = csys_arc.read();
+                                    while more {
+                                        
+                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                            Some(comm) => {
+                                                //println!("Poppin one");
+                                                for comm in comm.changes {
+                        
+                                                
+                        
+                                
+                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        == comm.expectedhere
+                                                    {
+                        
+                        
+                                                        // println!("Settin");
+                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                        // csys_arc.queue_rerender_with_key(
+                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                        //     false,
+                                                        //     false,
+                                                        // );
+                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
+                        
+                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                        
+                        
+                                                    } else {
+                                                        // println!(
+                                                        //     "Expected {} here but its {} for this change",
+                                                        //     comm.expectedhere,
+                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        // );
+                                                    }
+                                                }
+                                            }
+                                            None => {
+                                                more = false;
+                                            }
+                                        }
+                                    }
+                                    for imp in implic {
+                                        csys_arc.queue_rerender_with_key(
+                                            imp,
+                                            true,
+                                            false,
+                                        );
+                                    }
+                                    
+                                }
+                        
+                            }
+                            None => {}
+                        }
+                    }
+                    None => {
+                        genstuff = false;
+                    }
+                }
+            }
+        
+            let mut backgroundstuff = true;
+            while backgroundstuff {
+                
+                let csys_arc = csys.read();
+        
+                match csys_arc.background_rebuild_requests.pop() {
+                    Some(index) => {
+                        // info!("Popping stuff BACKGROUND {}", rng.gen_range(0..255));
+                        csys_arc.rebuild_index(index, false, false);
+        
+                        match csys_arc.user_rebuild_requests.pop() {
+                            Some(index) => {
+                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, false);
+                                let _userstuff = true;
+                            }
+                            None => {}
+                        }
+        
+                        match csys_arc.light_rebuild_requests.pop() {
+                            Some(index) => {
+                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, true);
+                                unsafe {
+                                    let mut implic = HashSet::new();
+                                    let mut more = true;
+                                    //let csys_arc = csys_arc.read();
+                                    while more {
+                                        
+                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                            Some(comm) => {
+                                                //println!("Poppin one");
+                                                for comm in comm.changes {
+                        
+                                                
+                        
+                                
+                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        == comm.expectedhere
+                                                    {
+                        
+                        
+                                                        // println!("Settin");
+                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                        // csys_arc.queue_rerender_with_key(
+                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                        //     false,
+                                                        //     false,
+                                                        // );
+                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
+                        
+                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                        
+                        
+                                                    } else {
+                                                        // println!(
+                                                        //     "Expected {} here but its {} for this change",
+                                                        //     comm.expectedhere,
+                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                        // );
+                                                    }
+                                                }
+                                            }
+                                            None => {
+                                                more = false;
+                                            }
+                                        }
+                                    }
+                                    for imp in implic {
+                                        csys_arc.queue_rerender_with_key(
+                                            imp,
+                                            true,
+                                            false,
+                                        );
+                                    }
+                                    
+                                }
+                        
+                            }
+                            None => {}
+                        }
+        
+                        match csys_arc.gen_rebuild_requests.pop() {
+                            Some(index) => {
+                                // info!("Popping stuff GEN {}", rng.gen_range(0..255));
+                                csys_arc.rebuild_index(index, true, false);
+                                let mut genstuff = true;
+                                while genstuff {
+                                    match csys_arc.gen_rebuild_requests.pop() {
+                                        Some(index) => {
+                                            csys_arc.rebuild_index(index, true, false);
+                                        }
+                                        None => {
+                                            genstuff = false;
+                                        }
+                                    }
+                                }
+                            }
+                            None => {}
+                        }
+                    }
+                    None => {
+                        backgroundstuff = false;
+                    }
+                }
             }
         }
-        None => {}
+        None => {
+        }
     }
 }
 pub fn attend_chunk_queues2() {
@@ -1659,8 +2052,8 @@ impl Game {
             } else {
                 app.add_systems(Update, attend_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
-                app.add_systems(Update, attend_chunk_queues2);
-                app.add_systems(Update, attend_chunk_queues3);
+                // app.add_systems(Update, attend_chunk_queues2);
+                // app.add_systems(Update, attend_chunk_queues3);
                 if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
