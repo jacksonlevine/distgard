@@ -584,6 +584,30 @@ pub fn attend_chunk_queues() {
             if poplightstuff(&cs) {
                 return;
             }
+        }
+        None => {}
+    }
+}
+pub fn attend_chunk_queues2() {
+    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    match csys_arc {
+        Some(csys) => {
+            let cs = csys.read();
+            if popbackroundstuff(&cs) {
+                return;
+            }
+            if popautomatastuff(&cs) {
+                return;
+            }
+        }
+        None => {}
+    }
+}
+pub fn attend_chunk_queues3() {
+    let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
+    match csys_arc {
+        Some(csys) => {
+            let cs = csys.read();
             if popbackroundstuff(&cs) {
                 return;
             }
@@ -1635,6 +1659,8 @@ impl Game {
             } else {
                 app.add_systems(Update, attend_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
+                app.add_systems(Update, attend_chunk_queues2);
+                app.add_systems(Update, attend_chunk_queues3);
                 if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
