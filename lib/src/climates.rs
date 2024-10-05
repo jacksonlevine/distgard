@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 
 use crate::vec;
 
-pub const VOX_MODEL_PATHS: [&'static str; 51] = [
+pub const VOX_MODEL_PATHS: [&'static str; 52] = [
     path!("assets/voxelmodels/bush.vox"),
     path!("assets/voxelmodels/tree1.vox"),
     path!("assets/voxelmodels/tree2.vox"),
@@ -67,6 +67,7 @@ pub const VOX_MODEL_PATHS: [&'static str; 51] = [
 
     path!("assets/voxelmodels/figtree1.vox"),
     path!("assets/voxelmodels/figtree2.vox"),
+    path!("assets/voxelmodels/pumpkin.vox")
 ];
 
 #[derive(PartialEq, FromPrimitive, Clone, Copy)]
@@ -133,6 +134,7 @@ pub enum VoxelModel {
     FigTree1 = 49,
     FigTree2 = 50,
 
+    Pumpkin = 51,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -186,6 +188,7 @@ pub enum TreeType {
     Eucalyptus,
     Saguaro,
     FigTree,
+    Pumpkin
 }
 
 pub const MAX_TREES_PER_CLIMATE: usize = 4;
@@ -301,6 +304,11 @@ pub fn get_vox_mod_from_treetype(
             v.push(VoxelModel::FigTree2);
             Some(v)
         }
+        TreeType::Pumpkin => {
+            let mut v = ArrayVec::new();
+            v.push(VoxelModel::Pumpkin);
+            Some(v)
+        }
     }
 }
 
@@ -355,6 +363,7 @@ pub fn get_tree_types(climate: &Climate) -> &'static [TreeType] {
                 &[
                     TreeType::Oak,
                     TreeType::Willow,
+                    TreeType::Pumpkin
                 ],
             );
             map.insert(

@@ -6,7 +6,7 @@ pub const BLOCK_DIRECTION_BITS: u32 =       0b0000_0000_0000_0011_0000_0000_0000
 pub const BLOCK_MARKED_FOR_DELETION: u32 = 0b0000_0000_0000_0100_0000_0000_0000_0000;
 pub struct Blocks {}
 
-pub const BLOCK_COUNT: u32 = 81;
+pub const BLOCK_COUNT: u32 = 90;
 
 static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.1,
@@ -90,7 +90,12 @@ static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     1.0, 
 
     1.0,
-    1.0
+    1.0,
+
+
+    1.0, 1.0, 1.0,
+    1.0, 1.0, 1.0,
+    1.0, 1.0, 1.0,
 ];
 
 static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
@@ -201,6 +206,16 @@ static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
 
             [(3, 12), (4, 13), (3, 13)],  // 79 Pumpkin
             [(4, 12), (4, 13), (3, 13)],  // 80 Jack o lantern
+
+            [(5, 12), (5, 12), (5, 12)],  // 81 Pine Planks
+            [(6, 12), (6, 12), (6, 12)],  // 82 Cedar Planks
+            [(7, 12), (7, 12), (7, 12)], // 83 Palm Planks
+            [(8, 12), (8, 12), (8, 12)], // 84 Joshua Planks
+            [(9, 12), (9, 12), (9, 12)], // 85 Birch Planks
+            [(10, 12), (10, 12), (10, 12)], // 86 Willow Planks
+            [(11, 12), (11, 12), (11, 12)], // 87 Beech Planks
+            [(12, 12), (12, 12), (12, 12)], // 88 Western Hemlock Planks
+            [(13, 12), (13, 12), (13, 12)], // 89 Eucalyptus Planks
         ];
 
 
@@ -305,6 +320,17 @@ impl Blocks {
             78 => {"Saguaro Block"}
             79 => {"Pumpkin"}
             80 => {"Jack o lantern"}
+            
+            81 => {"Pine Planks"}
+            82 => {"Cedar Planks"}
+            83 => {"Palm Planks"}
+            84 => {"Joshua Planks"}
+            85 => {"Birch Planks"}
+            86 => {"Willow Planks"}
+            87 => {"Beech Planks"}
+            88 => {"Western Hemlock Planks"}
+            89 => {"Eucalyptus Planks"}
+
             _ => {
                 "Unknown Item"
             }
@@ -462,7 +488,7 @@ impl Blocks {
             1 => {
                 "sandstepseries"
             }
-            6 | 64 | 66 | 68 | 70 | 72 | 74 | 76 => {
+            6 | 64 | 66 | 68 | 70 | 72 | 74 | 76 | 81..=89 => {
                 "woodstepseries"
             }
             4 => {

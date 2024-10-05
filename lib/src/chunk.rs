@@ -1001,8 +1001,8 @@ impl ChunkSystem {
 
         self.set_block(spot, block, user_power);
 
-        let blockislight = Blocks::is_light(block);
-        let blockwaslight = Blocks::is_light(existingblock);
+        let blockislight = Blocks::is_light(block & Blocks::block_id_bits());
+        let blockwaslight = Blocks::is_light(existingblock &    Blocks::block_id_bits());
 
         let light = blockislight || blockwaslight;
 
@@ -1067,8 +1067,8 @@ impl ChunkSystem {
 
         self.set_block_no_sound(spot, block, user_power);
 
-        let blockislight = Blocks::is_light(block);
-        let blockwaslight = Blocks::is_light(existingblock);
+        let blockislight = Blocks::is_light(block & Blocks::block_id_bits());
+        let blockwaslight = Blocks::is_light(existingblock & Blocks::block_id_bits());
 
         let light = blockislight || blockwaslight;
 
