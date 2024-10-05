@@ -2061,7 +2061,7 @@ impl Game {
                     app.add_systems(Update, handle_server_messages);
                 } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
 
-                } 
+                }
             }
             
             
@@ -7620,7 +7620,47 @@ impl Game {
                                     false,
                                 );
                             }
-                        } else if id == 20 {
+                        } else if id == 80 {
+                            //jackolantern shit
+
+                            let mut jol_id = id;
+
+                            let diffx = cl.position.x - place_point.x as f32;
+                            let diffz = cl.position.z - place_point.z as f32;
+
+                            let direction: u32;
+
+                            if diffx.abs() > diffz.abs() {
+                                direction = if diffx > 0.0 { 1 } else { 3 };
+                            } else {
+                                direction = if diffz > 0.0 { 2 } else { 0 };
+                            }
+
+                            Blocks::set_direction_bits(&mut jol_id, direction);
+
+                            if self.vars.in_multiplayer {
+                                // let message = Message::new(
+                                //     MessageType::BlockSet,
+                                //     Vec3::new(
+                                //         place_point.x as f32,
+                                //         place_point.y as f32,
+                                //         place_point.z as f32,
+                                //     ),
+                                //     0.0,
+                                //     conveyor_id,
+                                // );
+
+                                // self.netconn.send(&message);
+                            } else {
+                                csys.read().set_block_and_queue_rerender(
+                                    place_point,
+                                    jol_id,
+                                    false,
+                                    true,
+                                    false,
+                                );
+                            }
+                        }  else if id == 20 {
                             //ladder shit
 
                             let mut ladder_id = id;

@@ -68,6 +68,7 @@ use crate::specialblocks::conveyor::ConveyorInfo;
 use crate::specialblocks::crafttable::CraftTableInfo;
 use crate::specialblocks::door::DoorInfo;
 use crate::specialblocks::fence::FenceInfo;
+use crate::specialblocks::jackolantern::JackolanternInfo;
 use crate::specialblocks::ladder::LadderInfo;
 use crate::specialblocks::tallgrass::TallGrassInfo;
 use crate::specialblocks::torch::TorchInfo;
@@ -1508,9 +1509,9 @@ impl ChunkSystem {
                                     existingsources.insert(ray.origin);
 
                                     let id = self.blockat(originweremoving);
-
-                                    if Blocks::is_light(id) {
-                                        lightsources.insert((originweremoving, id));
+                                    let cleanid = id & Blocks::block_id_bits();
+                                    if Blocks::is_light(cleanid) {
+                                        lightsources.insert((originweremoving, cleanid));
                                     }
                                 }
                             }
@@ -1518,8 +1519,9 @@ impl ChunkSystem {
                         None => {}
                     }
                     let id = self.blockat(blockcoord);
-                    if Blocks::is_light(id) {
-                        lightsources.insert((blockcoord, id));
+                    let cleanid = id & Blocks::block_id_bits();
+                    if Blocks::is_light(cleanid) {
+                        lightsources.insert((blockcoord, cleanid));
                     }
                 }
             }
@@ -1749,6 +1751,70 @@ impl ChunkSystem {
                                 }
 
                                 uvdata.extend_from_slice(&LadderInfo::get_ladder_uvs());
+                            }
+                            80 => {
+                                let direction = Blocks::get_direction_bits(flags);
+
+                                let modelindex: i32 = direction as i32;
+
+                                let _blocklightval = 0.0;
+
+                                let lmlock = self.lightmap.lock();
+                                let blocklighthere = match lmlock.get(&spot) {
+                                    Some(k) => k.sum(),
+                                    None => LightColor::ZERO,
+                                };
+
+                                let packedrgb = PackedVertex::pack_rgb(
+                                    blocklighthere.x,
+                                    blocklighthere.y,
+                                    blocklighthere.z,
+                                );
+
+                                let prgb: u32 =
+                                    0b0000_0000_0000_0000_0000_0000_0000_0000 | (packedrgb) as u32;
+
+                                    let innerrgb = PackedVertex::pack_rgb(
+                                        14,
+                                        14,
+                                        14,
+                                    );
+    
+                                    let innerrgb: u32 =
+                                        0b0000_0000_0000_0000_0000_0000_0000_0000 | (innerrgb) as u32;
+
+
+                                drop(lmlock);
+
+                                for vert in
+                                    JackolanternInfo::jackolantern_model_from_index(modelindex as usize).chunks(5)
+                                {
+                                    vdata.extend_from_slice(&[
+                                        vert[0] + spot.x as f32,
+                                        vert[1] + spot.y as f32,
+                                        vert[2] + spot.z as f32,
+                                        f32::from_bits(prgb),
+                                        vert[4],
+                                    ])
+                                }
+
+                                uvdata.extend_from_slice(&JackolanternInfo::get_jackolantern_uvs());
+
+
+                                for vert in
+                                    JackolanternInfo::inner_bit_from_index(modelindex as usize).chunks(5)
+                                {
+                                    vdata.extend_from_slice(&[
+                                        vert[0] + spot.x as f32,
+                                        vert[1] + spot.y as f32,
+                                        vert[2] + spot.z as f32,
+                                        f32::from_bits(innerrgb),
+                                        vert[4],
+                                    ])
+                                }
+
+                                uvdata.extend_from_slice(&JackolanternInfo::inside_part_uvs());
+
                             }
                             45 => {
                                 let direction = Blocks::get_direction_bits(flags);

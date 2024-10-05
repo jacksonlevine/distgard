@@ -9,3 +9,4 @@ pub mod conveyor;
 pub mod torch;
 pub mod awds;
 pub mod fence;
+pub mod jackolantern;

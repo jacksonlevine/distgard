@@ -6,7 +6,7 @@ pub const BLOCK_DIRECTION_BITS: u32 =       0b0000_0000_0000_0011_0000_0000_0000
 pub const BLOCK_MARKED_FOR_DELETION: u32 = 0b0000_0000_0000_0100_0000_0000_0000_0000;
 pub struct Blocks {}
 
-pub const BLOCK_COUNT: u32 = 64;
+pub const BLOCK_COUNT: u32 = 81;
 
 static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.1,
@@ -75,7 +75,22 @@ static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     1.5,
     0.9,
     0.7,
-    1.5
+    1.5,
+
+
+    1.0, 1.0, 
+    1.0, 1.0, 
+    1.0, 1.0,
+
+    1.0, 1.0, 
+    1.0, 1.0,
+    1.0, 1.0, 
+
+    1.0, 1.0, 
+    1.0, 
+
+    1.0,
+    1.0
 ];
 
 static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
@@ -156,6 +171,36 @@ static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
             [(6, 8), (6, 8), (6, 8)],  // 61 Joshua Leaves
             [(0, 9),(1,0),(8,5)], // 62, snowy sand
             [(13, 3),(13, 3),(13, 3)], // 63, fence
+
+
+
+            [(7, 6), (7, 7), (7, 7)],  // 64 Paper Birch Wood
+            [(7, 8), (7, 8), (7, 8)],  // 65 Paper Birch Leaves
+
+            [(8, 6), (8, 7), (8, 7)],  // 66 Green Alder Wood
+            [(8, 8), (8, 8), (8, 8)],  // 67 Green Alder Leaves
+
+            [(9, 6), (9, 7), (9, 7)],  // 68 Willow Wood
+            [(9, 8), (9, 8), (9, 8)],  // 69 willow Leaves
+
+
+            [(3, 9), (3, 10), (3, 10)],  // 70 Beech Wood
+            [(3, 11), (3, 11), (3, 11)],  // 71 Beech Leaves
+
+            [(4, 9), (4, 10), (4, 10)],  // 72 Western Hemlock Wood
+            [(4, 11), (4, 11), (4, 11)],  // 73 Western Hemlock Leaves
+
+
+            [(5, 9), (5, 10), (5, 10)],  // 74 Eucalyptus Wood
+            [(5, 11), (5, 11), (5, 11)],  // 75 Eucalyptus Leaves
+
+            [(6, 9), (6, 10), (6, 10)],  // 76 Fig Wood
+            [(6, 11), (6, 11), (6, 11)],  // 77 Fig Leaves
+            
+            [(7, 9), (7, 10), (7, 10)],  // 78 Saguaro Block
+
+            [(3, 12), (4, 13), (3, 13)],  // 79 Pumpkin
+            [(4, 12), (4, 13), (3, 13)],  // 80 Jack o lantern
         ];
 
 
@@ -242,6 +287,24 @@ impl Blocks {
         61 => {"Joshua Leaves"}
             62 => {"Snowy Sand"}
             63 => {"Fence"}
+            64 => {"Paper Birch Wood"}
+            65 => {"Paper Birch Leaves"}
+            66 => {"Green Alder Wood"}
+            67 => {"Green Alder Leaves"}
+            68 => {"Willow Wood"}
+            69 => {"Willow Leaves"}
+            70 => {"Beech Wood"}
+            71 => {"Beech Leaves"}
+            72 => {"Western Hemlock Wood"}
+            73 => {"Western Hemlock Leaves"}
+            74 => {"Eucalyptus Wood"}
+
+            75 => {"Eucalyptus Leaves"}
+            76 => {"Fig Wood"}
+            77 => {"Fig Leaves"}
+            78 => {"Saguaro Block"}
+            79 => {"Pumpkin"}
+            80 => {"Jack o lantern"}
             _ => {
                 "Unknown Item"
             }
@@ -260,6 +323,8 @@ impl Blocks {
 
         static TORCH: LightColor = LightColor{x: 10, y:8, z:1};
         
+        static JACKOLANTERN: LightColor = LightColor{x: 6, y:2, z:0};
+
         match id {
             18 => {
                 WHITE
@@ -288,6 +353,9 @@ impl Blocks {
             }
             30 => {
                 TEAL
+            }
+            80 => {
+                JACKOLANTERN
             }
             _ => {
                 WHITE
@@ -327,8 +395,9 @@ impl Blocks {
         return CLIMBABLES.contains(&id);
     }
     pub fn is_semi_transparent(id: u32) -> bool {
-        static SEMI_TRANSPARENTS: [u32; 16] = [
-            7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59, 63
+        static SEMI_TRANSPARENTS: [u32; 24] = [
+            7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59, 63,
+            65, 67, 69, 71, 73, 75, 77, 80
         ];
         return SEMI_TRANSPARENTS.contains(&id);
     }
@@ -339,8 +408,8 @@ impl Blocks {
         return NP.contains(&id);
     }
     pub fn is_light(id: u32) -> bool {
-        static LIGHTS: [u32; 9] = [
-            18, 24, 25, 26, 27, 28, 29, 30, 49
+        static LIGHTS: [u32; 10] = [
+            18, 24, 25, 26, 27, 28, 29, 30, 49, 80
         ];
         return LIGHTS.contains(&id);
     }
@@ -378,13 +447,13 @@ impl Blocks {
     }
     pub fn get_walk_series(id: u32) -> &'static str {
         match id {
-            3 | 48 | 54 => {
+            3 | 48 | 54 | 52 => {
                 "grassstepseries"
             }
             34 | 52 => {
                 "mulchstepseries"
             }
-            7 => {
+            7 | 65 | 67 | 69 | 71 | 73 | 75 | 77 => {
                 "plantplaceseries"
             }
             11 | 57 | 59 => {
@@ -393,7 +462,7 @@ impl Blocks {
             1 => {
                 "sandstepseries"
             }
-            6 => {
+            6 | 64 | 66 | 68 | 70 | 72 | 74 | 76 => {
                 "woodstepseries"
             }
             4 => {
