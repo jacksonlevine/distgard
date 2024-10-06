@@ -1555,6 +1555,9 @@ impl ChunkSystem {
     }
 
     pub fn rebuild_index(&self, index: usize, user_power: bool, light: bool) {
+        self._rebuild_index(index, user_power, light);
+    }
+    pub fn _rebuild_index(&self, index: usize, user_power: bool, light: bool) {
         //info!("Rebuilding!");
         let chunkarc = self.chunks[index].clone();
         let mut chunklock = chunkarc.lock();

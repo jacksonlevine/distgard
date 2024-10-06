@@ -1136,6 +1136,10 @@ pub fn attend_needed_spots(
                                 if poplightstuff(&csys_arc) {
                                     return;
                                 }
+                                if popbackroundstuff(&csys_arc) {
+                                    return;
+                                }
+                                
                                 
                                 csys_arc.move_and_rebuild(sorted_chunk_facades[index].geo_index, *ns);
                                 
@@ -3959,8 +3963,13 @@ impl Game {
                 WEATHERTIMER += self.delta_time;
                 if WEATHERTIMER >= WEATHERINTERVAL {
                     let mut rand = StdRng::from_entropy();
-                    let randint: usize = rand.gen_range(0..=2);
-                    WEATHERTYPE = randint as f32;
+                    let isweather: usize = rand.gen_range(0..5);
+                    if isweather == 4 {
+                        let randint: usize = rand.gen_range(0..=2);
+                        WEATHERTYPE = randint as f32;
+                    } else {
+                        WEATHERTYPE = 0.0;
+                    }
                     WEATHERTIMER = 0.0;
                 }
             }
