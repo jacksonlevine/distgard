@@ -526,8 +526,20 @@ pub fn poplightstuff(csys_arc: &ChunkSystem) -> bool {
         }
     }
 }
-pub fn popbackroundstuff(csys_arc: &ChunkSystem) -> bool {
+pub fn popgenstuff(csys_arc: &ChunkSystem) -> bool {
     match csys_arc.gen_rebuild_requests.pop() {
+        Some(index) => {
+            csys_arc.rebuild_index(index, false, false);
+            return true;
+        }
+        None => {
+            return false;
+        }
+    }
+}
+
+pub fn popbackroundstuff(csys_arc: &ChunkSystem) -> bool {
+    match csys_arc.background_rebuild_requests.pop() {
         Some(index) => {
             csys_arc.rebuild_index(index, false, false);
             return true;
@@ -1136,7 +1148,7 @@ pub fn attend_needed_spots(
                                 if poplightstuff(&csys_arc) {
                                     return;
                                 }
-                                if popbackroundstuff(&csys_arc) {
+                                if popgenstuff(&csys_arc) {
                                     return;
                                 }
                                 

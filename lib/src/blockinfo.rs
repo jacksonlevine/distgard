@@ -421,9 +421,9 @@ impl Blocks {
         return CLIMBABLES.contains(&id);
     }
     pub fn is_semi_transparent(id: u32) -> bool {
-        static SEMI_TRANSPARENTS: [u32; 24] = [
+        static SEMI_TRANSPARENTS: [u32; 22] = [
             7, 11, 19, 20, 21, 22, 23, 31, 44, 50, 52, 54, 55, 57, 59, 63,
-            65, 67, 69, 71, 73, 75, 77, 80
+            65, 67, 69, 75, 77, 80
         ];
         return SEMI_TRANSPARENTS.contains(&id);
     }

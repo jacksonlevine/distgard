@@ -71,10 +71,25 @@ float pNoise(vec2 p, int res){
 void main()
 {
 
-    // Decode the RGB value from the 16-bit attribute
-    uint r = (rgb & 0xF00) >> 8;
-    uint g = (rgb & 0x0F0) >> 4;
-    uint b = (rgb & 0x00F);
+    vec3 normals[6] = vec3[6](
+        vec3(-1.0, 0.0, 0.0),
+        vec3(1.0, 0.0, 0.0),
+        
+        vec3(0.0, -1.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        
+        vec3(0.0, 0.0, -1.0),
+        vec3(0.0, 0.0, 1.0)
+        
+    );
+
+    // Decode the RGB value and normal index from the 16-bit attribute
+    uint normind = (rgb & 0xF000) >> 12; // Extract normal index from bits 12-15
+    uint r = (rgb & 0x0F00) >> 8;        // Extract red from bits 8-11
+    uint g = (rgb & 0x00F0) >> 4;        // Extract green from bits 4-7
+    uint b = (rgb & 0x000F);              // Extract blue from bits 0-3
+
+    vec3 normal = normals[normind];
 
     vec3 color = vec3(float(r) / 15.0, float(g) / 15.0, float(b) / 15.0);
 
@@ -87,7 +102,6 @@ void main()
     uint cornerID = ((u32 >> 12) & 0x0000000F);  // Next 4 bits for corner
     float ambientBright = float((u32 >> 8) & 0x0000000F); // Next 4 bits for al
     float isgrass = float((u32 >> 4) & 0x0000000F);   // Next 4 bits for ISGRASS
-
   
 
     //Texture stuff

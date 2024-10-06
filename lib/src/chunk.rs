@@ -966,6 +966,8 @@ impl ChunkSystem {
                     match unsafe { &GIS_QUEUED.get(&geo_index) } {
                         Some(_) => {}
                         None => {
+                            println!("BACKGROUND REBUILD REQUEST PUSHED");
+                            info!("BACKGROUND REBUILD REQUEST PUSHED");
                             unsafe { &GIS_QUEUED.insert(geo_index, true) };
                             self.background_rebuild_requests.push(geo_index);
                         }
@@ -1216,6 +1218,17 @@ impl ChunkSystem {
                 light = true;
             }
             drop(hashadlock);
+
+
+
+
+            /*
+            Ah, this is why background_rebuild_requests didnt seem to do anything
+            The background rebuilds are just done on the spot, no request queue used.
+
+             */
+
+
             self.rebuild_index(index, false, light);
         } else {
             info!("This path");
@@ -2289,10 +2302,11 @@ impl ChunkSystem {
                                                         texcoord.0,
                                                         texcoord.1,
                                                     );
-                                                    let packedcolor = PackedVertex::pack_rgb(
+                                                    let packedcolor = PackedVertex::pack_rgb_w_norm(
                                                         blocklighthere.x,
                                                         blocklighthere.y,
                                                         blocklighthere.z,
+                                                        cubeside as u16
                                                     );
         
                                                     packed32[ind] = pack.0;
@@ -2684,7 +2698,7 @@ impl ChunkSystem {
             for c in implicated_chunks.iter() {
                 match self.takencare.get(&c) {
                     Some(cf) => {
-                        self.background_rebuild_requests.push(cf.geo_index);
+                        self.gen_rebuild_requests.push(cf.geo_index);
                     }
                     None => {}
                 }
