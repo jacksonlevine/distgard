@@ -813,7 +813,7 @@ impl WindowAndKeyContext {
 
                                         for worldindex in 0..5 {
                                             ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * worldindex as f32)]);
-                                            // World 1 button
+                                            // "World (worldindex)" button
                                             if ui.button_with_size(format!("World {}", worldindex + 1), [button_width, button_height]) {
                                                 #[cfg(feature="audio")]
                                                 {
@@ -838,6 +838,7 @@ impl WindowAndKeyContext {
                                                 UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
                                             }
 
+                                            
                                             let hovered = ui.is_item_hovered();
 
                                             if hovered != unsafe { moused[worldindex] } {
