@@ -2141,8 +2141,12 @@ impl Game {
                 for req in requirements {
                     let mut amt = 0;
 
+                    let isplanks = req.0 == 10;
+
                     for slot in inv.inv {
-                        if slot.0 == req.0 {
+                        if slot.0 == req.0 || (isplanks && (
+                            slot.0 >= 81 && slot.0 <= 89 //if it's a plank
+                        )) {
                             amt += slot.1;
                         }
                     }
@@ -3382,7 +3386,10 @@ impl Game {
 
                     for i in 0..ROWLENGTH as usize {
                         let typehere = inven.inv[i].0;
-                        if typehere == req.0 {
+                        let isplanks = req.0 == 10;
+                        if typehere == req.0 || (isplanks &&  (
+                            typehere >= 81 && typehere <= 89
+                        )) {
                             amt += inven.inv[i].1;
                         }
                     }
@@ -3401,10 +3408,13 @@ impl Game {
                     //Subtract the ingredients
                     for req in &recipe.0 {
                         let mut amt = 0;
+                        let isplanks = req.0 == 10;
 
                         for i in 0..ROWLENGTH as usize {
                             let typehere = invclone[i].0;
-                            if typehere == req.0 {
+                            if typehere == req.0 || (isplanks && (
+                                typehere >= 81 && typehere <= 89
+                            )) {
                                 while invclone[i].1 > 0 && amt < req.1 {
                                     amt += 1;
                                     invclone[i].1 -= 1;
@@ -3478,7 +3488,10 @@ impl Game {
 
                     for i in 0..ROWLENGTH as usize {
                         let typehere = originalinvinv.inv[i].0;
-                        if typehere == req.0 {
+                        let isplanks = req.0 == 10;
+                        if typehere == req.0  || (isplanks && (
+                            typehere >= 81 && typehere <= 89
+                        )) {
                             amt += originalinvinv.inv[i].1;
                         }
                     }
@@ -3501,7 +3514,12 @@ impl Game {
 
                         for i in 0..ROWLENGTH as usize {
                             let typehere = invclone[i].0;
-                            if typehere == req.0 {
+                            let isplanks = req.0 == 10;
+                            if typehere == req.0 || (
+                                isplanks && (
+                                    typehere >= 81 && typehere <= 89
+                                )
+                            ) {
                                 while invclone[i].1 > 0 && amt < req.1 {
                                     amt += 1;
                                     invclone[i].1 -= 1;
