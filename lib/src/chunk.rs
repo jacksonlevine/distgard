@@ -1445,9 +1445,9 @@ impl ChunkSystem {
                         }
 
                         let reducedvalue = LightColor::new(
-                            (n.0.x as i32 - 1).max(0) as u16,
-                            (n.0.y as i32 - 2).max(0) as u16,
-                            (n.0.z as i32 - 2).max(0) as u16,
+                            (n.0.x as i32 - ((n.0.x as f32 / 3.0) as i32).max(1)).max(0) as u16,
+                            (n.0.y as i32 - ((n.0.y as f32 / 3.0) as i32).max(1)).max(0) as u16,
+                            (n.0.z as i32 - ((n.0.z as f32 / 3.0) as i32).max(1)).max(0) as u16,
                         );
 
                         if !visited.contains(&next)
@@ -1500,7 +1500,8 @@ impl ChunkSystem {
 
         let mut implicated: HashSet<vec::IVec2> = HashSet::new();
 
-        let mut lightsources: HashSet<(vec::IVec3, u32)> = HashSet::new();
+        let mut lightsources: HashMap<vec::IVec3, u32> = HashMap::new();
+        //let mut lightsources: HashSet<(vec::IVec3, u32)> = HashSet::new();
 
         let mut existingsources: HashSet<vec::IVec3> = HashSet::new();
 
@@ -1523,18 +1524,41 @@ impl ChunkSystem {
 
                                     let id = self.blockat(originweremoving);
                                     let cleanid = id & Blocks::block_id_bits();
+                                    
+                                    
+
                                     if Blocks::is_light(cleanid) {
-                                        lightsources.insert((originweremoving, cleanid));
+
+                                        //if there are no neighbor light sources
+                                        if !lightsources.contains_key(&(originweremoving + IVec3::new(1, 0, 0)))
+                                        && !lightsources.contains_key(&(originweremoving + IVec3::new(-1, 0, 0)))
+                                        && !lightsources.contains_key(&(originweremoving + IVec3::new(0, 1, 0)))
+                                        && !lightsources.contains_key(&(originweremoving + IVec3::new(0, -1, 0)))
+                                        && !lightsources.contains_key(&(originweremoving + IVec3::new(0, 0, 1)))
+                                        && !lightsources.contains_key(&(originweremoving + IVec3::new(0, 0, -1)))
+                                        {
+                                            lightsources.insert(originweremoving, cleanid);
+                                        }
                                     }
                                 }
                             }
                         }
                         None => {}
                     }
+
                     let id = self.blockat(blockcoord);
                     let cleanid = id & Blocks::block_id_bits();
                     if Blocks::is_light(cleanid) {
-                        lightsources.insert((blockcoord, cleanid));
+                        //if there are no neighbor light sources
+                        if !lightsources.contains_key(&(blockcoord + IVec3::new(1, 0, 0)))
+                        && !lightsources.contains_key(&(blockcoord + IVec3::new(-1, 0, 0)))
+                        && !lightsources.contains_key(&(blockcoord + IVec3::new(0, 1, 0)))
+                        && !lightsources.contains_key(&(blockcoord + IVec3::new(0, -1, 0)))
+                        && !lightsources.contains_key(&(blockcoord + IVec3::new(0, 0, 1)))
+                        && !lightsources.contains_key(&(blockcoord + IVec3::new(0, 0, -1)))
+                        {
+                            lightsources.insert(blockcoord, cleanid);
+                        }
                     }
                 }
             }
