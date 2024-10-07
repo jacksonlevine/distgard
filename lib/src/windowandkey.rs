@@ -792,9 +792,6 @@ impl WindowAndKeyContext {
                                         //         self.cmd.run(self.game.as_mut().unwrap());
                                         //     }
                                         // }
-
-
-                                        if CONFIRMDELETE < 0 {
                                             ui.set_cursor_pos([image_pos_x, image_pos_y]);
 
                                             draw_3d_menu_button(
@@ -804,7 +801,13 @@ impl WindowAndKeyContext {
                                                 false, Vec3::new(0.0, 0.0, 0.0), 3
                                             );
 
+                                        static mut moused: [bool; 5] = [false; 5];
+                                        static mut renamemode: [bool; 5] = [false; 5];    
 
+
+
+                                        if CONFIRMDELETE < 0 {
+                                            
                                             
 
 
@@ -817,10 +820,7 @@ impl WindowAndKeyContext {
                                             // Make button invisible but functional
                                             //let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
 
-                                            static mut moused: [bool; 5] = [false; 5];
-                                            static mut renamemode: [bool; 5] = [false; 5];    
-
-
+                                            
                                             for worldindex in 0..5 {
                                                 let cursorpos = [pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * worldindex as f32)];
                                                 ui.set_cursor_pos(cursorpos);
@@ -911,6 +911,13 @@ impl WindowAndKeyContext {
                                                 imgui::Image::new(texture_id, scaled_size).build(&ui);
 
                                                 if ui.is_item_clicked() {
+                                                    #[cfg(feature="audio")]
+                                                    {
+                                                        AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                                    }
+                                                    for worldindex in 0..5 {
+                                                        renamemode[worldindex] = false;
+                                                    }
                                                     renamemode[worldindex] = !renamemode[worldindex];
                                                 }
                                                 
@@ -937,6 +944,16 @@ impl WindowAndKeyContext {
 
                                                 save_misc();
                                                 CONFIRMDELETE = -1;
+                                            }
+                                            if ui.button("No") {
+                                                #[cfg(feature="audio")]
+                                                {
+                                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                                }
+                                                CONFIRMDELETE = -1;
+                                                for worldindex in 0..5 {
+                                                    renamemode[worldindex] = false;
+                                                }
                                             }
 
 
