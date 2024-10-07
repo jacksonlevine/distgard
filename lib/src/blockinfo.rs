@@ -6,7 +6,7 @@ pub const BLOCK_DIRECTION_BITS: u32 =       0b0000_0000_0000_0011_0000_0000_0000
 pub const BLOCK_MARKED_FOR_DELETION: u32 = 0b0000_0000_0000_0100_0000_0000_0000_0000;
 pub struct Blocks {}
 
-pub const BLOCK_COUNT: u32 = 90;
+pub const BLOCK_COUNT: u32 = 91;
 
 static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     0.1,
@@ -96,6 +96,8 @@ static BREAKTIMES: [f32; BLOCK_COUNT as usize] = [
     1.0, 1.0, 1.0,
     1.0, 1.0, 1.0,
     1.0, 1.0, 1.0,
+
+    2.0
 ];
 
 static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
@@ -216,6 +218,7 @@ static TEXS: [[(u8, u8); 3]; BLOCK_COUNT as usize] = [
             [(11, 12), (11, 12), (11, 12)], // 87 Beech Planks
             [(12, 12), (12, 12), (12, 12)], // 88 Western Hemlock Planks
             [(13, 12), (13, 12), (13, 12)], // 89 Eucalyptus Planks
+            [(12, 4), (12, 4), (12, 4)], // 90 Illuminite Ore
         ];
 
 
@@ -330,6 +333,7 @@ impl Blocks {
             87 => {"Beech Planks"}
             88 => {"Western Hemlock Planks"}
             89 => {"Eucalyptus Planks"}
+            90 => {"Illuminite Ore"}
 
             _ => {
                 "Unknown Item"
@@ -337,7 +341,7 @@ impl Blocks {
         }
     }
     pub fn get_light_color(id: u32) -> LightColor {
-        static WHITE: LightColor = LightColor{x: 9, y: 15, z:15};
+        static WHITE: LightColor = LightColor{x: 10, y: 15, z:15};
         static BLUE: LightColor = LightColor{x: 0, y:0, z:15};
         static PURPLE: LightColor = LightColor{x: 7, y:0, z:10};
         static YELLOW: LightColor = LightColor{x: 15, y:15, z:0};
@@ -348,6 +352,8 @@ impl Blocks {
         static TEAL: LightColor = LightColor{x: 2, y:15, z:12};
 
         static TORCH: LightColor = LightColor{x: 8, y:8, z:8};
+
+        static ILLUMINITE: LightColor = LightColor{x: 0, y:0, z:3};
         
         static JACKOLANTERN: LightColor = LightColor{x: 5, y:5, z:4};
 
@@ -382,6 +388,9 @@ impl Blocks {
             }
             80 => {
                 JACKOLANTERN
+            }
+            90 => {
+                ILLUMINITE
             }
             _ => {
                 WHITE
@@ -434,8 +443,8 @@ impl Blocks {
         return NP.contains(&id);
     }
     pub fn is_light(id: u32) -> bool {
-        static LIGHTS: [u32; 10] = [
-            18, 24, 25, 26, 27, 28, 29, 30, 49, 80
+        static LIGHTS: [u32; 11] = [
+            18, 24, 25, 26, 27, 28, 29, 30, 49, 80, 90
         ];
         return LIGHTS.contains(&id);
     }
@@ -525,7 +534,7 @@ impl Blocks {
             22 => {
                 "plantplaceseries"
             }
-            18 => {
+            18 | 90 => {
                 "glassplaceseries"
             }
             19 => {

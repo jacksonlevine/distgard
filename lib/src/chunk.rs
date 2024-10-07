@@ -2706,6 +2706,54 @@ impl ChunkSystem {
         }
     }
 
+    pub fn is_illuminite(spot: &vec::IVec3) -> bool {
+        let cpos = ChunkSystem::spot_to_chunk_pos(spot);
+        let seed: [u8; 32] = [
+            (cpos.x % 255) as u8,
+            (cpos.y % 255) as u8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ]; // This needs to be a fixed-size array of bytes (u8).
+
+        // Create a new RNG instance with the seed.
+        let mut rng = StdRng::from_seed(seed);
+
+        static perlin: Lazy<Perlin> = Lazy::new(|| Perlin::new(0) );
+        let res = Self::_ore_noise(&perlin, *spot) > 1.0 && rng.gen_range(0..200) > 190;
+        // if res {
+        //     println!("Illuminite at {:?}", spot);
+        // }
+        return res;
+    }
+
     pub fn generate_chunk(&self, cpos: &vec::IVec2) {
         // Seed for the RNG.
         let seed: [u8; 32] = [
@@ -3258,6 +3306,11 @@ impl ChunkSystem {
                 }
             }
         };
+        // if ret == 5 {
+        //     if Self::is_illuminite(&spot) {
+        //         return 90;
+        //     }
+        // }
         if ret != 2 && ret != 51 {
             if Self::_cave_noise(per, spot) > 0.5 {
                 return 0;

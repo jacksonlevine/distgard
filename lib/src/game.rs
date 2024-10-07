@@ -4071,7 +4071,7 @@ impl Game {
 
         let gaussian_value =
             Self::gaussian(*todlock, self.daylength / 2.0, self.daylength / 2.0) * 1.3;
-        self.ambient_bright_mult = gaussian_value.clamp(0.08, 1.0);
+        self.ambient_bright_mult = gaussian_value.clamp(0.1, 1.0);
 
         self.sunset_factor = Self::gaussian(
             *todlock,
