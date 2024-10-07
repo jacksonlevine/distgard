@@ -1445,7 +1445,7 @@ impl ChunkSystem {
                         }
 
                         let reducedvalue = LightColor::new(
-                            (n.0.x as i32 - 2).max(0) as u16,
+                            (n.0.x as i32 - 1).max(0) as u16,
                             (n.0.y as i32 - 2).max(0) as u16,
                             (n.0.z as i32 - 2).max(0) as u16,
                         );

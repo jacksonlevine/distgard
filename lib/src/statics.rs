@@ -29,7 +29,8 @@ pub struct MiscellaneousSettingsData {
     pub controllersupport: bool,
     #[serde(with = "vectorize", default = "singleplayer_worlds_default")]
     pub singleplayer_worlds: HashMap<usize, u32>,
-
+    #[serde(with = "vectorize", default = "worldnames_default")]
+    pub world_names: HashMap<usize, String>,
 
 }
 
@@ -43,6 +44,16 @@ pub fn singleplayer_worlds_default() -> HashMap<usize, u32> {
 
 pub fn waypoints_default() -> HashMap<String, IVec3> {
     HashMap::new()
+}
+
+pub fn worldnames_default() -> HashMap<usize, String> {
+    let mut h= HashMap::new();
+    h.insert(0, "World 1".into());
+    h.insert(1, "World 2".into());
+    h.insert(2, "World 3".into());
+    h.insert(3, "World 4".into());
+    h.insert(4, "World 5".into());
+    h
 }
 
 pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| MiscellaneousSettingsData {
@@ -72,6 +83,7 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
     ]),
     controllersupport: true,
     singleplayer_worlds: HashMap::new(),
+    world_names: HashMap::new(),
 } );
 
 pub fn save_misc() {

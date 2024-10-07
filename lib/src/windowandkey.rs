@@ -75,7 +75,8 @@ pub struct WindowAndKeyContext {
 
     pub serveraddrbuffer: String,
 
-    pub logo: Texture,
+    pub penciltexture: Texture,
+    pub deletetexture: Texture,
     pub menu_camera: crate::camera::Camera,
 
     pub gltf_models: Vec<(
@@ -263,14 +264,17 @@ impl WindowAndKeyContext {
             addressentered: Arc::new(AtomicBool::new(false)),
             serveraddress: Arc::new(Mutex::new(None)),
             serveraddrbuffer: String::with_capacity(128),
-            logo: Texture::new(path!(
-                "assets/Untitled3.png"
+            deletetexture: Texture::new(path!(
+                "assets/delete.png"
+            )).unwrap(),
+            penciltexture: Texture::new(path!(
+                "assets/pencil.png"
             ))
             .unwrap_or_else(|err| {
                 eprintln!(
                     "Error: {err:?}, path: {}",
                     path!(
-                        "assets/Untitled3.png"
+                        "assets/pencil.png"
                     )
                 );
                 panic!("Error!!!!!!!!1111, {err:?}");
@@ -607,8 +611,8 @@ impl WindowAndKeyContext {
 
                             // Adjust the image size and position
                             let scaled_size = [
-                                (self.logo.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
-                                (self.logo.size.1 as f32 * screen_height / 720.0).round(),
+                                (self.penciltexture.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
+                                (self.penciltexture.size.1 as f32 * screen_height / 720.0).round(),
                             ];
                             let image_pos_x = (available_width - scaled_size[0]) / 2.0;
                             let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - screen_height * 0.2;
@@ -735,6 +739,8 @@ impl WindowAndKeyContext {
                                 let screen_width = width as f32;
                                 let screen_height = height as f32;
 
+                                static mut CONFIRMDELETE: i8 = -1;
+
                                 // Start the ImGui frame
                                 let ui = self.imgui.frame();
 
@@ -751,6 +757,8 @@ impl WindowAndKeyContext {
                                     screen_width / 2.0 - (window_size.0 / 2.0),
                                     screen_height / 2.0 - (window_size.1 / 2.0) + screen_height * 0.1, // Slightly offset vertically
                                 ];
+
+
 
                                 ui.window("Transparent Window")
                                     .size([window_size.0, window_size.1], Condition::Always)
@@ -769,8 +777,8 @@ impl WindowAndKeyContext {
 
                                         // Adjust the image size and position
                                         let scaled_size = [
-                                            (self.logo.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
-                                            (self.logo.size.1 as f32 * screen_height / 720.0).round(),
+                                            (self.penciltexture.size.0 as f32 * screen_width / 1280.0).round(), // Scale based on reference size
+                                            (self.penciltexture.size.1 as f32 * screen_height / 720.0).round(),
                                         ];
                                         let image_pos_x = (available_width - scaled_size[0]) / 2.0;
                                         let image_pos_y = ((available_height - scaled_size[1]) / 2.0) - screen_height * 0.2;
@@ -785,79 +793,158 @@ impl WindowAndKeyContext {
                                         //     }
                                         // }
 
-                                        ui.set_cursor_pos([image_pos_x, image_pos_y]);
 
-                                        draw_3d_menu_button(
-                                            &self.modelshader, &self.menu_camera, 
-                                            &self.gltf_vaos, &self.gltf_textures, 
-                                            &self.gltf_counts, &self.gltf_drawmodes,
-                                            false, Vec3::new(0.0, 0.0, 0.0), 3
-                                        );
-
-
-                                        
-
-
-                                        // ui.set_cursor_pos([pos_x - screen_width * 0.04, pos_y - screen_height * 0.08]);
-                                        // ui.text_colored([1.0, 0.0, 0.0, 1.0], "Welcome! Please choose an option.");
-
-                                        // Center the button and adjust its size
-                                        ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.02]);
-
-                                        // Make button invisible but functional
-                                        //let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
-
-                                        static mut moused: [bool; 5] = [false; 5];
-
-
-
-                                        for worldindex in 0..5 {
-                                            ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * worldindex as f32)]);
-                                            // "World (worldindex)" button
-                                            if ui.button_with_size(format!("World {}", worldindex + 1), [button_width, button_height]) {
-                                                #[cfg(feature="audio")]
-                                                {
-                                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
-                                                }
-                                                
-                                                //PLAYER_DECIDED_SEED = seeds[worldindex];
-
-                                                match MISCSETTINGS.singleplayer_worlds.get(&worldindex) {
-                                                    Some(seed) => {
-                                                        PLAYER_DECIDED_SEED = *seed;
-                                                        DECIDEDSEEDOREXISTS = true;
-                                                    }
-                                                    None => {
-                                                        DECIDEDSEEDOREXISTS = false;
-                                                    }
-                                                }
-                                                SELECTEDWORLDINDEX = worldindex;
-                                                DECIDEDWORLD = true;
-                                                
-                                                
-                                                UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
-                                            }
-
-                                            
-                                            let hovered = ui.is_item_hovered();
-
-                                            if hovered != unsafe { moused[worldindex] } {
-                                                unsafe {
-                                                    moused[worldindex] = hovered;
-                                                }
-                                                #[cfg(feature="audio")]
-                                                {
-                                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
-                                                }
-                                            }
+                                        if CONFIRMDELETE < 0 {
+                                            ui.set_cursor_pos([image_pos_x, image_pos_y]);
 
                                             draw_3d_menu_button(
                                                 &self.modelshader, &self.menu_camera, 
                                                 &self.gltf_vaos, &self.gltf_textures, 
                                                 &self.gltf_counts, &self.gltf_drawmodes,
-                                                hovered, Vec3::new(0.0, 4.0 - (0.6 * worldindex as f32), 0.0), 4
+                                                false, Vec3::new(0.0, 0.0, 0.0), 3
                                             );
+
+
+                                            
+
+
+                                            // ui.set_cursor_pos([pos_x - screen_width * 0.04, pos_y - screen_height * 0.08]);
+                                            // ui.text_colored([1.0, 0.0, 0.0, 1.0], "Welcome! Please choose an option.");
+
+                                            // Center the button and adjust its size
+                                            ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.02]);
+
+                                            // Make button invisible but functional
+                                            //let sttok1 = ui.push_style_var(StyleVar::Alpha(0.0));
+
+                                            static mut moused: [bool; 5] = [false; 5];
+                                            static mut renamemode: [bool; 5] = [false; 5];    
+
+
+                                            for worldindex in 0..5 {
+                                                let cursorpos = [pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * worldindex as f32)];
+                                                ui.set_cursor_pos(cursorpos);
+                                                // "World (worldindex)" button
+
+                                                if !renamemode[worldindex] {
+                                                    if ui.button_with_size(MISCSETTINGS.world_names.get(&worldindex).unwrap_or_else(|| { 
+                                                        MISCSETTINGS.world_names.insert(worldindex,
+                                                        format!("World {}", worldindex + 1)); 
+                                                        MISCSETTINGS.world_names.get(&worldindex).unwrap()
+                                                    } ), [button_width, button_height]) {
+                                                        #[cfg(feature="audio")]
+                                                        {
+                                                            AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                                        }
+                                                        
+                                                        //PLAYER_DECIDED_SEED = seeds[worldindex];
+        
+                                                        match MISCSETTINGS.singleplayer_worlds.get(&worldindex) {
+                                                            Some(seed) => {
+                                                                PLAYER_DECIDED_SEED = *seed;
+                                                                DECIDEDSEEDOREXISTS = true;
+                                                            }
+                                                            None => {
+                                                                DECIDEDSEEDOREXISTS = false;
+                                                            }
+                                                        }
+                                                        SELECTEDWORLDINDEX = worldindex;
+                                                        DECIDEDWORLD = true;
+                                                        
+                                                        
+                                                        UNCAPKB.store(true, std::sync::atomic::Ordering::Relaxed);
+                                                    }
+                                                } else {
+                                                    ui.set_cursor_pos([cursorpos[0] - button_width * 0.15, cursorpos[1]]);
+
+                                                    let texture_id = imgui::TextureId::from(self.deletetexture.id as usize);
+
+
+                                                
+                                                    imgui::Image::new(texture_id, scaled_size).build(&ui);
+
+                                                    if ui.is_item_clicked() {
+                                                        CONFIRMDELETE = worldindex as i8;
+                                                    }
+                                                
+
+                                                    ui.set_cursor_pos(cursorpos);
+                                                    if ui.input_text(format!("worldname{worldindex}").as_str(), &mut MISCSETTINGS.world_names.get_mut(&worldindex).unwrap_or_else(|| { 
+                                                        MISCSETTINGS.world_names.insert(worldindex,
+                                                        format!("World {}", worldindex + 1)); 
+                                                        MISCSETTINGS.world_names.get_mut(&worldindex).unwrap()
+                                                    } )).enter_returns_true(true).build() {
+                                                        save_misc();
+                                                        renamemode[worldindex] = false;
+                                                    }
+                                                }
+                                                
+                                                
+
+                                                
+                                                let hovered = ui.is_item_hovered();
+
+                                                
+
+                                                if hovered != unsafe { moused[worldindex] } {
+                                                    unsafe {
+                                                        moused[worldindex] = hovered;
+                                                    }
+                                                    #[cfg(feature="audio")]
+                                                    {
+                                                        AUDIOPLAYER.play_in_head(path!("assets/sfx/mclick1.mp3"));
+                                                    }
+                                                }
+
+                                                draw_3d_menu_button(
+                                                    &self.modelshader, &self.menu_camera, 
+                                                    &self.gltf_vaos, &self.gltf_textures, 
+                                                    &self.gltf_counts, &self.gltf_drawmodes,
+                                                    hovered, Vec3::new(0.0, 4.0 - (0.6 * worldindex as f32), 0.0), 4
+                                                );
+
+                                                ui.set_cursor_pos([cursorpos[0] + button_width + (button_width * 0.09), cursorpos[1]]);
+                                                let texture_id = imgui::TextureId::from(self.penciltexture.id as usize);
+
+
+                                                
+                                                imgui::Image::new(texture_id, scaled_size).build(&ui);
+
+                                                if ui.is_item_clicked() {
+                                                    renamemode[worldindex] = !renamemode[worldindex];
+                                                }
+                                                
+
+                                                
+                                            }
+                                        } else {
+
+
+                                            ui.set_cursor_pos([image_pos_x, image_pos_y]);
+                                            ui.text_colored([1.0, 0.0, 0.0, 1.0],"Are you sure you want to delete this world?");
+                                            ui.set_cursor_pos([image_pos_x, image_pos_y + screen_height * 0.1]);
+                                            ui.text_colored([1.0, 0.0, 0.0, 1.0],"This action cannot be undone.");
+                                            ui.set_cursor_pos([image_pos_x, image_pos_y + screen_height * 0.2]);
+                                            if ui.button("Yes") {
+                                                #[cfg(feature="audio")]
+                                                {
+                                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                                }
+                                                MISCSETTINGS.singleplayer_worlds.remove(&(CONFIRMDELETE as usize));
+                                                MISCSETTINGS.world_names.remove(&(CONFIRMDELETE as usize));
+                                                
+                                                
+
+                                                save_misc();
+                                                CONFIRMDELETE = -1;
+                                            }
+
+
+
+                                            
                                         }
+
+                                        
 
 
                                         // Pop the button style after use

@@ -337,7 +337,7 @@ impl Blocks {
         }
     }
     pub fn get_light_color(id: u32) -> LightColor {
-        static WHITE: LightColor = LightColor{x: 15, y: 15, z:15};
+        static WHITE: LightColor = LightColor{x: 9, y: 15, z:15};
         static BLUE: LightColor = LightColor{x: 0, y:0, z:15};
         static PURPLE: LightColor = LightColor{x: 7, y:0, z:10};
         static YELLOW: LightColor = LightColor{x: 15, y:15, z:0};
@@ -347,9 +347,9 @@ impl Blocks {
         static ORANGE: LightColor = LightColor{x: 15, y:7, z:0};
         static TEAL: LightColor = LightColor{x: 2, y:15, z:12};
 
-        static TORCH: LightColor = LightColor{x: 10, y:8, z:1};
+        static TORCH: LightColor = LightColor{x: 8, y:8, z:8};
         
-        static JACKOLANTERN: LightColor = LightColor{x: 6, y:2, z:0};
+        static JACKOLANTERN: LightColor = LightColor{x: 5, y:5, z:4};
 
         match id {
             18 => {
