@@ -67,7 +67,7 @@ void main() {
     vec3 adjtopos = mix(lastpos, pos, min(interp_time * 4.0, 1.0));
 
 
-    vec3 mixedrots = mix(lastrot, vec3(xrot, yrot, zrot), min(interp_time * 4.0, 1.0));
+    vec3 mixedrots = mix(vec3(lastrot.x, -1.0 * lastrot.y, lastrot.z), vec3(xrot, -1.0 * yrot, zrot), min(interp_time * 4.0, 1.0));
 
 
 

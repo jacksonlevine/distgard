@@ -31,6 +31,7 @@ use parking_lot::{Mutex, RwLock};
 use jeffy_quintet::client::QuintetClientPlugin;
 use jeffy_quintet::server::QuintetServerPlugin;
 
+pub static mut REND_RAD: bool = false;
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
@@ -89,6 +90,7 @@ use crate::newserver::{handle_client_messages, start_listening};
 //use crate::network::NetworkConnector;
 use crate::planetinfo::Planets;
 use crate::playerposition::PlayerPosition;
+use crate::rad::{cycle_rad_positions, record_and_sort_rad_positions, RadCyclePositionTimer, RadPositionsList, RadRecordPositionTimer};
 use crate::raycast::*;
 use crate::recipes::{Recipe, RecipeEntry, RECIPES};
 use crate::selectcube::SelectCube;
@@ -161,6 +163,8 @@ pub const FALLFOV: f32 = 93.0;
 
 pub static mut CURRSEED: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
 
+pub static mut DEATHTIMER: f32 = 0.0;
+pub static mut DEAD: bool = false;
 
 
 
@@ -1847,6 +1851,11 @@ impl Game {
         #[cfg(feature = "glfw")]
         if !headless {
             g.load_model(path!("assets/models/player.glb"));
+            g.load_model(path!("assets/models/rad.glb"));
+            //g.load_model(path!("assets/models/radface.glb"));
+            
+           g.load_model(path!("assets/models/radfacetop.glb"));
+            g.load_model(path!("assets/models/radfacebot.glb"));
             
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
@@ -2026,10 +2035,26 @@ impl Game {
                     ],
                 );
 
-                // TODO: handle error
+                AUDIOPLAYER.preload_series(
+                    "aseries",
+                    vec![
+                        path!("assets/sfx/a1.mp3"),
+                        path!("assets/sfx/a2.mp3"),
+                    ],
+                );
+
                 let _ = AUDIOPLAYER.preload(
                     path!("assets/sfx/cricket1.mp3"),
                     path!("assets/sfx/cricket1.mp3"),
+                );
+                let _ = AUDIOPLAYER.preload(
+                    path!("assets/sfx/a1.mp3"),
+                    path!("assets/sfx/a1.mp3"),
+                );
+
+                let _ = AUDIOPLAYER.preload(
+                    path!("assets/sfx/galacticdeath.mp3"),
+                    path!("assets/sfx/galacticdeath.mp3"),
                 );
             }
         }
@@ -2056,27 +2081,37 @@ impl Game {
             let mut app = App::new();
             app
             .add_plugins(MinimalPlugins)
+            .insert_resource(RadRecordPositionTimer(Timer::from_seconds(5.0, TimerMode::Repeating)))
+            .insert_resource(RadCyclePositionTimer(Timer::from_seconds(10.0, TimerMode::Repeating)))
+            .insert_resource(RadPositionsList(Vec::new()))
             ;
             
             //.add_systems(Update, || println!("Testeroonie"));
             
             if unsafe {HEADLESS} { //Headless server
+
                 app.add_plugins(QuintetServerPlugin::default());
                 app.add_systems(Startup, start_listening);
                 app.add_systems(Update, handle_client_messages);
             
             } else {
+
                 app.add_systems(Update, attend_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
                 // app.add_systems(Update, attend_chunk_queues2);
                 // app.add_systems(Update, attend_chunk_queues3);
+
                 if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
+
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
                     app.add_systems(Startup, start_connection);
                     app.add_systems(Update, handle_server_messages);
+
                 } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
 
+                    app.add_systems(Update, record_and_sort_rad_positions);
+                    app.add_systems(Update, cycle_rad_positions);
                 }
             }
             
@@ -3994,6 +4029,7 @@ impl Game {
 
         unsafe {
             if WINDED {
+
                 if WINDEDTIMER < WINDEDLENGTH {
                     WINDED = true;
                     WINDEDTIMER += self.delta_time;
@@ -4012,25 +4048,28 @@ impl Game {
                 if self.controls.shift && !self.vars.in_climbable {
                     if stam > 0 {
                         SPRINTING = true;
-                        // self.stamina.store(stam - 4, Ordering::Relaxed);
+                        self.stamina.store(stam - 2, Ordering::Relaxed);
                     } else {
 
-                        // if stam < 0 {
-                        //     unsafe {
-                        //         WINDED = true;
-                        //     }
-                        // }
+             
+                            unsafe {
+                                WINDED = true;
+                            }
+                        
 
-                        // unsafe { SPRINTING = false }
-                        // if stam < 100 {
-                        //     self.stamina.store(stam + 2, Ordering::Relaxed);
-                        // }
+                        unsafe { SPRINTING = false }
+
+                        if stam < 100 && (!WINDED) {
+                            let stam = self.stamina.load(Ordering::Relaxed);
+                            self.stamina.store(stam + 2, Ordering::Relaxed);
+                        }
                     }
                 } else {
                     SPRINTING = false;
-                    // if stam < 100 {
-                    //     self.stamina.store(stam + 2, Ordering::Relaxed);
-                    // }
+                    if stam < 100 {
+                        let stam = self.stamina.load(Ordering::Relaxed);
+                        self.stamina.store(stam + 2, Ordering::Relaxed);
+                    }
                 }
             } else {
                 SPRINT_CHECK_TIMER += self.delta_time;
@@ -4067,6 +4106,12 @@ impl Game {
 
         if !self.vars.menu_open || self.vars.in_multiplayer {
             *todlock = (*todlock + self.delta_time) % self.daylength;
+        }
+        
+        if *todlock < 145.0 || *todlock > 775.0 {
+            unsafe { REND_RAD = true };
+        } else {
+            unsafe { REND_RAD = false };
         }
 
         let gaussian_value =
@@ -4540,7 +4585,16 @@ impl Game {
                     self.faders.write()[FaderNames::FovFader as usize].down();
                 }
             }
-            self.draw();
+            
+            if !unsafe { DEAD } {
+                self.draw();
+            } else {
+                unsafe { DEATHTIMER += self.delta_time };
+                if unsafe { DEATHTIMER } > 10.0 {
+                    unsafe { DEAD = false };
+                }
+            }
+            
 
             //if !self.vars.ship_taken_off {
             let camclone = self.draw_select_cube();
@@ -5148,9 +5202,12 @@ impl Game {
         if newamount <= 0 {
             //DEAD
 
+            unsafe { DEAD = true; DEATHTIMER = 0.0; };
+
             unsafe {
                 #[cfg(feature = "audio")]
                 AUDIOPLAYER.play_in_head(path!("assets/sfx/death.mp3"));
+                AUDIOPLAYER.play_in_head(path!("assets/sfx/galacticdeath.mp3"));
             }
             let cam = unsafe { CAMERA.as_ref().unwrap() };
             let mut camlock = cam.lock();
@@ -5909,7 +5966,10 @@ impl Game {
             gl::Disable(gl::CULL_FACE);
         }
         self.draw_models();
-
+        if unsafe { REND_RAD } {
+            self.draw_rad();
+        }
+        
         for (_index, cfl) in cmem.memories.iter().enumerate() {
             if cfl.used {
                 let dd1: Mutex<Vec<u32>> = Mutex::new(Vec::new());
@@ -7948,12 +8008,12 @@ impl Game {
 
                 let h = self.health.load(Ordering::Relaxed);
 
-                //let s = self.stamina.load(Ordering::Relaxed);
+                let s = self.stamina.load(Ordering::Relaxed);
 
                 self.health
                     .store((h + foodstats.0 as i8).min(20), Ordering::Relaxed);
-                // self.stamina
-                //     .store((s + foodstats.1).min(100), Ordering::Relaxed);
+                self.stamina
+                    .store((s + foodstats.1).min(100), Ordering::Relaxed);
 
                 //REDUCE THE INV ITEM:
                 if self.vars.in_multiplayer {

@@ -50,3 +50,4 @@ pub mod menu3d;
 pub mod actest;
 pub mod database;
 pub mod climates;
+pub mod rad;

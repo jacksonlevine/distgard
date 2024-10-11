@@ -170,7 +170,7 @@ pub enum Elevation {
 }
 
 #[derive(Clone, Copy)]
-pub enum TreeType {
+pub enum TerrainFeatureType {
     ArticWillowDwarfShrub,
     Pine,
     ArticWillow,
@@ -188,125 +188,146 @@ pub enum TreeType {
     Eucalyptus,
     Saguaro,
     FigTree,
-    Pumpkin
+    Pumpkin,
+    Boulder,
+    Bamboo,
+    LightberryBush,
+
 }
 
 pub const MAX_TREES_PER_CLIMATE: usize = 4;
 
 pub fn get_vox_mod_from_treetype(
-    treetype: TreeType,
+    treetype: TerrainFeatureType,
 ) -> Option<ArrayVec<VoxelModel, MAX_TREES_PER_CLIMATE>> {
     match treetype {
-        TreeType::ArticWillowDwarfShrub => {
+        TerrainFeatureType::ArticWillowDwarfShrub => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Awds);
             Some(v)
         }
-        TreeType::Pine => {
+        TerrainFeatureType::Pine => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::PineTree1);
             v.push(VoxelModel::PineTree2);
             Some(v)
         }
-        TreeType::ArticWillow => {
+        TerrainFeatureType::ArticWillow => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::ArticWillow);
             Some(v)
         }
-        TreeType::Oak => {
+        TerrainFeatureType::Oak => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Tree1);
             v.push(VoxelModel::Tree2);
             Some(v)
         }
-        TreeType::Maple => {
+        TerrainFeatureType::Maple => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Tree3);
             v.push(VoxelModel::Tree4);
             Some(v)
         }
-        TreeType::Cedar => {
+        TerrainFeatureType::Cedar => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::CedarTree1);
             v.push(VoxelModel::CedarTree2);
             Some(v)
         }
-        TreeType::Palm => {
+        TerrainFeatureType::Palm => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::PalmTree1);
             v.push(VoxelModel::PalmTree2);
             v.push(VoxelModel::PalmTree3);
             Some(v)
         }
-        TreeType::Joshua => {
+        TerrainFeatureType::Joshua => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::JoshuaTree1);
             v.push(VoxelModel::JoshuaTree2);
             v.push(VoxelModel::JoshuaTree3);
             Some(v)
         }
-        TreeType::Rubber => {
+        TerrainFeatureType::Rubber => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::RubberTree);
             Some(v)
         }
-        TreeType::PaperBirch => {
+        TerrainFeatureType::PaperBirch => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::PaperBirch1);
             v.push(VoxelModel::PaperBirch2);
             v.push(VoxelModel::PaperBirch3);
             Some(v)
         }
-        TreeType::GreenAlder => {
+        TerrainFeatureType::GreenAlder => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::GreenAlder1);
             v.push(VoxelModel::GreenAlder2);
             Some(v)
         }
-        TreeType::Willow => {
+        TerrainFeatureType::Willow => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Willow1);
             v.push(VoxelModel::Willow2);
             v.push(VoxelModel::Willow3);
             Some(v)
         }
-        TreeType::Beech => {
+        TerrainFeatureType::Beech => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Beech1);
             v.push(VoxelModel::Beech2);
             v.push(VoxelModel::Beech3);
             Some(v)
         }
-        TreeType::WesternHemlock => {
+        TerrainFeatureType::WesternHemlock => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::WesternHemlock1);
             v.push(VoxelModel::WesternHemlock2);
             v.push(VoxelModel::WesternHemlock3);
             Some(v)
         }
-        TreeType::Eucalyptus => {
+        TerrainFeatureType::Eucalyptus => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Eucalyptus1);
             v.push(VoxelModel::Eucalyptus2);
             v.push(VoxelModel::Eucalyptus3);
             Some(v)
         }
-        TreeType::Saguaro => {
+        TerrainFeatureType::Saguaro => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Saguaro1);
             v.push(VoxelModel::Saguaro2);
             v.push(VoxelModel::Saguaro3);
             Some(v)
         }
-        TreeType::FigTree => {
+        TerrainFeatureType::FigTree => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::FigTree1);
             v.push(VoxelModel::FigTree2);
             Some(v)
         }
-        TreeType::Pumpkin => {
+        TerrainFeatureType::Pumpkin => {
             let mut v = ArrayVec::new();
             v.push(VoxelModel::Pumpkin);
+            Some(v)
+        }
+        TerrainFeatureType::Boulder => {
+            let mut v = ArrayVec::new();
+            v.push(VoxelModel::Rock1);
+            v.push(VoxelModel::Rock2);
+            Some(v)
+        }
+        TerrainFeatureType::Bamboo => {
+            let mut v = ArrayVec::new();
+            v.push(VoxelModel::Bamboo1);
+            v.push(VoxelModel::Bamboo2);
+            Some(v)
+        }
+        TerrainFeatureType::LightberryBush => {
+            let mut v = ArrayVec::new();
+            v.push(VoxelModel::Bush);
             Some(v)
         }
     }
@@ -334,74 +355,85 @@ pub fn get_climate(temp: f32, hum: f32) -> &'static Climate {
 }
 
 //get tree types based on climate
-pub fn get_tree_types(climate: &Climate) -> &'static [TreeType] {
-    static CLIMATE_CATEGORIES: Lazy<HashMap<Climate, &'static [TreeType]>> =
+pub fn get_tree_types(climate: &Climate) -> &'static [TerrainFeatureType] {
+    static CLIMATE_CATEGORIES: Lazy<HashMap<Climate, &'static [TerrainFeatureType]>> =
         Lazy::new(|| {
-            let mut map: hashbrown::HashMap<Climate, &'static [TreeType]> = HashMap::default();
+            let mut map: hashbrown::HashMap<Climate, &'static [TerrainFeatureType]> = HashMap::default();
             map.insert(
                 Climate::PolarDesert,
                 &[
-                    TreeType::ArticWillowDwarfShrub,
+                    TerrainFeatureType::Boulder,
+                    TerrainFeatureType::ArticWillowDwarfShrub,
                 ],
             );
             map.insert(
                 Climate::BorealForest,
                 &[
-                    TreeType::Pine,
-                    TreeType::PaperBirch,
+                    TerrainFeatureType::LightberryBush,
+                    TerrainFeatureType::Boulder,
+                    TerrainFeatureType::Pine,
+                    TerrainFeatureType::PaperBirch,
                 ],
             );
             map.insert(
                 Climate::WetTundra,
                 &[
-                    TreeType::ArticWillow,
-                    TreeType::GreenAlder,
+                    TerrainFeatureType::Boulder,
+                    TerrainFeatureType::ArticWillow,
+                    TerrainFeatureType::GreenAlder,
                 ],
             );
             map.insert(
                 Climate::TemperateGrassland,
                 &[
-                    TreeType::Oak,
-                    TreeType::Willow,
-                    TreeType::Pumpkin
+                    TerrainFeatureType::LightberryBush,
+                    TerrainFeatureType::Oak,
+                    TerrainFeatureType::Willow,
+                    TerrainFeatureType::Pumpkin
                 ],
             );
             map.insert(
                 Climate::DeciduousForest,
                 &[
-                    TreeType::Oak,
-                    TreeType::Maple,
-                    TreeType::Beech,
+                    TerrainFeatureType::LightberryBush,
+                    TerrainFeatureType::Oak,
+                    TerrainFeatureType::Maple,
+                    TerrainFeatureType::Beech,
                 ],
             );
             map.insert(
                 Climate::TemperateRainforest,
                 &[
-                    TreeType::Maple,
-                    TreeType::Cedar,
-                    TreeType::WesternHemlock,
+                    TerrainFeatureType::LightberryBush,
+                    TerrainFeatureType::Bamboo,
+                    TerrainFeatureType::Boulder,
+                    TerrainFeatureType::Maple,
+                    TerrainFeatureType::Cedar,
+                    TerrainFeatureType::WesternHemlock,
                 ],
             );
             map.insert(
                 Climate::HotDesert,
                 &[
-                    TreeType::Joshua,
-                    TreeType::Saguaro,
+                    TerrainFeatureType::Joshua,
+                    TerrainFeatureType::Saguaro,
+                    TerrainFeatureType::Boulder,
                 ],
             );
             map.insert(
                 Climate::Savannah,
                 &[
-                    TreeType::Palm,
-                    TreeType::Eucalyptus,
+                    TerrainFeatureType::Palm,
+                    TerrainFeatureType::Eucalyptus,
 
                 ],
             );
             map.insert(
                 Climate::TropicalRainforest,
                 &[
-                    TreeType::Rubber,
-                    TreeType::FigTree,
+                    TerrainFeatureType::Bamboo,
+                    TerrainFeatureType::Rubber,
+                    TerrainFeatureType::FigTree,
                 ],
             );
             map
