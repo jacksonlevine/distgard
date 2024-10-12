@@ -50,10 +50,11 @@ use crate::cube::Cube;
 use crate::cube::CubeSide;
 
 use crate::database::UserDataMapAndMiscMap;
-use crate::eyeris::EyerisVisitSpot;
-use crate::eyeris::EYERIS_VISIT_QUEUE;
-use crate::eyeris::MAX_LIGHTS;
-use crate::eyeris::QUEUED_FOR_EYERIS;
+use crate::everis::EverisVisitSpot;
+use crate::everis::EVERIS_VISIT_QUEUE;
+use crate::everis::EVERIS_KILLED_YET;
+use crate::everis::MAX_LIGHTS;
+use crate::everis::QUEUED_FOR_EVERIS;
 #[cfg(feature = "audio")]
 use crate::game::AUDIOPLAYER;
 
@@ -1579,9 +1580,10 @@ impl ChunkSystem {
 
         if lightsources.len() > MAX_LIGHTS {
             let key = bevy::math::IVec2::new(pos.x, pos.y);
-            if !QUEUED_FOR_EYERIS.contains_key(&key) {
-                QUEUED_FOR_EYERIS.insert(key, true);
-                unsafe { EYERIS_VISIT_QUEUE.push(EyerisVisitSpot{ spot:key, highestlight: highest}) };
+            if !QUEUED_FOR_EVERIS.contains_key(&key) {
+                QUEUED_FOR_EVERIS.insert(key, true);
+                unsafe { EVERIS_KILLED_YET = false };
+                unsafe { EVERIS_VISIT_QUEUE.push(EverisVisitSpot{ spot:key, highestlight: highest}) };
             }
             
         }

@@ -233,8 +233,13 @@ impl Game {
                     #[cfg(feature = "audio")]
                     unsafe {
                         AUDIOPLAYER.play_next_in_series( "aseries", &realpos, &Vec3::ZERO, 1.0 );
+                        
                     }
+                    
+                }else {
+                    self.take_damage_no_drops(200);
                 }
+
                 WASFACE = renderface;
             }
 

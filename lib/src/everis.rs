@@ -17,11 +17,12 @@ use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{Game, AU
 
 
 
-pub static mut EYERIS_POSITION: Vec3 = Vec3::new(0.0, 80.0, 0.0);
-pub static mut EYERIS_ROT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+pub static mut EVERIS_POSITION: Vec3 = Vec3::new(0.0, 80.0, 0.0);
+pub static mut EVERIS_ROT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
 
-pub static mut EYERIS_VISIT_TIMER: f32 = 0.0;
-pub static mut EYERIS_IS_VISITING: bool = false;
+pub static mut EVERIS_VISIT_TIMER: f32 = 0.0;
+pub static mut EVERIS_IS_VISITING: bool = false;
+
 
 pub static mut CURRENT_VISIT_SPOT: IVec2 = IVec2{x:0, y:0};
 pub static mut HIGHEST: i32 = 0;
@@ -31,50 +32,31 @@ pub const MAX_LIGHTS: usize = 7;
 pub const VISIT_LENGTH: f32 = 10.0;
 
 
-pub struct EyerisVisitSpot{
+pub struct EverisVisitSpot{
     pub spot: IVec2,
     pub highestlight: i32
 }
-pub static mut EYERIS_VISIT_QUEUE: Lazy<Queue<EyerisVisitSpot>> = Lazy::new(|| {
+pub static mut EVERIS_VISIT_QUEUE: Lazy<Queue<EverisVisitSpot>> = Lazy::new(|| {
     Queue::new()
 });
 
-pub static QUEUED_FOR_EYERIS: Lazy<DashMap<IVec2, bool>> = Lazy::new(||DashMap::new());
+pub static QUEUED_FOR_EVERIS: Lazy<DashMap<IVec2, bool>> = Lazy::new(||DashMap::new());
+
+pub static mut REMOVED_LIGHTS_YET: bool = false;
 
 pub fn wait_or_visit_queued_spots(
 
-    mut removedlightsyet: Local<bool>,
     time: Res<Time>
 ) {
 
     unsafe {
-        if !EYERIS_IS_VISITING {
-
-            match unsafe { &EYERIS_VISIT_QUEUE }.pop() {
-                Some(spot) => {
         
-                    EYERIS_IS_VISITING = true;
-                    CURRENT_VISIT_SPOT = spot.spot;
-                    HIGHEST = spot.highestlight;
-                    *removedlightsyet = false;
-                    #[cfg(feature="audio")]
-                    {
-                        let spothere = Vec3::new((CURRENT_VISIT_SPOT.x * CH_W + (CH_W / 2)) as f32, HIGHEST as f32, (CURRENT_VISIT_SPOT.y * CH_W + (CH_W / 2)) as f32);
-                        AUDIOPLAYER.play_in_head(path!("assets/sfx/eye3.mp3"));
-                    }
-                }
-                None => {
-                    
-                }
-            }
-
-        }
         
 
-        if EYERIS_IS_VISITING {
-            if EYERIS_VISIT_TIMER <= VISIT_LENGTH {
+        if EVERIS_IS_VISITING {
+            if EVERIS_VISIT_TIMER <= VISIT_LENGTH {
 
-                if EYERIS_VISIT_TIMER > (VISIT_LENGTH * 0.5) && !*removedlightsyet {
+                if EVERIS_VISIT_TIMER > (VISIT_LENGTH * 0.5) && !REMOVED_LIGHTS_YET {
                     
 
                     let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
@@ -101,7 +83,7 @@ pub fn wait_or_visit_queued_spots(
                     }
 
                     
-                    QUEUED_FOR_EYERIS.remove(&CURRENT_VISIT_SPOT);
+                    QUEUED_FOR_EVERIS.remove(&CURRENT_VISIT_SPOT);
 
                     // for source in unsafe { &currentdeletespots } {
                     //     csys.read().set_block_no_sound(vec::IVec3::new(source.x, source.y, source.z), 0, true);
@@ -114,7 +96,7 @@ pub fn wait_or_visit_queued_spots(
                     
 
 
-                    *removedlightsyet = true;
+                    REMOVED_LIGHTS_YET = true;
                 }
             }
 
@@ -125,14 +107,47 @@ pub fn wait_or_visit_queued_spots(
     
 }
 
+pub static mut EVERIS_KILLED_YET: bool = false;
 
 impl Game {
 
-    pub fn draw_eyeris(&self) {
+    pub fn update_everis(&self) {
+        unsafe {
+            if !EVERIS_IS_VISITING {
+
+                match unsafe { &EVERIS_VISIT_QUEUE }.pop() {
+                    Some(spot) => {
+            
+                        EVERIS_IS_VISITING = true;
+                        CURRENT_VISIT_SPOT = spot.spot;
+                        HIGHEST = spot.highestlight;
+                        REMOVED_LIGHTS_YET = false;
+                        #[cfg(feature="audio")]
+                        {
+                            let spothere = Vec3::new((CURRENT_VISIT_SPOT.x * CH_W + (CH_W / 2)) as f32, HIGHEST as f32, (CURRENT_VISIT_SPOT.y * CH_W + (CH_W / 2)) as f32);
+                            AUDIOPLAYER.play_in_head(path!("assets/sfx/eye3.mp3"));
+                        }
+                        
+                    }
+                    None => {
+                        
+                    }
+                }
+    
+            }
+        }
+    }
+
+    pub fn draw_everis(&self) {
 
 
         #[cfg(feature = "glfw")]
         unsafe {
+
+           if !EVERIS_KILLED_YET  && EVERIS_VISIT_TIMER > 6.0 {
+                self.take_damage_no_drops(200);
+                EVERIS_KILLED_YET = true;
+           }
 
             
 
@@ -143,15 +158,15 @@ impl Game {
 
             
 
-            static eyeris_modelentity: Lazy<ModelEntity> = Lazy::new(|| {
+            static everis_modelentity: Lazy<ModelEntity> = Lazy::new(|| {
                 let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
                 let cam = unsafe { CAMERA.as_ref().unwrap() };
-                ModelEntity::new(4, unsafe { EYERIS_POSITION }, 1.0, unsafe { EYERIS_ROT }, csys, cam, false)
+                ModelEntity::new(4, unsafe { EVERIS_POSITION }, 1.0, unsafe { EVERIS_ROT }, csys, cam, false)
             });
 
 
 
-            let modelents = vec![&eyeris_modelentity ];
+            let modelents = vec![&everis_modelentity ];
 
             
             let camclone = {
@@ -161,7 +176,7 @@ impl Game {
                 //Camera::new()
             };
 
-            //EYERIS_ROT = calculate_rotation(EYERIS_POSITION, camclone.position);
+            //EVERIS_ROT = calculate_rotation(EVERIS_POSITION, camclone.position);
 
             gl::UniformMatrix4fv(mvp_loc, 1, gl::FALSE, camclone.mvp.to_cols_array().as_ptr());
             gl::Uniform1i(
@@ -218,18 +233,18 @@ impl Game {
                 self.vars.walkbobtimer,
             );
 
-            let distfromend =  ( (EYERIS_VISIT_TIMER - 8.0).max(0.0) / 2.0);
+            let distfromend =  ( (EVERIS_VISIT_TIMER - 8.0).max(0.0) / 2.0);
 
             gl::Uniform1f(
                 gl::GetUniformLocation(
                     self.modelshader.shader_id,
                     b"opacity\0".as_ptr() as *const i8,
                 ),
-                (EYERIS_VISIT_TIMER as f32 * 0.5).min(1.0) - distfromend
+                (EVERIS_VISIT_TIMER as f32 * 0.5).min(1.0) - distfromend
             );
 
                 
-            let camdist = camclone.position.distance(EYERIS_POSITION);
+            let camdist = camclone.position.distance(EVERIS_POSITION);
 
             static mut WASFACE: bool = false;
 
@@ -241,7 +256,7 @@ impl Game {
             //     Vec3::new(RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1))
             // };
 
-            let realpos = EYERIS_POSITION;// + shakeoffset;
+            let realpos = EVERIS_POSITION;// + shakeoffset;
 
             if renderface != WASFACE {
                 if renderface {
@@ -329,14 +344,14 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"xrot\0".as_ptr() as *const i8,
                                 ),
-                                EYERIS_ROT.x,
+                                EVERIS_ROT.x,
                             );
                             gl::Uniform1f(
                                 gl::GetUniformLocation(
                                     self.modelshader.shader_id,
                                     b"yrot\0".as_ptr() as *const i8,
                                 ),
-                                EYERIS_ROT.y,
+                                EVERIS_ROT.y,
                             );
 
                             gl::Uniform1f(
@@ -344,7 +359,7 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"zrot\0".as_ptr() as *const i8,
                                 ),
-                                EYERIS_ROT.z,
+                                EVERIS_ROT.z,
                             );
 
                        
@@ -398,9 +413,9 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"lastrot\0".as_ptr() as *const i8,
                                 ),
-                                EYERIS_ROT.x,
-                                EYERIS_ROT.y,
-                                EYERIS_ROT.z
+                                EVERIS_ROT.x,
+                                EVERIS_ROT.y,
+                                EVERIS_ROT.z
                             );
 
 

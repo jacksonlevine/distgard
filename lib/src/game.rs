@@ -78,7 +78,7 @@ use crate::camera::Camera;
 use crate::collisioncage::*;
 use crate::cube::Cube;
 use crate::drops::Drops;
-use crate::eyeris::{wait_or_visit_queued_spots, CURRENT_VISIT_SPOT, EYERIS_IS_VISITING, EYERIS_POSITION, EYERIS_VISIT_TIMER, HIGHEST, VISIT_LENGTH};
+use crate::everis::{wait_or_visit_queued_spots, CURRENT_VISIT_SPOT, EVERIS_IS_VISITING, EVERIS_POSITION, EVERIS_VISIT_TIMER, HIGHEST, VISIT_LENGTH};
 use crate::fader::Fader;
 use crate::glyphface::GlyphFace;
 use crate::guisystem::GuiSystem;
@@ -494,7 +494,7 @@ pub struct Game {
     pub mouse_slot: (u32, u32),
     //pub needtosend: Arc<Queue<Message>>,
 
-    pub health: Arc<AtomicI8>,
+    pub health: Arc<AtomicI32>,
     pub crafting_open: bool,
     pub stamina: Arc<AtomicI32>,
     pub weathertype: f32,
@@ -1364,7 +1364,7 @@ impl Game {
             })
         };
 
-        let health = Arc::new(AtomicI8::new(20));
+        let health = Arc::new(AtomicI32::new(20));
 
         // let cam_clone = cam.clone();
         // let csysclone = chunksys.clone();
@@ -2056,8 +2056,8 @@ impl Game {
                 );
 
                 let _ = AUDIOPLAYER.preload(
-                    path!("assets/sfx/galacticdeath.mp3"),
-                    path!("assets/sfx/galacticdeath.mp3"),
+                    path!("assets/sfx/d1short.mp3"),
+                    path!("assets/sfx/d1short.mp3"),
                 );
             }
         }
@@ -2169,7 +2169,7 @@ impl Game {
 
         let health = get_misc_entry("health");
         if let Some(health) = health {
-            self.health.store((&String::from_utf8(health).unwrap()).parse::<i8>().unwrap(), Ordering::Relaxed);
+            self.health.store((&String::from_utf8(health).unwrap()).parse::<i32>().unwrap(), Ordering::Relaxed);
         }
 
         if let Some(waypoints) = waypoints {
@@ -3967,22 +3967,22 @@ impl Game {
 
         let stam = self.stamina.load(Ordering::Relaxed);
         unsafe {
-            if unsafe { EYERIS_IS_VISITING } {
-                if EYERIS_VISIT_TIMER >= 10.0 {
+            if unsafe { EVERIS_IS_VISITING } {
+                if EVERIS_VISIT_TIMER >= 10.0 {
 
-                    EYERIS_VISIT_TIMER = 0.0;
-                    EYERIS_IS_VISITING = false;
+                    EVERIS_VISIT_TIMER = 0.0;
+                    EVERIS_IS_VISITING = false;
                 } else {
-                    EYERIS_VISIT_TIMER += self.delta_time;
+                    EVERIS_VISIT_TIMER += self.delta_time;
 
-                    let visitprogress = EYERIS_VISIT_TIMER / VISIT_LENGTH;
+                    let visitprogress = EVERIS_VISIT_TIMER / VISIT_LENGTH;
                     let visitprogtimespi = visitprogress * std::f32::consts::PI;
 
                     let ymod = 0.0 - visitprogtimespi.sin() * 120.0;
 
                     let currentspot = Vec3::new((CURRENT_VISIT_SPOT.x * CH_W + (CH_W / 2)) as f32, HIGHEST as f32 + 120.0 , (CURRENT_VISIT_SPOT.y * CH_W + (CH_W / 2)) as f32);
 
-                    unsafe { EYERIS_POSITION = currentspot + Vec3::new(0.0, ymod, 0.0) };
+                    unsafe { EVERIS_POSITION = currentspot + Vec3::new(0.0, ymod, 0.0) };
                 }
             }
         }
@@ -5213,15 +5213,15 @@ impl Game {
                     #[cfg(feature = "audio")]
                     AUDIOPLAYER.play_in_head(path!("assets/sfx/falldamage.mp3"));
                 }
-                self.take_damage((fd * 20.0) as u8);
+                self.take_damage((fd * 20.0) as i32);
             }
             None => {}
         }
     }
 
-    pub fn take_damage(&mut self, amount: u8) {
+    pub fn take_damage_no_drops(&self, amount: i32) {
         let h = self.health.load(std::sync::atomic::Ordering::Relaxed);
-        let newamount = (h - amount as i8).max(0);
+        let newamount = (h - amount).max(0);
         self.health
             .store(newamount, std::sync::atomic::Ordering::Relaxed);
         if newamount <= 0 {
@@ -5232,7 +5232,42 @@ impl Game {
             unsafe {
                 #[cfg(feature = "audio")]
                 AUDIOPLAYER.play_in_head(path!("assets/sfx/death.mp3"));
-                AUDIOPLAYER.play_in_head(path!("assets/sfx/galacticdeath.mp3"));
+                AUDIOPLAYER.play_in_head(path!("assets/sfx/d1short.mp3"));
+            }
+            let cam = unsafe { CAMERA.as_ref().unwrap() };
+            let mut camlock = cam.lock();
+            let campos = camlock.position.clone();
+
+            let mut inv = self.inventory.write();
+            for i in 0..ROWLENGTH {
+                let amt = inv.inv[i as usize].1;
+
+            }
+            inv.inv = STARTINGITEMS;
+
+            unsafe {
+                camlock.position = SPAWNPOINT;
+                camlock.velocity = Vec3::ZERO;
+            }
+
+            drop(camlock);
+            self.health.store(20, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    pub fn take_damage(&mut self, amount: i32) {
+        let h = self.health.load(std::sync::atomic::Ordering::Relaxed);
+        let newamount = (h - amount).max(0);
+        self.health
+            .store(newamount, std::sync::atomic::Ordering::Relaxed);
+        if newamount <= 0 {
+            //DEAD
+
+            unsafe { DEAD = true; DEATHTIMER = 0.0; };
+
+            unsafe {
+                #[cfg(feature = "audio")]
+                AUDIOPLAYER.play_in_head(path!("assets/sfx/death.mp3"));
+                AUDIOPLAYER.play_in_head(path!("assets/sfx/d1short.mp3"));
             }
             let cam = unsafe { CAMERA.as_ref().unwrap() };
             let mut camlock = cam.lock();
@@ -5994,8 +6029,9 @@ impl Game {
         if unsafe { REND_RAD } {
             self.draw_rad();
         }
-        if unsafe { EYERIS_IS_VISITING } {
-            self.draw_eyeris();
+        self.update_everis();
+        if unsafe { EVERIS_IS_VISITING } {
+            self.draw_everis();
         }
         for (_index, cfl) in cmem.memories.iter().enumerate() {
             if cfl.used {
@@ -8038,7 +8074,7 @@ impl Game {
                 let s = self.stamina.load(Ordering::Relaxed);
 
                 self.health
-                    .store((h + foodstats.0 as i8).min(20), Ordering::Relaxed);
+                    .store((h + foodstats.0).min(20), Ordering::Relaxed);
                 self.stamina
                     .store((s + foodstats.1).min(100), Ordering::Relaxed);
 

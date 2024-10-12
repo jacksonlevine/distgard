@@ -113,7 +113,7 @@ impl Cmd {
                 *tod = 0.0;
             }
             Some(Ok(Token::Kill)) => {
-                game.take_damage(game.health.load(std::sync::atomic::Ordering::Relaxed) as u8);
+                game.take_damage(game.health.load(std::sync::atomic::Ordering::Relaxed));
             }
             Some(Ok(Token::Spawn)) => {
                 let cam = unsafe { CAMERA.as_ref().unwrap() };

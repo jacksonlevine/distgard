@@ -124,12 +124,12 @@ pub struct Hud {
     pub chestdirty: bool,
     pub highlightedslot: SlotIndexType,
     pub mousetrans: Vec2,
-    pub health: Arc<AtomicI8>,
+    pub health: Arc<AtomicI32>,
     pub stamina: Arc<AtomicI32>
 }
 
 impl Hud {
-    pub fn new(window: &Arc<RwLock<PWindow>>, texture: GLuint, health: Arc<AtomicI8>, stamina: Arc<AtomicI32>) -> Hud {
+    pub fn new(window: &Arc<RwLock<PWindow>>, texture: GLuint, health: Arc<AtomicI32>, stamina: Arc<AtomicI32>) -> Hud {
         let mut vbo: GLuint = 0;
         let mut chestvbo: GLuint = 0;
         let mut healthvbo: GLuint = 0;
@@ -258,7 +258,7 @@ impl Hud {
 
     pub fn draw_health(&self) {
 
-        static mut LASTHEALTH: i8 = -99;
+        static mut LASTHEALTH: i32 = -99;
         static mut LASTSTAMINA: i32 = -999;
 
         let redface   = TextureFace::new(0, 5);
