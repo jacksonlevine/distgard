@@ -1,13 +1,15 @@
-use std::{ptr::addr_of, time::Duration};
+use std::{collections::HashSet, ptr::addr_of, time::Duration};
 
 use arrayvec::ArrayVec;
-use bevy::{math::Vec3, prelude::Resource, time::Timer};
+use bevy::{math::Vec3, prelude::Resource, reflect::Array, time::Timer};
+use dashmap::DashMap;
 use glfw::ffi::glfwGetTime;
+use lockfree::queue::Queue;
 use once_cell::sync::Lazy;
 use bevy::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{game::{Game, AUDIOPLAYER, CAMERA, CHUNKSYS, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, vec};
+use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{Game, AUDIOPLAYER, CAMERA, CHUNKSYS, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, rad::calculate_rotation, vec};
 
 
 
@@ -15,90 +17,118 @@ use crate::{game::{Game, AUDIOPLAYER, CAMERA, CHUNKSYS, PLAYERPOS}, modelentity:
 
 
 
-pub static mut RAD_POSITION: Vec3 = Vec3::new(0.0, 80.0, 0.0);
-pub static mut RAD_ROT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+pub static mut EYERIS_POSITION: Vec3 = Vec3::new(0.0, 80.0, 0.0);
+pub static mut EYERIS_ROT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
 
-static mut RADRNG: Lazy<StdRng> = Lazy::new(||StdRng::from_entropy());
+pub static mut EYERIS_VISIT_TIMER: f32 = 0.0;
+pub static mut EYERIS_IS_VISITING: bool = false;
 
-#[derive(Resource)]
-pub struct RadRecordPositionTimer(pub Timer);
+pub static mut CURRENT_VISIT_SPOT: IVec2 = IVec2{x:0, y:0};
+pub static mut HIGHEST: i32 = 0;
 
-#[derive(Resource)]
-pub struct RadCyclePositionTimer(pub Timer);
+pub const MAX_LIGHTS: usize = 7;
 
-#[derive(Resource)]
-pub struct RadPositionsList(pub Vec<Vec3>);
+pub const VISIT_LENGTH: f32 = 10.0;
 
 
-pub fn record_and_sort_rad_positions(time: Res<Time>, mut timer: ResMut<RadRecordPositionTimer>, mut rad_positions: ResMut<RadPositionsList>) {
-    if timer.0.tick(Duration::from_secs_f32(time.delta_seconds())).just_finished() {
-        let pos = unsafe { PLAYERPOS.snapshot() };
-        let newspot = Vec3::new(pos.pos.0, pos.pos.1, pos.pos.2);
-
-        
-
-        if !rad_positions.0.contains(&newspot) {
-            rad_positions.0.push(newspot);
-           // println!("Recorded a rad position at {}, {}, {}", pos.pos.0, pos.pos.1, pos.pos.2);
-        }
-
-        
-    }
+pub struct EyerisVisitSpot{
+    pub spot: IVec2,
+    pub highestlight: i32
 }
+pub static mut EYERIS_VISIT_QUEUE: Lazy<Queue<EyerisVisitSpot>> = Lazy::new(|| {
+    Queue::new()
+});
 
-pub fn cycle_rad_positions(time: Res<Time>, mut timer: ResMut<RadCyclePositionTimer>, mut rad_positions: ResMut<RadPositionsList>) {
-    
-    if timer.0.tick(Duration::from_secs_f32(time.delta_seconds())).just_finished() {
+pub static QUEUED_FOR_EYERIS: Lazy<DashMap<IVec2, bool>> = Lazy::new(||DashMap::new());
 
-        let pos = unsafe { PLAYERPOS.snapshot() };
+pub fn wait_or_visit_queued_spots(
 
-        rad_positions.0.retain(|x| {
-            let d = x.distance(Vec3::new(pos.pos.0, pos.pos.1, pos.pos.2));
-            return d < 100.0 && d > 20.0;
-        });
-        rad_positions.0.sort_by(|a, b| {
-            let d1 = a.distance(Vec3::new(pos.pos.0, pos.pos.1, pos.pos.2));
-            let d2 = b.distance(Vec3::new(pos.pos.0, pos.pos.1, pos.pos.2));
-            d1.partial_cmp(&d2).unwrap()
-        });
-        let len = rad_positions.0.len();
-        rad_positions.0.truncate(len.min(10));
+    mut removedlightsyet: Local<bool>,
+    time: Res<Time>
+) {
 
-        if rad_positions.0.len() > 0 {
+    unsafe {
+        if !EYERIS_IS_VISITING {
 
-            let randomind = unsafe { RADRNG.gen_range(0..rad_positions.0.len()) };
-            
-            let pos = rad_positions.0.get(randomind).unwrap().clone();
-            unsafe {
-                RAD_POSITION = pos;
+            match unsafe { &EYERIS_VISIT_QUEUE }.pop() {
+                Some(spot) => {
+        
+                    EYERIS_IS_VISITING = true;
+                    CURRENT_VISIT_SPOT = spot.spot;
+                    HIGHEST = spot.highestlight;
+                    *removedlightsyet = false;
+                    #[cfg(feature="audio")]
+                    {
+                        let spothere = Vec3::new((CURRENT_VISIT_SPOT.x * CH_W + (CH_W / 2)) as f32, HIGHEST as f32, (CURRENT_VISIT_SPOT.y * CH_W + (CH_W / 2)) as f32);
+                        AUDIOPLAYER.play_in_head(path!("assets/sfx/eye3.mp3"));
+                    }
+                }
+                None => {
+                    
+                }
             }
-            //println!("Cycling to a rad position at {}, {}, {}", pos.x, pos.y, pos.z);
+
+        }
+        
+
+        if EYERIS_IS_VISITING {
+            if EYERIS_VISIT_TIMER <= VISIT_LENGTH {
+
+                if EYERIS_VISIT_TIMER > (VISIT_LENGTH * 0.5) && !*removedlightsyet {
+                    
+
+                    let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
+
+                    let mut implic: HashSet<_> = HashSet::new();
+
+                    for y in 0..CH_H {
+                        for x in 0..CH_W {
+                            for z in 0..CH_W {
+                                let spothere = vec::IVec3::new(CURRENT_VISIT_SPOT.x * CH_W + x, y, CURRENT_VISIT_SPOT.y * CH_W + z);
+                                let blockhere = csys.read().blockat(spothere);
+                                let idhere = blockhere & Blocks::block_id_bits();
+
+                                if Blocks::is_light(idhere) {
+                                    Game::delete_block_recursively(csys, idhere, spothere, &mut implic);
+                                    //csys.read().set_block_no_sound(spothere, 0, true);
+                                }
+                            }
+                        }
+                    }
+
+                    for vec in implic {
+                        csys.read().queue_rerender_with_key(vec, true, true);
+                    }
+
+                    
+                    QUEUED_FOR_EYERIS.remove(&CURRENT_VISIT_SPOT);
+
+                    // for source in unsafe { &currentdeletespots } {
+                    //     csys.read().set_block_no_sound(vec::IVec3::new(source.x, source.y, source.z), 0, true);
+                    //     implic.insert(ChunkSystem::spot_to_chunk_pos(source));
+                    // }
+                    // for vec in implic {
+                    //     csys.read().queue_rerender_with_key(vec, true, true);
+                    // }
+                    
+                    
+
+
+                    *removedlightsyet = true;
+                }
+            }
+
+            
+
         }
     }
+    
 }
 
 
-pub fn calculate_rotation(v1: Vec3, v2: Vec3) -> Vec3 {
-    // Compute the direction vector
-    let dir = v2 - v1;
-
-    // Normalize the direction vector
-    let dir_norm = dir.normalize();
-
-    // Calculate pitch (rotation around X-axis) and yaw (rotation around Y-axis)
-    let pitch = dir_norm.y.atan2((dir_norm.z).hypot(dir_norm.x)); // Up/down rotation
-    let yaw = dir_norm.x.atan2(dir_norm.z);                       // Left/right rotation
-    let roll = 0.0;                                               // Roll can be 0 unless needed
-
-    // Return the Vec3 of radian rotations
-    Vec3::new(pitch, yaw, roll)
-}
-
-
-//implement the draw_rad function
 impl Game {
 
-    pub fn draw_rad(&self) {
+    pub fn draw_eyeris(&self) {
 
 
         #[cfg(feature = "glfw")]
@@ -113,28 +143,15 @@ impl Game {
 
             
 
-            static rad_model_entity: Lazy<ModelEntity> = Lazy::new(|| {
+            static eyeris_modelentity: Lazy<ModelEntity> = Lazy::new(|| {
                 let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
                 let cam = unsafe { CAMERA.as_ref().unwrap() };
-                ModelEntity::new(1, unsafe { RAD_POSITION }, 1.0, unsafe { RAD_ROT }, csys, cam, false)
-            });
-
-
-            static rad_face: Lazy<ModelEntity> = Lazy::new(|| {
-                let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
-                let cam = unsafe { CAMERA.as_ref().unwrap() };
-                ModelEntity::new(2, unsafe { RAD_POSITION }, 1.0, unsafe { RAD_ROT }, csys, cam, false)
-            });
-
-            static rad_face_bottom: Lazy<ModelEntity> = Lazy::new(|| {
-                let csys = unsafe { CHUNKSYS.as_ref().unwrap() };
-                let cam = unsafe { CAMERA.as_ref().unwrap() };
-                ModelEntity::new(3, unsafe { RAD_POSITION }, 1.0, unsafe { RAD_ROT }, csys, cam, false)
+                ModelEntity::new(4, unsafe { EYERIS_POSITION }, 1.0, unsafe { EYERIS_ROT }, csys, cam, false)
             });
 
 
 
-            let modelents = vec![&rad_model_entity, &rad_face, &rad_face_bottom, ];
+            let modelents = vec![&eyeris_modelentity ];
 
             
             let camclone = {
@@ -144,7 +161,7 @@ impl Game {
                 //Camera::new()
             };
 
-            RAD_ROT = calculate_rotation(RAD_POSITION, camclone.position);
+            //EYERIS_ROT = calculate_rotation(EYERIS_POSITION, camclone.position);
 
             gl::UniformMatrix4fv(mvp_loc, 1, gl::FALSE, camclone.mvp.to_cols_array().as_ptr());
             gl::Uniform1i(
@@ -201,32 +218,30 @@ impl Game {
                 self.vars.walkbobtimer,
             );
 
+            let distfromend =  ( (EYERIS_VISIT_TIMER - 8.0).max(0.0) / 2.0);
+
             gl::Uniform1f(
                 gl::GetUniformLocation(
                     self.modelshader.shader_id,
                     b"opacity\0".as_ptr() as *const i8,
                 ),
-                1.0
+                (EYERIS_VISIT_TIMER as f32 * 0.5).min(1.0) - distfromend
             );
 
                 
-            let camdist = camclone.position.distance(RAD_POSITION);
+            let camdist = camclone.position.distance(EYERIS_POSITION);
 
             static mut WASFACE: bool = false;
 
             let renderface = camdist < 4.0 ;
 
-            let indicestorender = if renderface {
-                vec![0]
-            } else {
-                vec![1]
-            };
+            let indicestorender = vec![0]; //indices into the little vec declared earlier in this func
 
-            let shakeoffset = if !renderface { Vec3::ZERO } else {
-                Vec3::new(RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1))
-            };
+            // let shakeoffset = if !renderface { Vec3::ZERO } else {
+            //     Vec3::new(RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1), RADRNG.gen_range(-0.1..0.1))
+            // };
 
-            let realpos = RAD_POSITION + shakeoffset;
+            let realpos = EYERIS_POSITION;// + shakeoffset;
 
             if renderface != WASFACE {
                 if renderface {
@@ -314,14 +329,14 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"xrot\0".as_ptr() as *const i8,
                                 ),
-                                RAD_ROT.x,
+                                EYERIS_ROT.x,
                             );
                             gl::Uniform1f(
                                 gl::GetUniformLocation(
                                     self.modelshader.shader_id,
                                     b"yrot\0".as_ptr() as *const i8,
                                 ),
-                                RAD_ROT.y,
+                                EYERIS_ROT.y,
                             );
 
                             gl::Uniform1f(
@@ -329,7 +344,7 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"zrot\0".as_ptr() as *const i8,
                                 ),
-                                RAD_ROT.z,
+                                EYERIS_ROT.z,
                             );
 
                        
@@ -383,9 +398,9 @@ impl Game {
                                     self.modelshader.shader_id,
                                     b"lastrot\0".as_ptr() as *const i8,
                                 ),
-                                RAD_ROT.x,
-                                RAD_ROT.y,
-                                RAD_ROT.z
+                                EYERIS_ROT.x,
+                                EYERIS_ROT.y,
+                                EYERIS_ROT.z
                             );
 
 

@@ -50,9 +50,14 @@ use crate::cube::Cube;
 use crate::cube::CubeSide;
 
 use crate::database::UserDataMapAndMiscMap;
+use crate::eyeris::EyerisVisitSpot;
+use crate::eyeris::EYERIS_VISIT_QUEUE;
+use crate::eyeris::MAX_LIGHTS;
+use crate::eyeris::QUEUED_FOR_EYERIS;
 #[cfg(feature = "audio")]
 use crate::game::AUDIOPLAYER;
 
+use crate::game::CHUNKSYS;
 //use crate::game::CHUNKDRAWINGHERE;
 use crate::game::CURRSEED;
 
@@ -1505,6 +1510,8 @@ impl ChunkSystem {
 
         let mut existingsources: HashSet<vec::IVec3> = HashSet::new();
 
+        let mut highest = 0;
+
         let lmarc = self.lightmap.clone();
 
         for x in 0..CH_W {
@@ -1537,6 +1544,9 @@ impl ChunkSystem {
                                         && !lightsources.contains_key(&(originweremoving + IVec3::new(0, 0, 1)))
                                         && !lightsources.contains_key(&(originweremoving + IVec3::new(0, 0, -1)))
                                         {
+                                            if blockcoord.y > highest {
+                                                highest = blockcoord.y;
+                                            }
                                             lightsources.insert(originweremoving, cleanid);
                                         }
                                     }
@@ -1557,11 +1567,23 @@ impl ChunkSystem {
                         && !lightsources.contains_key(&(blockcoord + IVec3::new(0, 0, 1)))
                         && !lightsources.contains_key(&(blockcoord + IVec3::new(0, 0, -1)))
                         {
+                            if blockcoord.y > highest {
+                                highest = blockcoord.y;
+                            }
                             lightsources.insert(blockcoord, cleanid);
                         }
                     }
                 }
             }
+        }
+
+        if lightsources.len() > MAX_LIGHTS {
+            let key = bevy::math::IVec2::new(pos.x, pos.y);
+            if !QUEUED_FOR_EYERIS.contains_key(&key) {
+                QUEUED_FOR_EYERIS.insert(key, true);
+                unsafe { EYERIS_VISIT_QUEUE.push(EyerisVisitSpot{ spot:key, highestlight: highest}) };
+            }
+            
         }
 
         for source in existingsources {

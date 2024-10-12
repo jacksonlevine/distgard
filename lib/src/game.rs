@@ -52,7 +52,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::{Blocks, BLOCK_MARKED_FOR_DELETION};
 use crate::blockoverlay::BlockOverlay;
-use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
+use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, CH_W, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
 use crate::climates::VOX_MODEL_PATHS;
 use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
 
@@ -78,6 +78,7 @@ use crate::camera::Camera;
 use crate::collisioncage::*;
 use crate::cube::Cube;
 use crate::drops::Drops;
+use crate::eyeris::{wait_or_visit_queued_spots, CURRENT_VISIT_SPOT, EYERIS_IS_VISITING, EYERIS_POSITION, EYERIS_VISIT_TIMER, HIGHEST, VISIT_LENGTH};
 use crate::fader::Fader;
 use crate::glyphface::GlyphFace;
 use crate::guisystem::GuiSystem;
@@ -1852,10 +1853,12 @@ impl Game {
         if !headless {
             g.load_model(path!("assets/models/player.glb"));
             g.load_model(path!("assets/models/rad.glb"));
-            //g.load_model(path!("assets/models/radface.glb"));
+            g.load_model(path!("assets/models/radface.glb"));
             
-           g.load_model(path!("assets/models/radfacetop.glb"));
+           //g.load_model(path!("assets/models/radfacetop.glb"));
             g.load_model(path!("assets/models/radfacebot.glb"));
+
+            g.load_model(path!("assets/models/eye.glb"));
             
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
@@ -2112,6 +2115,7 @@ impl Game {
 
                     app.add_systems(Update, record_and_sort_rad_positions);
                     app.add_systems(Update, cycle_rad_positions);
+                    app.add_systems(Update, wait_or_visit_queued_spots);
                 }
             }
             
@@ -3962,6 +3966,27 @@ impl Game {
         }
 
         let stam = self.stamina.load(Ordering::Relaxed);
+        unsafe {
+            if unsafe { EYERIS_IS_VISITING } {
+                if EYERIS_VISIT_TIMER >= 10.0 {
+
+                    EYERIS_VISIT_TIMER = 0.0;
+                    EYERIS_IS_VISITING = false;
+                } else {
+                    EYERIS_VISIT_TIMER += self.delta_time;
+
+                    let visitprogress = EYERIS_VISIT_TIMER / VISIT_LENGTH;
+                    let visitprogtimespi = visitprogress * std::f32::consts::PI;
+
+                    let ymod = 0.0 - visitprogtimespi.sin() * 120.0;
+
+                    let currentspot = Vec3::new((CURRENT_VISIT_SPOT.x * CH_W + (CH_W / 2)) as f32, HIGHEST as f32 + 120.0 , (CURRENT_VISIT_SPOT.y * CH_W + (CH_W / 2)) as f32);
+
+                    unsafe { EYERIS_POSITION = currentspot + Vec3::new(0.0, ymod, 0.0) };
+                }
+            }
+        }
+        
 
         if unsafe { MOVING } {
             self.vars.walkbobtimer = self.vars.walkbobtimer + self.delta_time * 10.0;
@@ -5969,7 +5994,9 @@ impl Game {
         if unsafe { REND_RAD } {
             self.draw_rad();
         }
-        
+        if unsafe { EYERIS_IS_VISITING } {
+            self.draw_eyeris();
+        }
         for (_index, cfl) in cmem.memories.iter().enumerate() {
             if cfl.used {
                 let dd1: Mutex<Vec<u32>> = Mutex::new(Vec::new());

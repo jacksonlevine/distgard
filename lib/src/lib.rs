@@ -51,3 +51,4 @@ pub mod actest;
 pub mod database;
 pub mod climates;
 pub mod rad;
+pub mod eyeris;
