@@ -32,7 +32,7 @@ mat4 getRotationMatrix(float xrot, float yrot, float zrot) {
 
 void main() {
 
-    const vec2 TEXS[47] = vec2[47](
+    const vec2 TEXS[91] = vec2[91](
     vec2(0.0, 0.0),  // 0
     vec2(1.0, 0.0),  // 1 sand
     vec2(2.0, 0.0),  // 2 water
@@ -82,7 +82,54 @@ void main() {
     vec2(1.0, 8.0),   // 44 rubbertree leaves
 
     vec2(10.0, 6.0),   // 45 conveyor
-    vec2(11.0, 5.0)   // 46 autotrampoline
+    vec2(11.0, 5.0),   // 46 autotrampoline
+
+    vec2(1.0, 6.0), // 47 metal plate block
+    vec2(8.0, 4.0), // 48 snowy grass
+    vec2(9.0, 4.0), // 49 torch
+    vec2(7.0, 5.0), // 50 snow leaves
+    vec2(1.0, 7.0), // 51 ice
+    vec2(1.0, 12.0), // 52 Arctic Willow Dwarf Shrub
+    vec2(3.0, 6.0), // 53 Pine Wood
+    vec2(3.0, 8.0), // 54 Pine Leaves
+    vec2(2.0, 12.0), // 55 Arctic Willow Leaves
+    vec2(4.0, 6.0), // 56 Cedar Wood
+    vec2(4.0, 8.0), // 57 Cedar Leaves
+    vec2(5.0, 6.0), // 58 Palm Wood
+    vec2(5.0, 8.0), // 59 Palm Leaves
+    vec2(6.0, 6.0), // 60 Joshua Wood
+    vec2(6.0, 8.0), // 61 Joshua Leaves
+    vec2(0.0, 9.0), // 62 snowy sand
+    vec2(13.0, 3.0), // 63 fence
+    vec2(7.0, 6.0), // 64 Paper Birch Wood
+    vec2(7.0, 8.0), // 65 Paper Birch Leaves
+    vec2(8.0, 6.0), // 66 Green Alder Wood
+    vec2(8.0, 8.0), // 67 Green Alder Leaves
+    vec2(9.0, 6.0), // 68 Willow Wood
+    vec2(9.0, 8.0), // 69 Willow Leaves
+    vec2(3.0, 9.0), // 70 Beech Wood
+    vec2(3.0, 11.0), // 71 Beech Leaves
+    vec2(4.0, 9.0), // 72 Western Hemlock Wood
+    vec2(4.0, 11.0), // 73 Western Hemlock Leaves
+    vec2(5.0, 9.0), // 74 Eucalyptus Wood
+    vec2(5.0, 11.0), // 75 Eucalyptus Leaves
+    vec2(6.0, 9.0), // 76 Fig Wood
+    vec2(6.0, 11.0), // 77 Fig Leaves
+    vec2(7.0, 9.0), // 78 Saguaro Block
+    vec2(3.0, 12.0), // 79 Pumpkin
+    vec2(4.0, 12.0), // 80 Jack o lantern
+    vec2(5.0, 12.0), // 81 Pine Planks
+    vec2(6.0, 12.0), // 82 Cedar Planks
+    vec2(7.0, 12.0), // 83 Palm Planks
+    vec2(8.0, 12.0), // 84 Joshua Planks
+    vec2(9.0, 12.0), // 85 Birch Planks
+    vec2(10.0, 12.0), // 86 Willow Planks
+    vec2(11.0, 12.0), // 87 Beech Planks
+    vec2(12.0, 12.0), // 88 Western Hemlock Planks
+    vec2(13.0, 12.0), // 89 Eucalyptus Planks
+    vec2(12.0, 4.0) // 90 Illuminite Ore
+
+
 );
 
 
