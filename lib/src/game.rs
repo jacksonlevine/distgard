@@ -9,6 +9,7 @@ use std::ptr::{addr_of, addr_of_mut};
 use arrayvec::ArrayVec;
 use atomic_float::AtomicF32;
 use noise::Perlin;
+use num_enum::FromPrimitive;
 use once_cell::sync::Lazy;
 use tracing::info;
 
@@ -35,10 +36,20 @@ use jeffy_quintet::server::QuintetServerPlugin;
 
 pub static mut REND_RAD: bool = false;
 
+#[derive(FromPrimitive, Clone)]
+#[repr(usize)]
+pub enum DeathType {
+    #[num_enum(default)]
+    STATIC = 0,
+    COLORS
+}
+
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
 
 pub static mut HIDEHUD: bool = false;
+
+pub static mut DEATHTYPE: DeathType = DeathType::STATIC;
 
 //pub static mut CHUNKDRAWINGHERE: Lazy<DashMap<IVec2, Instant>> = Lazy::new(|| DashMap::new());
 
@@ -2084,7 +2095,7 @@ impl Game {
         })
     }
 
-    pub fn draw_dead_screen(&self) {
+    pub fn draw_dead_screen(&self, deathtype: DeathType) {
         unsafe {
             gl::Disable(gl::CULL_FACE);
             gl::Disable(gl::DEPTH_TEST);
@@ -2127,8 +2138,8 @@ impl Game {
             gl::BindVertexArray(VAO);
 
 
-            gl::Uniform1f(gl::GetUniformLocation(self.twodshader.shader_id, b"time\0".as_ptr() as *const i8), glfwGetTime() as f32 * 100.0);
-
+            gl::Uniform1f(gl::GetUniformLocation(self.twodshader.shader_id, b"time\0".as_ptr() as *const i8), (glfwGetTime() as f32 % 20.0));
+            gl::Uniform1f(gl::GetUniformLocation(self.twodshader.shader_id, b"deathtype\0".as_ptr() as *const i8), deathtype as usize as f32);
             gl::DrawArrays(gl::TRIANGLES, 0, 6);
 
 
@@ -4097,7 +4108,7 @@ impl Game {
                 WEATHERTIMER += self.delta_time;
                 if WEATHERTIMER >= WEATHERINTERVAL {
                     let mut rand = StdRng::from_entropy();
-                    let isweather: usize = rand.gen_range(0..5);
+                    let isweather: usize = rand.gen_range(0..15);
                     if isweather == 4 {
                         let randint: usize = rand.gen_range(0..=2);
                         WEATHERTYPE = randint as f32;
@@ -4676,7 +4687,7 @@ impl Game {
             if !unsafe { DEAD } {
                 self.draw();
             } else {
-                self.draw_dead_screen();
+                self.draw_dead_screen( unsafe { DEATHTYPE.clone() });
                 unsafe { DEATHTIMER += self.delta_time };
                 if unsafe { DEATHTIMER } > 10.0 {
                     unsafe { DEAD = false };

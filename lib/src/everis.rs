@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use bevy::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{Game, AUDIOPLAYER, CAMERA, CHUNKSYS, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, rad::calculate_rotation, vec};
+use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, rad::calculate_rotation, vec};
 
 
 
@@ -27,7 +27,7 @@ pub static mut EVERIS_IS_VISITING: bool = false;
 pub static mut CURRENT_VISIT_SPOT: IVec2 = IVec2{x:0, y:0};
 pub static mut HIGHEST: i32 = 0;
 
-pub const MAX_LIGHTS: usize = 7;
+pub const MAX_LIGHTS: usize = 13;
 
 pub const VISIT_LENGTH: f32 = 10.0;
 
@@ -145,6 +145,7 @@ impl Game {
         unsafe {
 
            if !EVERIS_KILLED_YET  && EVERIS_VISIT_TIMER > 6.0 {
+                DEATHTYPE = DeathType::STATIC;
                 self.take_damage_no_drops(200);
                 EVERIS_KILLED_YET = true;
            }

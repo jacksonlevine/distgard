@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use bevy::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{game::{Game, AUDIOPLAYER, CAMERA, CHUNKSYS, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, vec};
+use crate::{game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, vec};
 
 
 
@@ -237,6 +237,7 @@ impl Game {
                     }
                     
                 }else {
+                    DEATHTYPE = DeathType::COLORS;
                     self.take_damage_no_drops(200);
                 }
 

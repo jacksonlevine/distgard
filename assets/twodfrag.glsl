@@ -1,9 +1,11 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 in vec2 TexCoord;
 
 
 uniform float time;
+
+uniform float deathtype; 
 
 float rand(vec2 c){
 	return fract(sin(dot(c.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -46,7 +48,27 @@ float pNoise(vec2 p, int res){
 
 void main() {
     
-    float noisevalue = pNoise(TexCoord + vec2(time, time), 1);
+    
 
-    FragColor = vec4(1.0, 1.0, 1.0, noisevalue);
+	if(deathtype == 0.0) {
+		float noisevalue = pNoise((TexCoord * 0.3) + vec2(time * 100.0, time * 100.0), 1);
+		FragColor = vec4(1.0, 1.0, 1.0, noisevalue);
+	}
+
+    if(deathtype == 1.0) {
+
+		vec3 colors[4] = vec3[4](
+			vec3(1.0, 0.0, 0.0),
+			vec3(0.0, 1.0, 0.0),
+			
+			vec3(0.0, 0.0, 1.0),
+			vec3(1.0, 1.0, 0.0)
+		);
+
+		float noisevalue = pNoise((TexCoord * 0.2) + vec2(time * 20.0, time * 20.0), 1);
+
+		int colorIndex = int(time) % 4;
+		
+		FragColor = vec4(colors[colorIndex], noisevalue);
+	}
 }

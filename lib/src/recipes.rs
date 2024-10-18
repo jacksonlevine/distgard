@@ -25,7 +25,7 @@ impl RecipeEntry {
 
     pub fn tick_disabled_timer(&mut self, dt: f32) {
         if self.disabled {
-            info!("I'm ticking disabled timer deta time: {dt}, my timer: {}", self.disabledtimer);
+
             if self.disabledtimer > 1.0 {
                 self.disabledtimer = 0.0;
                 self.disabled = false;
@@ -39,7 +39,7 @@ impl RecipeEntry {
 
 
 
-pub static RECIPES: Lazy<[Recipe; 36]> = Lazy::new(|| 
+pub static RECIPES: Lazy<[Recipe; 37]> = Lazy::new(|| 
     {
 
 
@@ -83,6 +83,7 @@ pub static RECIPES: Lazy<[Recipe; 36]> = Lazy::new(||
             (vec![(70, 1)], (87, 4), true),
             (vec![(72, 1)], (88, 4), true),
             (vec![(74, 1)], (89, 4), true),
+            (vec![(10, 2)], (63, 8), true),
         ];
 
 
