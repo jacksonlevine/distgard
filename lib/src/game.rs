@@ -1,6 +1,8 @@
 // use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{self};
+use std::ffi::c_void;
+use std::{mem, ptr};
 use std::ptr::{addr_of, addr_of_mut};
 // use std::io::Write;
 
@@ -411,6 +413,7 @@ pub struct Game {
     pub modelshader: Shader,
     pub cloudshader: Shader,
     pub starshader: Shader,
+    pub twodshader: Shader,
 
 
     //Another resource moved to static. Another resource moved to static. (hey, hey)
@@ -1245,6 +1248,7 @@ impl Game {
         let oldshader = Shader::new(path!("assets/oldvert.glsl"), path!("assets/oldfrag.glsl"));
         let shader0 = Shader::new(path!("assets/vert.glsl"), path!("assets/frag.glsl"));
         let skyshader = Shader::new(path!("assets/skyvert.glsl"), path!("assets/skyfrag.glsl"));
+        let twodshader = Shader::new(path!("assets/twodvert.glsl"), path!("assets/twodfrag.glsl"));
         let faders: RwLock<Vec<Fader>> = RwLock::new(Vec::new());
         let cam = Arc::new(Mutex::new(Camera::new()));
 
@@ -1848,6 +1852,7 @@ impl Game {
             stamina,
             weathertype: 0.0,
             chest_registry,
+            twodshader
         };
         #[cfg(feature = "glfw")]
         if !headless {
@@ -2077,6 +2082,63 @@ impl Game {
             }
             g
         })
+    }
+
+    pub fn draw_dead_screen(&self) {
+        unsafe {
+            gl::Disable(gl::CULL_FACE);
+            gl::Disable(gl::DEPTH_TEST);
+            gl::UseProgram(self.twodshader.shader_id);
+
+            static mut VBO: GLuint = 0;
+            static mut VAO: GLuint = 0;
+
+            if VAO == 0 {
+
+                static QUADVERTS: [f32; 24] = [
+                    -1.0, -1.0,   0.0, 0.0,
+                    1.0, -1.0,    1.0, 0.0,
+                    1.0, 1.0,     1.0, 1.0,
+
+                     1.0, 1.0,     1.0, 1.0,
+                    -1.0, 1.0,   0.0, 1.0,
+                    -1.0, -1.0,   0.0, 0.0,
+                ];
+
+                gl::GenVertexArrays(1, &mut VAO);
+                gl::GenBuffers(1, &mut VBO);
+                gl::BindVertexArray(VAO);
+                gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (QUADVERTS.len() * mem::size_of::<f32>()) as GLsizeiptr,
+                    &QUADVERTS[0] as *const f32 as *const c_void,
+                    gl::STATIC_DRAW,
+                );
+                gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, 4 * mem::size_of::<f32>() as GLsizei, ptr::null());
+                gl::EnableVertexAttribArray(0);
+                gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 4 * mem::size_of::<f32>() as GLsizei, (2 * mem::size_of::<f32>()) as *const c_void);
+                gl::EnableVertexAttribArray(1);
+                
+                
+            }
+
+
+            gl::BindVertexArray(VAO);
+
+
+            gl::Uniform1f(gl::GetUniformLocation(self.twodshader.shader_id, b"time\0".as_ptr() as *const i8), glfwGetTime() as f32 * 100.0);
+
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+
+
+            gl::Enable(gl::CULL_FACE);
+            gl::Enable(gl::DEPTH_TEST);
+
+            gl::BindVertexArray(0);
+        }
+        
+
     }
 
     pub fn spawn_bevy_thread() {
@@ -4614,15 +4676,20 @@ impl Game {
             if !unsafe { DEAD } {
                 self.draw();
             } else {
+                self.draw_dead_screen();
                 unsafe { DEATHTIMER += self.delta_time };
                 if unsafe { DEATHTIMER } > 10.0 {
                     unsafe { DEAD = false };
                 }
             }
             
-
+            let camclone;
             //if !self.vars.ship_taken_off {
-            let camclone = self.draw_select_cube();
+            if !unsafe { DEAD } {
+                camclone = self.draw_select_cube();
+            } else {
+                camclone = unsafe { CAMERA.as_ref().unwrap().lock().clone() };
+            }
             //}
 
             unsafe {
@@ -4642,11 +4709,12 @@ impl Game {
             self.guisys.draw_text(0);
 
             let mvp = camclone.mvp;
-
-            self.drops.update_and_draw_drops(&self.delta_time, &mvp);
+            if !unsafe { DEAD } {
+                self.drops.update_and_draw_drops(&self.delta_time, &mvp);
+            }
 
             self.hud.update();
-            if unsafe {!HIDEHUD} {
+            if unsafe {!HIDEHUD} && !unsafe { DEAD } {
                 self.hud.draw();
             }
             
