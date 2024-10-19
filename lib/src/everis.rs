@@ -146,7 +146,9 @@ impl Game {
 
            if !EVERIS_KILLED_YET  && EVERIS_VISIT_TIMER > 6.0 {
                 DEATHTYPE = DeathType::STATIC;
+
                 self.take_damage_no_drops(200);
+                
                 EVERIS_KILLED_YET = true;
            }
 

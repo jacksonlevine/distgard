@@ -238,6 +238,7 @@ impl Game {
                     
                 }else {
                     DEATHTYPE = DeathType::COLORS;
+                    *self.timeofday.lock() = 300.0; //Set it to day as well
                     self.take_damage_no_drops(200);
                 }
 
