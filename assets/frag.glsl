@@ -57,7 +57,7 @@ void main()
 
     //Fresnel effect on semi-transparent stuff right here, I was wondering wtf this was I just remembered though
     if(FragColor.a < 1.0) {
-        FragColor.a += distance*2.5f;
+        FragColor.a += 0.2 + distance*8.5f;
     }
 
     float spacedist = 300.0;

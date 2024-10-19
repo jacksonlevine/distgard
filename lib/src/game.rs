@@ -2550,6 +2550,7 @@ impl Game {
                     ("SliderMouse Sensitivity".to_string(), "test".to_string()),
                     ("SliderMusic Volume".to_string(), "music".to_string()),
                     ("SliderSounds Volume".to_string(), "sounds".to_string()),
+                    ("SliderBrightness".to_string(), "brightness".to_string()),
                 ];
                 self.vars.menu_open = true;
             }
@@ -4215,7 +4216,7 @@ impl Game {
 
         let gaussian_value =
             Self::gaussian(*todlock, self.daylength / 2.0, self.daylength / 2.0) * 1.3;
-        self.ambient_bright_mult = gaussian_value.clamp(0.1, 1.0);
+        self.ambient_bright_mult = gaussian_value.clamp(0.1, 1.0) + unsafe { MISCSETTINGS.brightness };
 
         self.sunset_factor = Self::gaussian(
             *todlock,

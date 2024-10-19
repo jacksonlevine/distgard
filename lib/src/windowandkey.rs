@@ -1325,6 +1325,11 @@ impl WindowAndKeyContext {
                                                                                         //g.button_command(command);
                                                                                     }
                                                                                 }
+                                                                                if buttonname == "SliderBrightness" {
+                                                                                    if ui.slider(truncated_name, 0.0, 1.0, &mut MISCSETTINGS.brightness) {
+                                                                                        //g.button_command(command);
+                                                                                    }
+                                                                                }
                                                                             } else if buttonname.starts_with("Switch") {
                     
                                                                                 if buttonname == "SwitchJoystick" {

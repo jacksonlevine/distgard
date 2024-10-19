@@ -31,11 +31,17 @@ pub struct MiscellaneousSettingsData {
     pub singleplayer_worlds: HashMap<usize, u32>,
     #[serde(with = "vectorize", default = "worldnames_default")]
     pub world_names: HashMap<usize, String>,
+    #[serde(default = "brightness_default")]
+    pub brightness: f32
 
 }
 
 pub fn support_controller_default() -> bool {
     true
+}
+
+pub fn brightness_default() -> f32 {
+    0.0
 }
 
 pub fn singleplayer_worlds_default() -> HashMap<usize, u32> {
@@ -84,6 +90,7 @@ pub static mut MISCSETTINGS: Lazy<MiscellaneousSettingsData> = Lazy::new(|| Misc
     controllersupport: true,
     singleplayer_worlds: HashMap::new(),
     world_names: HashMap::new(),
+    brightness: 0.0
 } );
 
 pub fn save_misc() {
