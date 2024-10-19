@@ -41,7 +41,8 @@ pub static mut REND_RAD: bool = false;
 pub enum DeathType {
     #[num_enum(default)]
     STATIC = 0,
-    COLORS
+    COLORS,
+    VISION
 }
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
@@ -1875,7 +1876,7 @@ impl Game {
             g.load_model(path!("assets/models/radfacebot.glb"));
 
             g.load_model(path!("assets/models/eye.glb"));
-            
+            g.load_model(path!("assets/models/cow.glb"));
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
             // g.load_model(path!("assets/models/monster1/scene.gltf"));
@@ -5293,6 +5294,19 @@ impl Game {
                     AUDIOPLAYER.play_in_head(path!("assets/sfx/falldamage.mp3"));
                 }
                 self.take_damage((fd * 20.0) as i32);
+                if unsafe {DEAD} {
+                            unsafe { DEATHTYPE = DeathType::VISION }
+                            let mut rng = StdRng::from_entropy();
+                            self.current_vision =
+                                Some(VisionType::Model(rng.gen_range(2..self.gltf_models.len())));
+                            self.visions_timer = 0.0;
+                            self.faders.write()[FaderNames::VisionsFader as usize].up();
+                            #[cfg(feature = "audio")]
+                            unsafe {
+                                AUDIOPLAYER.play_in_head("assets/sfx/dreambell.mp3");
+                            }
+
+                }
             }
             None => {}
         }

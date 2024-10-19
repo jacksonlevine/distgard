@@ -71,4 +71,22 @@ void main() {
 		
 		FragColor = vec4(colors[colorIndex], noisevalue);
 	}
+
+	if(deathtype == 2.0) {
+
+		if (int(time) % 4 <= 1) {
+			float noisevalue = pNoise((TexCoord * 3.2) + vec2(time * 20.0, time * 20.0), 1);
+			float noisevalue1 = pNoise((TexCoord * 2.2) + vec2(time * 400.0, time * 10.0), 1);
+			float noisevalue2 = pNoise((TexCoord * 1.2) + vec2(time * 100.0, time * 100.0), 1);
+			float noisevalue3 = pNoise((TexCoord * 1.6) + vec2(time * 80.0, time * 70.0), 1);
+			
+			FragColor = vec4(vec3(noisevalue, noisevalue2, noisevalue1), noisevalue3);
+		} else {
+			float noisevalue = pNoise((TexCoord * 0.3) + vec2(time * 100.0, time * 100.0), 1);
+			FragColor = vec4(1.0, 1.0, 1.0, noisevalue);
+		}
+
+		
+	}
+
 }

@@ -21,17 +21,17 @@ impl Game {
                     //gl::Disable(gl::DEPTH_TEST);
                     gl::Disable(gl::CULL_FACE);
                     gl::UseProgram(self.modelshader.shader_id);
-            let mvp_loc = gl::GetUniformLocation(self.modelshader.shader_id, b"mvp\0".as_ptr() as *const i8);
+                    let mvp_loc = gl::GetUniformLocation(self.modelshader.shader_id, b"mvp\0".as_ptr() as *const i8);
 
 
-            gl::UniformMatrix4fv(mvp_loc, 1, gl::FALSE, self.visions_camera.mvp.to_cols_array().as_ptr());
-            gl::Uniform1i(
-                gl::GetUniformLocation(
-                    self.modelshader.shader_id,
-                    b"ourTexture\0".as_ptr() as *const i8,
-                ),
-                1,
-            );
+                    gl::UniformMatrix4fv(mvp_loc, 1, gl::FALSE, self.visions_camera.mvp.to_cols_array().as_ptr());
+                    gl::Uniform1i(
+                        gl::GetUniformLocation(
+                            self.modelshader.shader_id,
+                            b"ourTexture\0".as_ptr() as *const i8,
+                        ),
+                        1,
+                    );
 
 
 
