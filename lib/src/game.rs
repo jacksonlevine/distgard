@@ -1918,6 +1918,17 @@ impl Game {
                 );
 
                 AUDIOPLAYER.preload_series(
+                    "snowstepseries",
+                    vec![
+                        path!("assets/sfx/snowstep1.mp3"),
+                        path!("assets/sfx/snowstep2.mp3"),
+                        path!("assets/sfx/snowstep3.mp3"),
+                        path!("assets/sfx/snowstep4.mp3")
+                    ],
+                );
+
+
+                AUDIOPLAYER.preload_series(
                     "bubbles",
                     vec![
                         path!("assets/sfx/bubble-01.mp3"),

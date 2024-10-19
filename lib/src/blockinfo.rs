@@ -482,10 +482,13 @@ impl Blocks {
     }
     pub fn get_walk_series(id: u32) -> &'static str {
         match id {
-            3 | 48 | 54 | 52 => {
+            62 | 48 | 50 => {
+                "snowstepseries"
+            }
+            3 | 54 | 52 => {
                 "grassstepseries"
             }
-            34 | 52 => {
+            34 => {
                 "mulchstepseries"
             }
             7 | 65 | 67 | 69 | 71 | 73 | 75 | 77 => {
