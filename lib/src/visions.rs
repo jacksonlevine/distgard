@@ -68,7 +68,7 @@ impl Game {
                                             self.modelshader.shader_id,
                                             b"pos\0".as_ptr() as *const i8,
                                         ),
-                                        0.0,0.0,0.0
+                                        0.0,1.2,0.0
                                     );
 
 

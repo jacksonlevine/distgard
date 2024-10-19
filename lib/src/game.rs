@@ -4733,8 +4733,8 @@ impl Game {
 
             self.tex.update_texture(self.delta_time);
 
-            let overlaycolor = Vec4::new(0.0, 0.0, 1.0, overlayfade);
-            let overlaycolor2 = Vec4::new(1.0, 0.0, 0.0, overlayfade);
+            let overlaycolor = Vec4::new(1.0, 1.0, 1.0, overlayfade);
+            let overlaycolor2 = Vec4::new(0.0, 0.0, 0.0, overlayfade);
             if overlayfade > 0.0 {
                 self.draw_sky(overlaycolor, overlaycolor2, 1.0, 0.0);
                 self.draw_current_vision(overlayfade);
