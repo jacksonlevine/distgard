@@ -4203,7 +4203,7 @@ impl Game {
                         SONGINDEX = (SONGINDEX + rng.gen_range(1..SONGS.len())) % SONGS.len();
 
                         #[cfg(feature = "audio")]
-                        AUDIOPLAYER.play_in_head(SONGS[SONGINDEX]);
+                        AUDIOPLAYER.play_in_head_song(SONGS[SONGINDEX]);
                     }
                 }
             }
@@ -6411,7 +6411,7 @@ impl Game {
         unsafe {AUDIOPLAYER.stop_head_sound(MAINMENUSONG.to_string());}
 
         //Uncomment to do automata (just snow updating grass simulation for now)
-        csysarc.write().do_automata(&carc);
+       // csysarc.write().do_automata(&carc);
 
         // let handle = thread::spawn(move || {
         //     Game::chunk_thread_function(&rctarc, carc, csysarc);

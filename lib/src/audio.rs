@@ -18,6 +18,7 @@ static mut FUNC_QUEUE: Lazy<Queue<FuncQueue>> = Lazy::new(|| Queue::new());
 
 enum FuncQueue {
     PlayInHead(String),
+    PlayInHeadSong(String),
     Play(String, Vec3, Vec3, f32)
 }
 
@@ -72,6 +73,9 @@ pub fn spawn_audio_thread() {
                         match f {
                             FuncQueue::PlayInHead(f) => {
                                 AUDIOPLAYER._play_in_head(f);
+                            },
+                            FuncQueue::PlayInHeadSong(f) => {
+                                AUDIOPLAYER._play_in_head_song(f);
                             },
                             FuncQueue::Play(id, pos, vel, vol) => {
                                 AUDIOPLAYER._play(id, &pos, &vel, vol)
@@ -175,6 +179,10 @@ impl AudioPlayer {
         unsafe { FUNC_QUEUE.push(FuncQueue::PlayInHead(id.to_string())) };
     }
 
+    pub fn play_in_head_song(&mut self, id: &'static str) {
+        unsafe { FUNC_QUEUE.push(FuncQueue::PlayInHeadSong(id.to_string())) };
+    }
+
     pub fn stop_head_sound(&mut self, id: String) {
         match self.headsinks.get(&id.to_string()) {
             Some(sink) => {
@@ -204,6 +212,54 @@ impl AudioPlayer {
         
                         sink.append(source);
                         sink.set_volume(0.5);
+                    },
+                    None => {
+                        println!("There was a sound but no sink. This shouldn't happen");
+                    },
+                }
+
+
+
+            },
+            None => {
+                needtopreload = true;
+            },
+        }
+
+        if needtopreload {
+            match self._preload(id.clone(), id.clone()) {
+                Ok(_) => {
+                    self._play_in_head(id.clone());
+                }
+                Err(_e) => {
+                    println!("Couldn't play or preload {}", id);
+                }
+            }
+            
+        }
+    }
+
+
+
+
+    pub fn _play_in_head_song(&mut self, id: String) {
+        let mut needtopreload = false;
+        match self.sounds.get(&id.to_string()) {
+            Some(sound) => {
+
+
+                match self.headsinks.get(&id.to_string()) {
+                    Some(sink) => {
+
+        
+                        let cursor = Cursor::new(sound.clone());
+                        let reader = BufReader::new(cursor);
+                        let source = Decoder::new(reader).unwrap();
+
+                        sink.stop();
+        
+                        sink.append(source);
+                        sink.set_volume(unsafe { MISCSETTINGS.music_vol });
                     },
                     None => {
                         println!("There was a sound but no sink. This shouldn't happen");
