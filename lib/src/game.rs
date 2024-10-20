@@ -6673,7 +6673,7 @@ impl Game {
 
             if chunksys.blockat(current) != target {
                 // Set the block at the current position
-                chunksys.set_block(current, target, true);
+                chunksys.set_block_no_sound(current, target, true);
                 count += 1;
                 let key = ChunkSystem::spot_to_chunk_pos(&current);
                 set.insert(key);
