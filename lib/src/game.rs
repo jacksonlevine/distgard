@@ -88,6 +88,12 @@ pub static mut WAYPOINTS: Lazy<HashMap<String, IVec3>> = Lazy::new(|| HashMap::n
 
 pub static TILEWID: f32 =  0.10;
 
+
+pub static mut HEADINWATER: bool = false;
+
+
+
+
 use crate::camera::Camera;
 use crate::collisioncage::*;
 use crate::cube::Cube;
@@ -250,10 +256,11 @@ pub enum AmbientSound {
     RainInside,
     RainOutside,
     SnowInside,
-    SnowOutside
+    SnowOutside,
+    Underwater
 }
 
-pub static mut AMBIENTSOUNDS: [&'static str; 8] = [
+pub static mut AMBIENTSOUNDS: [&'static str; 9] = [
     path!("assets/sfx/outside/morningbirds.mp3"),
     path!("assets/sfx/outside/afternoonbirds.mp3"),
     path!("assets/sfx/outside/twilightcrickets.mp3"),
@@ -262,7 +269,8 @@ pub static mut AMBIENTSOUNDS: [&'static str; 8] = [
     path!("assets/sfx/raininside.mp3"),
     path!("assets/sfx/rainoutside.mp3"),
     path!("assets/sfx/snowinside.mp3"),
-    path!("assets/sfx/snowoutside.mp3") ];
+    path!("assets/sfx/snowoutside.mp3"),
+    path!("assets/sfx/underwater.mp3") ];
 
 pub static mut SONGTIMER: f32 = 0.0;
 pub static mut SONGINTERVAL: f32 = 300.0;
@@ -272,12 +280,13 @@ pub static mut SONGINDEX: usize = 0;
 pub static mut AMBIENTTIMER: f32 = 0.0;
 pub static mut AMBIENTINTERVAL: f32 = 120.0;
 pub static mut AMBIENTINDEX: usize = 0;
-pub static mut AMBIENTSOUNDPLAYING: [bool; 8] = [
+pub static mut AMBIENTSOUNDPLAYING: [bool; 9] = [
     false,
     false,
     false,
     false,
 
+    false,
     false,
     false,
     false,
@@ -1462,10 +1471,17 @@ impl Game {
                         unsafe {
                             if hitblock && !Blocks::is_leaf_or_tree(lastblock & Blocks::block_id_bits()) {
                                 ROOFOVERHEAD.store(true, Ordering::Relaxed);
-                                if WEATHERTYPE == 0.0 { // there are only indoor ambient sounds when weather
+                                if WEATHERTYPE == 0.0 && !HEADINWATER { // there are only indoor ambient sounds when weather or underwater
                                     for soundname in AMBIENTSOUNDS {
                                         AUDIOPLAYER.stop_head_sound(String::from(soundname));
                                     }
+                                }
+                                if HEADINWATER && !AMBIENTSOUNDPLAYING[AmbientSound::Underwater as usize] {
+                                    for soundname in AMBIENTSOUNDS {
+                                        AUDIOPLAYER.stop_head_sound(String::from(soundname));
+                                    }
+                                    AUDIOPLAYER.play_in_head(AMBIENTSOUNDS[AmbientSound::Underwater as usize]);
+                                    AMBIENTSOUNDPLAYING[AmbientSound::Underwater as usize] = true;
                                 }
                             } else {
                                 ROOFOVERHEAD.store(false, Ordering::Relaxed);
@@ -2748,66 +2764,74 @@ impl Game {
                 }
                 AMBIENTTIMER = 0.0;
             };
-
-            match WEATHERTYPE {
-                2.0 => { //rain
-                    if ROOFOVERHEAD.load(Ordering::Relaxed) {
-                        play_if_needed_and_stop_others(AmbientSound::RainInside);
-                    } else {
-                        play_if_needed_and_stop_others(AmbientSound::RainOutside);
-                    }
+            match self.headinwater {
+                true => {
+                    play_if_needed_and_stop_others(AmbientSound::Underwater);
                 }
-                1.0 => { //snow
-                    if ROOFOVERHEAD.load(Ordering::Relaxed) {
-                        play_if_needed_and_stop_others(AmbientSound::SnowInside);
-                    } else {
-                        play_if_needed_and_stop_others(AmbientSound::SnowOutside);
-                    }
-                }
-                0.0 => {
-                    match *self.timeofday.lock() {
-                        0.0..350.0 | 750.0..900.0 => {
-                            //Night
-                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
-                                play_if_needed_and_stop_others(AmbientSound::NighttimeCrickets);
+                false => {
+                    match WEATHERTYPE {
+                        2.0 => { //rain
+                            if ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::RainInside);
                             } else {
-                                stop_all();
+                                play_if_needed_and_stop_others(AmbientSound::RainOutside);
                             }
                         }
-                        350.0..450.0=> {
-                            //Morning
-                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
-                                play_if_needed_and_stop_others(AmbientSound::MorningBirds);
+                        1.0 => { //snow
+                            if ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::SnowInside);
                             } else {
-                                stop_all();
+                                play_if_needed_and_stop_others(AmbientSound::SnowOutside);
                             }
                         }
-                        450.0..650.0=> {
-                            //Afternoon
-                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
-                                play_if_needed_and_stop_others(AmbientSound::AfternoonBirds);
-                            } else {
-                                stop_all();
+                        0.0 => {
+                            
+                            match *self.timeofday.lock() {
+                                0.0..350.0 | 750.0..900.0 => {
+                                    //Night
+                                    if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                        play_if_needed_and_stop_others(AmbientSound::NighttimeCrickets);
+                                    } else {
+                                        stop_all();
+                                    }
+                                }
+                                350.0..450.0=> {
+                                    //Morning
+                                    if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                        play_if_needed_and_stop_others(AmbientSound::MorningBirds);
+                                    } else {
+                                        stop_all();
+                                    }
+                                }
+                                450.0..650.0=> {
+                                    //Afternoon
+                                    if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                        play_if_needed_and_stop_others(AmbientSound::AfternoonBirds);
+                                    } else {
+                                        stop_all();
+                                    }
+                                }
+                                650.0..750.0=> {
+                                    //Twilight
+                                    if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                        play_if_needed_and_stop_others(AmbientSound::TwilightCrickets);
+                                    } else {
+                                        stop_all();
+                                    }
+                                }
+                                _ => {
+                                    
+                                }
                             }
-                        }
-                        650.0..750.0=> {
-                            //Twilight
-                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
-                                play_if_needed_and_stop_others(AmbientSound::TwilightCrickets);
-                            } else {
-                                stop_all();
-                            }
-                        }
-                        _ => {
                             
                         }
+                        _ => {
+        
+                        }
                     }
-                    
-                }
-                _ => {
-
                 }
             }
+            
         }
     }
 
@@ -5048,8 +5072,10 @@ impl Game {
 
         if blockheadin == 2 {
             self.headinwater = true;
+            unsafe { HEADINWATER = true };
         } else {
             self.headinwater = false;
+            unsafe { HEADINWATER = false };
         }
 
         static mut WAS_CONVEYOR: bool = false;
