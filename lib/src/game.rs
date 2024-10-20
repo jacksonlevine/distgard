@@ -239,9 +239,50 @@ pub static mut SONGS: [&'static str; 13] = [
     path!("assets/music/empythree.mp3"),
 ];
 
+#[derive(FromPrimitive, PartialEq, Eq, Clone)]
+#[repr(usize)]
+pub enum AmbientSound {
+    #[default]
+    MorningBirds,
+    AfternoonBirds,
+    TwilightCrickets,
+    NighttimeCrickets,
+    RainInside,
+    RainOutside,
+    SnowInside,
+    SnowOutside
+}
+
+pub static mut AMBIENTSOUNDS: [&'static str; 8] = [
+    path!("assets/sfx/outside/morningbirds.mp3"),
+    path!("assets/sfx/outside/afternoonbirds.mp3"),
+    path!("assets/sfx/outside/twilightcrickets.mp3"),
+    path!("assets/sfx/outside/nighttimecrickets.mp3"),
+
+    path!("assets/sfx/raininside.mp3"),
+    path!("assets/sfx/rainoutside.mp3"),
+    path!("assets/sfx/snowinside.mp3"),
+    path!("assets/sfx/snowoutside.mp3") ];
+
 pub static mut SONGTIMER: f32 = 0.0;
 pub static mut SONGINTERVAL: f32 = 300.0;
 pub static mut SONGINDEX: usize = 0;
+
+
+pub static mut AMBIENTTIMER: f32 = 0.0;
+pub static mut AMBIENTINTERVAL: f32 = 120.0;
+pub static mut AMBIENTINDEX: usize = 0;
+pub static mut AMBIENTSOUNDPLAYING: [bool; 8] = [
+    false,
+    false,
+    false,
+    false,
+
+    false,
+    false,
+    false,
+    false
+];
 
 pub static mut AMBIENTBRIGHTNESS: f32 = 0.0;
 
@@ -1382,76 +1423,90 @@ impl Game {
 
         let health = Arc::new(AtomicI32::new(20));
 
-        // let cam_clone = cam.clone();
-        // let csysclone = chunksys.clone();
-        // if !headless {
-        //     thread::spawn(move || {
-        //         while unsafe { SHOULDRUN } {
-        //             let mut pos = Vec3::ZERO;
-        //             let mut hitblock = false;
+        let cam_clone = cam.clone();
+        let csysclone = chunksys.clone();
+        if !headless {
+            thread::spawn(move || {
+                while unsafe { SHOULDRUN } {
+                    let mut pos = Vec3::ZERO;
+                    let mut hitblock = false;
 
-        //             match cam_clone.try_lock() {
-        //                 Some(camlock) => {
-        //                     pos = camlock.position.clone();
-        //                 }
-        //                 None => {
-        //                     //println!("Failed to lock camera: {:?}", e);
-        //                 }
-        //             }
+                    match cam_clone.try_lock() {
+                        Some(camlock) => {
+                            pos = camlock.position.clone();
+                        }
+                        None => {
+                            //println!("Failed to lock camera: {:?}", e);
+                        }
+                    }
 
-        //             if pos != Vec3::ZERO {
-        //                 let r = csysclone.read();
-        //                 while !hitblock && pos.y < 128.0 {
-        //                     let ppos = vec::IVec3::new(
-        //                         pos.x.floor() as i32,
-        //                         pos.y.round() as i32,
-        //                         pos.z.floor() as i32,
-        //                     );
-        //                     if r.blockat(ppos) != 0 {
-        //                         hitblock = true;
-        //                         break;
-        //                     }
-        //                     pos.y += 1.0;
-        //                 }
-        //                 unsafe {
-        //                     if hitblock {
-        //                         ROOFOVERHEAD.store(true, Ordering::Relaxed)
-        //                     } else {
-        //                         ROOFOVERHEAD.store(false, Ordering::Relaxed)
-        //                     }
-        //                 }
-        //             }
+                    if pos != Vec3::ZERO {
+                        let r = csysclone.read();
+                        let mut lastblock = 0;
+                        while !hitblock && pos.y < 128.0 {
+                            let ppos = vec::IVec3::new(
+                                pos.x.floor() as i32,
+                                pos.y.round() as i32,
+                                pos.z.floor() as i32,
+                            );
+                            lastblock = r.blockat(ppos);
+                            if lastblock != 0 {
+                                hitblock = true;
+                                break;
+                            }
+                            pos.y += 1.0;
+                        }
 
-        //             thread::sleep(Duration::from_millis(250));
-        //         }
-        //     });
+                        
+                        
+                        unsafe {
+                            if hitblock && !Blocks::is_leaf_or_tree(lastblock & Blocks::block_id_bits()) {
+                                ROOFOVERHEAD.store(true, Ordering::Relaxed);
+                                if WEATHERTYPE == 0.0 { // there are only indoor ambient sounds when weather
+                                    for soundname in AMBIENTSOUNDS {
+                                        AUDIOPLAYER.stop_head_sound(String::from(soundname));
+                                    }
+                                }
+                            } else {
+                                ROOFOVERHEAD.store(false, Ordering::Relaxed);
+                                // for soundname in AMBIENTSOUNDS {
+                                //     AUDIOPLAYER.stop_head_sound(String::from(soundname));
+                                // }
+                            }
+                        }
 
-        //     //  let csysclone = chunksys.clone();
-        //     // let cam_clone = cam.clone();
+                    }
 
-        //     // thread::spawn(move || {
-        //     //     while unsafe { SHOULDRUN } {
+                    thread::sleep(Duration::from_millis(250));
+                }
+            });
 
-        //     //         match csysclone.try_read() {
-        //     //             Ok(csys) => {
-        //     //                 match QUEUE_THESE.pop() {
-        //     //                     Some(spot) => {
-        //     //                         csys.queue_rerender_with_key(spot, true, true);
-        //     //                     }
-        //     //                     None => {
+            //  let csysclone = chunksys.clone();
+            // let cam_clone = cam.clone();
 
-        //     //                     }
-        //     //                 }
-        //     //             }
-        //     //             Err(e) => {
+            // thread::spawn(move || {
+            //     while unsafe { SHOULDRUN } {
 
-        //     //             }
-        //     //         }
+            //         match csysclone.try_read() {
+            //             Ok(csys) => {
+            //                 match QUEUE_THESE.pop() {
+            //                     Some(spot) => {
+            //                         csys.queue_rerender_with_key(spot, true, true);
+            //                     }
+            //                     None => {
 
-        //     //         thread::sleep(Duration::from_millis(250));
-        //     //     }
-        //     // });
-        // }
+            //                     }
+            //                 }
+            //             }
+            //             Err(e) => {
+
+            //             }
+            //         }
+
+            //         thread::sleep(Duration::from_millis(250));
+            //     }
+            // });
+        }
 
         #[cfg(feature = "glfw")]
         let mut hud = Hud::new(
@@ -1897,7 +1952,13 @@ impl Game {
         unsafe {
             for string in SONGS {
                 #[cfg(feature = "audio")]
-                // TODO: handle error
+                let _ = AUDIOPLAYER.preload(string, string);
+            }
+        }
+
+        unsafe {
+            for string in AMBIENTSOUNDS {
+                #[cfg(feature = "audio")]
                 let _ = AUDIOPLAYER.preload(string, string);
             }
         }
@@ -2645,95 +2706,106 @@ impl Game {
         }
     }
     #[cfg(feature = "audio")]
-    pub fn play_weather_sound(&mut self) {
-        static mut TIMER: f32 = 0.0;
-        static mut OUTSIDE_RAIN_PLAYING: bool = false;
-        static mut INSIDE_RAIN_PLAYING: bool = false;
-        static mut OUTSIDE_SNOW_PLAYING: bool = false;
-        static mut INSIDE_SNOW_PLAYING: bool = false;
+    pub fn play_ambient_sound(&mut self) {
+
+
         unsafe {
-            TIMER += self.delta_time;
+            AMBIENTTIMER += self.delta_time;
             //println!("TIMER: {}, DELTA_TIME: {}", TYMER, self.delta_time);
 
-            if TIMER >= 14.0 {
-                OUTSIDE_RAIN_PLAYING = false;
-                INSIDE_RAIN_PLAYING = false;
-                OUTSIDE_SNOW_PLAYING = false;
-                INSIDE_SNOW_PLAYING = false;
-                TIMER = 0.0;
+            if AMBIENTTIMER >= AMBIENTINTERVAL {
+                // OUTSIDE_RAIN_PLAYING = false;
+                // INSIDE_RAIN_PLAYING = false;
+                // OUTSIDE_SNOW_PLAYING = false;
+                // INSIDE_SNOW_PLAYING = false;
+
+                for playing in &mut AMBIENTSOUNDPLAYING {
+                    *playing = false;
+                }
+
+                AMBIENTTIMER = 0.0;
             }
 
+            let play_if_needed_and_stop_others = |soundname: AmbientSound| {
+                if !AMBIENTSOUNDPLAYING[soundname.clone() as usize] {
+                    for (index, sound) in AMBIENTSOUNDS.iter().enumerate() {
+                        if AmbientSound::from(index) == soundname {
+                            AUDIOPLAYER.play_in_head(sound);
+                            AMBIENTSOUNDPLAYING[index] = true;
+                        } else {
+                            AUDIOPLAYER.stop_head_sound(String::from(*sound));
+                            AMBIENTSOUNDPLAYING[index] = false;
+                        }
+                    }
+                    AMBIENTTIMER = 0.0;
+                }
+            };
+
+            let stop_all = || {
+                for (index, sound) in AMBIENTSOUNDS.iter().enumerate() {
+                        AUDIOPLAYER.stop_head_sound(String::from(*sound));
+                        AMBIENTSOUNDPLAYING[index] = false;
+                }
+                AMBIENTTIMER = 0.0;
+            };
+
             match WEATHERTYPE {
-                2.0 => {
+                2.0 => { //rain
                     if ROOFOVERHEAD.load(Ordering::Relaxed) {
-                        if !INSIDE_RAIN_PLAYING {
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/rainoutside.mp3"));
-                            //w.stop_sound("assets/sfx/raininside.mp3");
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowoutside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowinside.mp3"));
-                            AUDIOPLAYER.play_in_head(path!("assets/sfx/raininside.mp3"));
-                            TIMER = 0.0;
-                            INSIDE_RAIN_PLAYING = true;
-                            OUTSIDE_RAIN_PLAYING = false;
-                            OUTSIDE_SNOW_PLAYING = false;
-                            INSIDE_SNOW_PLAYING = false;
-                        }
+                        play_if_needed_and_stop_others(AmbientSound::RainInside);
                     } else {
-                        if !OUTSIDE_RAIN_PLAYING {
-                            //w.stop_sound("assets/sfx/rainoutside.mp3");
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/raininside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowoutside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowinside.mp3"));
-                            AUDIOPLAYER.play_in_head(path!("assets/sfx/rainoutside.mp3"));
-                            TIMER = 0.0;
-                            OUTSIDE_RAIN_PLAYING = true;
-                            INSIDE_RAIN_PLAYING = false;
-                            OUTSIDE_SNOW_PLAYING = false;
-                            INSIDE_SNOW_PLAYING = false;
-                            //println!("playing outside rain");
-                        }
+                        play_if_needed_and_stop_others(AmbientSound::RainOutside);
                     }
                 }
-                1.0 => {
+                1.0 => { //snow
                     if ROOFOVERHEAD.load(Ordering::Relaxed) {
-                        if !INSIDE_SNOW_PLAYING {
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/rainoutside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/raininside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowoutside.mp3"));
-                            // w.stop_sound("assets/sfx/snowinside.mp3");
-                            AUDIOPLAYER.play_in_head(path!("assets/sfx/snowinside.mp3"));
-                            TIMER = 0.0;
-                            INSIDE_SNOW_PLAYING = true;
-                            OUTSIDE_SNOW_PLAYING = false;
-                            OUTSIDE_RAIN_PLAYING = false;
-                            INSIDE_RAIN_PLAYING = false;
-                        }
+                        play_if_needed_and_stop_others(AmbientSound::SnowInside);
                     } else {
-                        if !OUTSIDE_SNOW_PLAYING {
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/rainoutside.mp3"));
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/raininside.mp3"));
-                            //w.stop_sound("assets/sfx/snowoutside.mp3");
-                            AUDIOPLAYER.stop_sound(path!("assets/sfx/snowinside.mp3"));
-
-                            AUDIOPLAYER.play_in_head(path!("assets/sfx/snowoutside.mp3"));
-                            TIMER = 0.0;
-                            OUTSIDE_SNOW_PLAYING = true;
-                            INSIDE_SNOW_PLAYING = false;
-                            OUTSIDE_RAIN_PLAYING = false;
-                            INSIDE_RAIN_PLAYING = false;
+                        play_if_needed_and_stop_others(AmbientSound::SnowOutside);
+                    }
+                }
+                0.0 => {
+                    match *self.timeofday.lock() {
+                        0.0..350.0 | 750.0..900.0 => {
+                            //Night
+                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::NighttimeCrickets);
+                            } else {
+                                stop_all();
+                            }
+                        }
+                        350.0..450.0=> {
+                            //Morning
+                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::MorningBirds);
+                            } else {
+                                stop_all();
+                            }
+                        }
+                        450.0..650.0=> {
+                            //Afternoon
+                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::AfternoonBirds);
+                            } else {
+                                stop_all();
+                            }
+                        }
+                        650.0..750.0=> {
+                            //Twilight
+                            if !ROOFOVERHEAD.load(Ordering::Relaxed) {
+                                play_if_needed_and_stop_others(AmbientSound::TwilightCrickets);
+                            } else {
+                                stop_all();
+                            }
+                        }
+                        _ => {
+                            
                         }
                     }
+                    
                 }
                 _ => {
-                    AUDIOPLAYER.stop_sound(path!("assets/sfx/rainoutside.mp3"));
-                    AUDIOPLAYER.stop_sound(path!("assets/sfx/raininside.mp3"));
-                    AUDIOPLAYER.stop_sound(path!("assets/sfx/snowoutside.mp3"));
-                    AUDIOPLAYER.stop_sound(path!("assets/sfx/snowinside.mp3"));
-                    OUTSIDE_RAIN_PLAYING = false;
-                    INSIDE_RAIN_PLAYING = false;
-                    OUTSIDE_SNOW_PLAYING = false;
-                    INSIDE_SNOW_PLAYING = false;
-                    //println!("Stopping");
+
                 }
             }
         }
@@ -4135,7 +4207,7 @@ impl Game {
 
         if !self.headless {
             #[cfg(feature = "audio")]
-            self.play_weather_sound();
+            self.play_ambient_sound();
         }
 
         unsafe {

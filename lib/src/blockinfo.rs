@@ -235,6 +235,17 @@ pub static BLOCK_NAME_TO_ID: std::sync::LazyLock::<HashMap<String, u32>> = std::
 
 
 impl Blocks {
+
+    pub fn is_leaf_or_tree(id:u32) -> bool {
+        match id {
+            6 | 7| 43 | 44 | 50 | 52..=61 | 64..=78 => {
+                true
+            }
+            _=>{
+                false
+            }
+        }
+    }
     pub fn get_name(id: u32) -> &'static str {
         match id {
             0 => {"Air"}
