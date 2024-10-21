@@ -13,6 +13,7 @@ use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use crate::server_types::*;
 
 pub fn start_listening(mut server: ResMut<QuintetServer>) {
+    println!("Server starting!");
     server
         .start_endpoint(
             ServerEndpointConfiguration::from_ip(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 6000),

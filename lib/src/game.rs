@@ -35,7 +35,7 @@ use jeffy_quintet::client::QuintetClientPlugin;
 use jeffy_quintet::server::QuintetServerPlugin;
 
 pub static mut REND_RAD: bool = false;
-
+pub static mut SPECIAL_TOOL_OVERLAY: bool = false;
 #[derive(FromPrimitive, Clone)]
 #[repr(usize)]
 pub enum DeathType {
@@ -44,6 +44,10 @@ pub enum DeathType {
     COLORS,
     VISION
 }
+
+pub static mut TOOL_MENU_SPOT: IVec3 = IVec3{x:0, y:0, z:0};
+pub static mut TOOL_MENU_OPEN: bool = false;
+pub static mut TOOL_MENU_TIMER: f32 = 0.0;
 
 pub const CHUNKFADEINTIME: f32 = 0.6;
 pub const CHUNKFADEIN_TIMEMULTIPLIER_TOGET1_WHENITSFULL: f32 = 1.0 / CHUNKFADEINTIME;
@@ -105,6 +109,7 @@ use crate::guisystem::GuiSystem;
 use crate::hud::{Hud, HudElement, SlotIndexType};
 use crate::inventory::*;
 
+use crate::menu3d::draw_3d_menu_button_with_mvp;
 use crate::modelentity::ModelEntity;
 use crate::newclient::{handle_server_messages, start_connection, PlayerUpdateTimer};
 use crate::newserver::{handle_client_messages, start_listening};
@@ -1948,6 +1953,8 @@ impl Game {
 
             g.load_model(path!("assets/models/eye.glb"));
             g.load_model(path!("assets/models/cow.glb"));
+
+            g.load_model(path!("assets/models/button.gltf"));
             // g.load_model(path!("assets/models/car/scene.gltf"));
             // //g.load_model(path!("assets/models/ship/scene.gltf"));
             // g.load_model(path!("assets/models/monster1/scene.gltf"));
@@ -2254,7 +2261,7 @@ impl Game {
             //.add_systems(Update, || println!("Testeroonie"));
             
             if unsafe {HEADLESS} { //Headless server
-
+                println!("Adding systems for server");
                 app.add_plugins(QuintetServerPlugin::default());
                 app.add_systems(Startup, start_listening);
                 app.add_systems(Update, handle_client_messages);
@@ -2273,11 +2280,16 @@ impl Game {
                     app.add_systems(Startup, start_connection);
                     app.add_systems(Update, handle_server_messages);
 
+                    app.add_systems(Update, record_and_sort_rad_positions);
+                    app.add_systems(Update, cycle_rad_positions);
+                    app.add_systems(Update, wait_or_visit_queued_spots);
+
                 } else if unsafe {!HEADLESS} && unsafe {SINGLEPLAYER} { //Client singleplayer
 
                     app.add_systems(Update, record_and_sort_rad_positions);
                     app.add_systems(Update, cycle_rad_positions);
                     app.add_systems(Update, wait_or_visit_queued_spots);
+                    
                 }
             }
             
@@ -2787,7 +2799,7 @@ impl Game {
                         0.0 => {
                             
                             match *self.timeofday.lock() {
-                                0.0..350.0 | 750.0..900.0 => {
+                                0.0..250.0 | 750.0..900.0 => {
                                     //Night
                                     if !ROOFOVERHEAD.load(Ordering::Relaxed) {
                                         play_if_needed_and_stop_others(AmbientSound::NighttimeCrickets);
@@ -2795,7 +2807,7 @@ impl Game {
                                         stop_all();
                                     }
                                 }
-                                350.0..450.0=> {
+                                250.0..450.0=> {
                                     //Morning
                                     if !ROOFOVERHEAD.load(Ordering::Relaxed) {
                                         play_if_needed_and_stop_others(AmbientSound::MorningBirds);
@@ -2837,13 +2849,13 @@ impl Game {
 
     pub fn initialize_being_in_world(&mut self) -> JoinHandle<()> {
 
-        
-        if self.vars.in_multiplayer {
-            //ChunkSystem::initial_rebuild_on_main_thread(&self.chunksys.clone(), &self.shader0, &self.camera.lock().position);
-            while !RECEIVED_WORLD.load(Ordering::Relaxed) {
-                thread::sleep(Duration::from_millis(500));
-            }
-        }
+        println!("in");
+        // if !unsafe { SINGLEPLAYER } {
+        //     //ChunkSystem::initial_rebuild_on_main_thread(&self.chunksys.clone(), &self.shader0, &self.camera.lock().position);
+        //     while !RECEIVED_WORLD.load(Ordering::Relaxed) {
+        //         thread::sleep(Duration::from_millis(500));
+        //     }
+        // }
         
 
         self.vars.hostile_world = false; //(self.chunksys.read().planet_type % 2) != 0;
@@ -2865,8 +2877,9 @@ impl Game {
 
         self.load_world_aspects_from_db();
         self.load_chests_from_file();
+        println!("Spawning bevy thread");
         Self::spawn_bevy_thread();
-
+        
         //self.static_model_entities.push(ModelEntity::new(5, Vec3::new(0.0, 25.0, 200.0), 140.0, Vec3::new(0.0, 0.0, 0.0), &self.chunksys, &self.camera));
         //self.update_model_collisions(0);
 
@@ -4126,6 +4139,8 @@ impl Game {
             self.prev_time = current_time;
         }
 
+
+
         static mut saveworldaspectstimer: f32 = 0.0;
         unsafe {
             saveworldaspectstimer += self.delta_time;
@@ -4804,12 +4819,29 @@ impl Game {
             }
             
             let camclone;
-            //if !self.vars.ship_taken_off {
+                //if !self.vars.ship_taken_off {
             if !unsafe { DEAD } {
                 camclone = self.draw_select_cube();
             } else {
                 camclone = unsafe { CAMERA.as_ref().unwrap().lock().clone() };
             }
+
+            if unsafe { TOOL_MENU_OPEN } {
+                unsafe { TOOL_MENU_TIMER += self.delta_time };
+                unsafe {
+                    draw_3d_menu_button_with_mvp(&self.modelshader, &camclone, &self.gltf_vaos, &self.gltf_textures, &self.gltf_counts, &self.gltf_drawmodes, false, 
+                        Vec3::new(TOOL_MENU_SPOT.x as f32 + 0.5, TOOL_MENU_SPOT.y as f32 + 0.5 + (TOOL_MENU_TIMER * 1.3).min(1.0) + (TOOL_MENU_TIMER*5.0).sin()*0.04, TOOL_MENU_SPOT.z as f32 + 0.5), 6, &camclone.mvp);
+                }
+                
+            }
+            unsafe {
+                let p = unsafe { PLAYERPOS.snapshot() };
+                if Vec3::new(TOOL_MENU_SPOT.x as f32, TOOL_MENU_SPOT.y as f32, TOOL_MENU_SPOT.z as f32).distance(Vec3::new(p.pos.0, p.pos.1, p.pos.2)) > 7.0 {
+                    TOOL_MENU_OPEN = false;
+                }
+            }
+            
+            
             //}
 
             unsafe {
@@ -4825,6 +4857,8 @@ impl Game {
                     );
                 }
             }
+
+            
 
             self.guisys.draw_text(0);
 
@@ -5670,8 +5704,12 @@ impl Game {
 
                     let hitvec3 = Vec3::new(hit.x as f32, hit.y as f32, hit.z as f32);
 
+                    let special = BLOCK_TYPE == 45;
+
+                    SPECIAL_TOOL_OVERLAY = special;
+
                     self.select_cube
-                        .draw_at(hitvec3, &cam_clone.mvp, self.vars.walkbobtimer);
+                        .draw_at(hitvec3, &cam_clone.mvp, self.vars.walkbobtimer, special);
 
                     let bprog = (BREAK_TIME / Blocks::get_break_time(BLOCK_TYPE)).clamp(0.0, 1.0);
 
@@ -8342,6 +8380,8 @@ impl Game {
     }
     #[cfg(feature = "glfw")]
     pub fn mouse_button(&mut self, mb: MouseButton, a: Action) {
+        use crate::menu3d::draw_3d_menu_button_with_mvp;
+
         if self.hud.chest_open {
             match unsafe {
                 MISCSETTINGS
@@ -8354,6 +8394,19 @@ impl Game {
                     //self.vars.mouse_clicked = a == Action::Press;
 
                     if a == Action::Press {
+
+
+
+
+
+
+
+
+
+
+
+
+
                         let mut updateinv = false;
                         {
                             //let csys = self.chunksys.write();
@@ -8530,6 +8583,21 @@ impl Game {
             } {
                 "Break/Attack" => {
                     self.vars.mouse_clicked = a == Action::Press;
+
+                    if a == Action::Press {
+                        if unsafe { SPECIAL_TOOL_OVERLAY } {
+                            unsafe { TOOL_MENU_SPOT = SELECTCUBESPOT };
+                            unsafe { TOOL_MENU_OPEN = true };
+                            unsafe { TOOL_MENU_TIMER = 0.0 };
+
+                            unsafe { #[cfg(feature="audio")]
+                            AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3")) };
+                        
+                        }
+                    }
+                    
+
+
                     // if self.vars.mouse_clicked {
                     //     self.cast_break_ray();
                     // }

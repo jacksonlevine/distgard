@@ -3,18 +3,51 @@
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::Subscriber;
 use tracing::{error, info};
+use std::env;
 use std::fs::File;
 
 use voxelland::windowandkey::{UNCAPKB, WindowAndKeyContext};
 
-use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, SHOULDRUN};
+use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, HEADLESS, RECEIVED_WORLD, SHOULDRUN, SINGLEPLAYER};
 
-
+pub static mut ISSERVER: bool = false;
 
 fn main() {
 
     
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        if args[1] == "s" {
+            println!("I AM SERVER");
+            unsafe { ISSERVER = true };
+        }
+    }
 
+
+    if unsafe { ISSERVER } {
+
+        let mut wak = WindowAndKeyContext::new("Server", 100, 100);
+
+        let gameh = Game::new(&wak.window, true, true, &wak.addressentered, &wak.serveraddress);
+        let mut game = gameh.join().unwrap();
+
+        game.initialize_being_in_world();
+        wak.game = Some(game);
+        
+        while !wak.window.read().should_close() {
+            wak.glfw.poll_events();
+        }
+
+
+
+        
+
+
+
+
+
+
+    } else {
 
     
 
@@ -67,27 +100,53 @@ fn main() {
         }
 
 
-        while !DECIDEDWORLD {
-            if !wak_context.window.read().should_close() {
-                wak_context.run();
-            } else {
-                return ();
+
+        if SINGLEPLAYER {
+
+            while !DECIDEDWORLD {
+                if !wak_context.window.read().should_close() {
+                    wak_context.run();
+                } else {
+                    return ();
+                }
             }
+
+            while !DECIDEDSEEDOREXISTS {
+                if !wak_context.window.read().should_close() {
+                    wak_context.run();
+                } else {
+                    return ();
+                }
+            }
+
+        } else {
+
+            //MULTIPLAYER
+
+            while !RECEIVED_WORLD.load(std::sync::atomic::Ordering::Relaxed) {
+                if !wak_context.window.read().should_close() {
+                    wak_context.run();
+                } else {
+                    return ();
+                }
+            }
+
+
+
+
+
         }
 
-        while !DECIDEDSEEDOREXISTS {
-            if !wak_context.window.read().should_close() {
-                wak_context.run();
-            } else {
-                return ();
-            }
-        }
+
+        
+
+        
     }
     
 
     
 
-    let gameh = Game::new(&wak_context.window, true, false, &wak_context.addressentered, &wak_context.serveraddress);
+    let gameh = Game::new(&wak_context.window, true, unsafe { HEADLESS }, &wak_context.addressentered, &wak_context.serveraddress);
 
     while !gameh.is_finished() {
         if !wak_context.window.read().should_close() {
@@ -146,4 +205,5 @@ fn main() {
     }
 
     unsafe { SHOULDRUN = false; }
+    }
 }

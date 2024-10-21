@@ -6,7 +6,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     audio::spawn_audio_thread, blockinfo::Blocks, cmd::Cmd, game::{
-        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, MOUSEX, MOUSEY, PLAYER_DECIDED_SEED, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
+        Game, JGltfNode, AUDIOPLAYER, CAMERA, CROUCHING, CURRENT_AVAIL_RECIPES, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, MOUSEX, MOUSEY, PLAYER_DECIDED_SEED, RECEIVED_WORLD, SHOWTOOLTIP, SINGLEPLAYER, TOOLTIPNAME
     }, keybinds::{AboutToRebind, ABOUTTOREBIND, LISTENINGFORREBIND}, menu3d::draw_3d_menu_button, newclient::{ADDRESSENTERED, THEENTEREDADDRESS}, recipes::{RECIPES_DISABLED, RECIPE_COOLDOWN_TIMER}, statics::{
         load_misc, load_or_initialize_statics, save_lesa, save_misc, LAST_ENTERED_SERVERADDRESS, MISCSETTINGS
     }, texture::Texture
@@ -160,8 +160,8 @@ impl WindowAndKeyContext {
         }
 
         let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
-
-        //glfw.window_hint(glfw::WindowHint::Samples(Some(8)));  // 8x MSAA
+        
+        //glfw.window_hint(glfw::WindowHint::Samples(Some(3)));  //  MSAA
         let (mut window, events) = glfw
             .create_window(width, height, windowname, glfw::WindowMode::Windowed)
             .expect("Failed to create GLFW window.");
@@ -688,12 +688,12 @@ impl WindowAndKeyContext {
 
                             // Multiplayer button
                             if ui.button_with_size("Multiplayer", [button_width, button_height]) {
-                                // #[cfg(feature="audio")]
-                                // {
-                                //     AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
-                                // }
-                                // SINGLEPLAYER = false;
-                                // DECIDEDSPORMP = true;
+                                #[cfg(feature="audio")]
+                                {
+                                    AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
+                                }
+                                SINGLEPLAYER = false;
+                                DECIDEDSPORMP = true;
                             }
 
                             static mut ELEMENT2MOUSED: bool = false;
@@ -1551,6 +1551,89 @@ impl WindowAndKeyContext {
                                 
                             }
                         }
+                    } else { //MULTIPLAYER
+
+                        match RECEIVED_WORLD.load(std::sync::atomic::Ordering::Relaxed) {
+                            false => {
+                                self.imgui
+                                            .io_mut()
+                                            .update_delta_time(Duration::from_secs_f32(self.delta_time));
+
+                                        let (width, height) = self.window.read().get_framebuffer_size();
+                                        self.imgui.io_mut().display_size = [width as f32, height as f32];
+
+                                        let screen_width = width as f32;
+                                        let screen_height = height as f32;
+
+                                        // Start the ImGui frame
+                                        let ui = self.imgui.frame();
+
+                                        let window_flags = WindowFlags::NO_DECORATION
+                                            | WindowFlags::NO_MOVE
+                                            | WindowFlags::NO_RESIZE
+                                            | WindowFlags::NO_SCROLLBAR
+                                            | WindowFlags::NO_TITLE_BAR
+                                            | WindowFlags::NO_BACKGROUND;
+
+                                        // Scale the window and button size proportionally to the screen size
+                                        let window_size = (screen_width * 0.90, screen_height * 0.75);
+                                        let window_pos = [
+                                            screen_width / 2.0 - (window_size.0 / 2.0),
+                                            screen_height / 2.0 - (window_size.1 / 2.0) + screen_height * 0.1, // Slightly offset vertically
+                                        ];
+
+                                        ui.window("Transparent Window")
+                                            .size([window_size.0, window_size.1], Condition::Always)
+                                            .position(window_pos, Condition::Always)
+                                            .flags(window_flags)
+                                            .build(|| {
+                                                let button_width = screen_width * 0.35; // Scale button width by 15% of screen width
+                                                let button_height = screen_height * 0.07; // Scale button height by 7% of screen height
+                                                let window_size = ui.window_size();
+
+                                                let available_width = window_size[0];
+                                                let available_height = window_size[1];
+
+                                                let pos_x = (available_width - button_width) / 2.0;
+                                                let pos_y = (available_height - (button_height) - 20.0) / 2.0;
+
+
+                                                draw_3d_menu_button(
+                                                    &self.modelshader, &self.menu_camera, 
+                                                    &self.gltf_vaos, &self.gltf_textures, 
+                                                    &self.gltf_counts, &self.gltf_drawmodes,
+                                                    false, Vec3::new(0.0, 0.0, 0.0), 3
+                                                );
+
+                                                draw_3d_menu_button(
+                                                    &self.modelshader, &self.menu_camera, 
+                                                    &self.gltf_vaos, &self.gltf_textures, 
+                                                    &self.gltf_counts, &self.gltf_drawmodes,
+                                                    false, Vec3::new(0.0, 0.0, 0.0), 0
+                                                );
+
+
+                                                ui.set_cursor_pos([pos_x, pos_y - screen_height * 0.15 + screen_height * (0.065 * 0 as f32)]);
+
+                                                ui.text("Waiting for world info...");
+                                                
+                                            });
+                                        // Render the ImGui frame
+                                        self.guirenderer.render(&mut self.imgui);
+
+                                        // avoid borrow checker
+                                        (*addr_of_mut!(*self)).handle_events(self.imgui.io_mut())
+
+                            }
+                            true => {
+
+                            }
+                        }
+
+
+
+
+
                     }
                     
                     if main_menu && !SINGLEPLAYER {

@@ -1,1 +1,1 @@
-cargo run -p voxelland-server --release
+cargo run -p voxelland-client --release -- s

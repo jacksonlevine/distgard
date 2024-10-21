@@ -52,3 +52,4 @@ pub mod database;
 pub mod climates;
 pub mod rad;
 pub mod everis;
+pub mod aabb;
