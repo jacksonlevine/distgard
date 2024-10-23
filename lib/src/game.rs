@@ -98,6 +98,15 @@ pub static mut HEADINWATER: bool = false;
 
 
 
+
+
+
+
+pub static mut VOXEL_MODELS: Vec<JVoxModel> = Vec::new();
+
+
+
+
 use crate::camera::Camera;
 use crate::collisioncage::*;
 use crate::cube::Cube;
@@ -460,7 +469,7 @@ pub static mut PLAYERPOS: Lazy<PlayerCam> = Lazy::new(|| PlayerCam {
 
 //FREED MEMBERS TAKEN OUT OF Game AS PER BEVY MIGRATION PLAN STEP 1
 
-pub static mut CHUNKSYS: Option<Arc<RwLock<ChunkSystem>>> = None;
+pub static mut CHUNKSYS: Option<Arc<ChunkSystem>> = None;
 pub static mut CAMERA: Option<Arc<Mutex<Camera>>> = None;
 
 
@@ -468,7 +477,7 @@ pub static mut CAMERA: Option<Arc<Mutex<Camera>>> = None;
 pub struct Game {
 
     // Removal alert below this very line:
-    // This line marks the declaration of the `chunksys` variable, an `Arc<RwLock<ChunkSystem>>`, which has been a cornerstone of our chunk data management.
+    // This line marks the declaration of the `chunksys` variable, an `Arc<ChunkSystem>`, which has been a cornerstone of our chunk data management.
     // Its removal signifies a major shift in our approach to handling this data, potentially introducing a new system or methodology.
     // This change might bring about significant challenges or complications, as indicated by the phrase "the act that started the war." This metaphorically highlights the possible upheaval or issues caused by the presence of this variable in our codebase.
     // We now hope that by removing `chunksys`, we are bringing an end to the war of development struggles and complications it may have caused. Pray for this war to now end as we remove this from the babels of history.
@@ -502,7 +511,6 @@ pub struct Game {
     pub current_jump_y: f32,
     pub allowable_jump_height: f32,
     pub initial_timer: f32,
-    pub voxel_models: Arc<Vec<JVoxModel>>,
     pub gltf_models: Vec<(
         gltf::Document,
         Vec<gltf::buffer::Data>,
@@ -668,7 +676,7 @@ pub fn attend_chunk_queues() {
                 let mut implic = HashSet::new();
                 let mut more = true;
                 
-                let csys_arc = csys.read();
+                let csys_arc = csys.clone();
                 while more {
                     
                     match AUTOMATA_QUEUED_CHANGES.pop_front() {
@@ -724,7 +732,7 @@ pub fn attend_chunk_queues() {
             let mut lightstuff = true;
             while lightstuff {
                 
-                let csys_arc = csys.read();
+                let csys_arc = csys.clone();
         
                 match csys_arc.light_rebuild_requests.pop() {
                     Some(index) => {
@@ -795,7 +803,7 @@ pub fn attend_chunk_queues() {
         
             let mut userstuff = true;
             while userstuff {
-                let csys_arc = csys.read();
+                let csys_arc = csys.clone();
         
                 match csys_arc.user_rebuild_requests.pop() {
                     Some(index) => {
@@ -873,7 +881,7 @@ pub fn attend_chunk_queues() {
             }
             let mut genstuff = true;
             while genstuff {
-                let csys_arc = csys.read();
+                let csys_arc = csys.clone();
         
                 match csys_arc.gen_rebuild_requests.pop() {
                     Some(index) => {
@@ -959,7 +967,7 @@ pub fn attend_chunk_queues() {
             let mut backgroundstuff = true;
             while backgroundstuff {
                 
-                let csys_arc = csys.read();
+                let csys_arc = csys.clone();
         
                 match csys_arc.background_rebuild_requests.pop() {
                     Some(index) => {
@@ -1072,7 +1080,7 @@ pub fn attend_chunk_queues2() {
     let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
     match csys_arc {
         Some(csys) => {
-            let cs = csys.read();
+            let cs = csys.clone();
             if popbackroundstuff(&cs) {
                 return;
             }
@@ -1087,7 +1095,7 @@ pub fn attend_chunk_queues3() {
     let csys_arc = unsafe { (*addr_of!(CHUNKSYS)).as_ref() };
     match csys_arc {
         Some(csys) => {
-            let cs = csys.read();
+            let cs = csys.clone();
             if popbackroundstuff(&cs) {
                 return;
             }
@@ -1160,13 +1168,13 @@ pub fn attend_needed_spots(
                             let adjusted_user_cpos = user_cpos;
                 
                             let radius = {
-                                let x = csys.read().radius;
+                                let x = csys.clone().radius;
                                 x.clone()
                             };
                 
                             for i in -(radius as i32)..(radius as i32) {
                                 for k in -(radius as i32)..(radius as i32) {
-                                    let csys_arc = csys.read();
+                                    let csys_arc = csys.clone();
                 
                                     let tcarc = csys_arc.takencare.clone();
                                     let this_spot = IVec2 {
@@ -1181,7 +1189,7 @@ pub fn attend_needed_spots(
                 
                             let mut sorted_chunk_facades: Vec<ChunkFacade> = Vec::new();
                             {
-                                let csyschunks = csys.read().chunks.clone();
+                                let csyschunks = csys.clone().chunks.clone();
                 
                                 for carc in &csyschunks {
                                     match carc.try_lock() {
@@ -1215,7 +1223,7 @@ pub fn attend_needed_spots(
                             });
                 
                             for (index, ns) in neededspots.iter().enumerate() {
-                                let csys_arc = csys.read();
+                                let csys_arc = csys.clone();
                                 //Also check the queues from this thread or else it will hog the lock
                                 if popuserstuff(&csys_arc) {
                                     return;
@@ -1378,7 +1386,7 @@ impl Game {
                 JVoxModel::new(path!("assets/voxelmodels/rubbertree.vox")),
             ]
         };
-        let voxel_models: Vec<JVoxModel> = VOX_MODEL_PATHS.iter().map(|path| JVoxModel::new(path)).collect();
+        unsafe { VOXEL_MODELS = VOX_MODEL_PATHS.iter().map(|path| JVoxModel::new(path)).collect() };
 
         // let voxel_models = vec![
         //     JVoxModel::new(path!("assets/voxelmodels/bush.vox")),
@@ -1408,17 +1416,13 @@ impl Game {
         //self.start_chunks_with_radius(10, seed, 0);
         //self.camera.lock().position = Vec3::new(0.0, 100.0, 0.0);
 
-        let vmarc = Arc::new(voxel_models);
-        let vmarc2 = vmarc.clone();
 
-        csys.voxel_models = Some(vmarc);
-
-        let chunksys = Arc::new(RwLock::new(csys));
+        let chunksys = Arc::new(csys);
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool + Send + Sync> = {
             let csys_arc = Arc::clone(&chunksys);
             Box::new(move |v: vec::IVec3| {
-                let csys = csys_arc.read();
+                let csys = csys_arc.clone();
                 let bitshere = csys.blockat(v.clone());
 
                 let isntopendoor = DoorInfo::get_door_open_bit(bitshere) != 1;
@@ -1431,7 +1435,7 @@ impl Game {
                     && isnttorch
                     && isntbamboo
                     && isnttallgrass
-                    && csys_arc.read().collision_predicate(v);
+                    && csys_arc.collision_predicate(v);
             })
         };
 
@@ -1455,7 +1459,7 @@ impl Game {
                     }
 
                     if pos != Vec3::ZERO {
-                        let r = csysclone.read();
+                        let r = csysclone.clone();
                         let mut lastblock = 0;
                         while !hitblock && pos.y < 128.0 {
                             let ppos = vec::IVec3::new(
@@ -1859,7 +1863,6 @@ impl Game {
             current_jump_y: 0.0,
             allowable_jump_height: 1.6,
             initial_timer: 0.0,
-            voxel_models: vmarc2,
             nodes: Vec::new(),
             gltf_models: Vec::new(),
             gltf_vbos: Vec::new(),
@@ -2897,7 +2900,7 @@ impl Game {
         // Function to decrement y until a block is found
         fn find_ground_y(position: &mut vec::IVec3, _game: &Game) {
             let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-            while csys.read().blockat(*position) == 0 {
+            while csys.clone().blockat(*position) == 0 {
                 position.y -= 1;
             }
         }
@@ -3875,7 +3878,7 @@ impl Game {
         let campos = position;
         let camfootpos = campos - Vec3::new(0.0, 2.0, 0.0);
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-        let blockat = csys.read().blockat(IVec3::new(
+        let blockat = csys.clone().blockat(IVec3::new(
             camfootpos.x.floor() as i32,
             camfootpos.y.floor() as i32,
             camfootpos.z.floor() as i32,
@@ -3903,7 +3906,7 @@ impl Game {
             camfootpos.z.floor() as i32,
         );
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-        let blockat = csys.read().blockat(spot);
+        let blockat = csys.clone().blockat(spot);
         let blockat = blockat & Blocks::block_id_bits();
         // if blockat != 0 {
         //     self.audiop.write().play_next_in_series(&Blocks::get_walk_series(blockat), &(camfootpos), &Vec3::new(0.0, 0.0, 0.0), 0.5);
@@ -3914,7 +3917,6 @@ impl Game {
                 if !self.vars.in_multiplayer {
                     let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
                     csys
-                        .read()
                         .set_block_and_queue_rerender_no_sound(spot, 41, false, true, true);
                 } else {
                     // let mut message = Message::new(
@@ -3943,7 +3945,7 @@ impl Game {
                 if !self.vars.in_multiplayer {
                     let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
                     csys
-                        .read()
+                      
                         .set_block_and_queue_rerender_no_sound(spot, 40, false, true, true);
                 } else {
                     // let mut message = Message::new(
@@ -4391,17 +4393,14 @@ impl Game {
 
                             let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
 
-                            match csys.try_read() {
-                                Some(_csys) => {
-                                    match self.chest_registry.get(&self.hud.current_chest) {
-                                        Some(chest) => {
-                                            TOOLTIPNAME = Blocks::get_name(chest.value().inv[i].0);
-                                        }
-                                        None => {}
+                       
+                                match self.chest_registry.get(&self.hud.current_chest) {
+                                    Some(chest) => {
+                                        TOOLTIPNAME = Blocks::get_name(chest.value().inv[i].0);
                                     }
+                                    None => {}
                                 }
-                                None => {}
-                            }
+                        
 
                             SHOWTOOLTIP = true;
                             isoverlappingany = true;
@@ -5007,7 +5006,7 @@ impl Game {
         unsafe {
             let per = {
                 let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
-                let cr = csys.read();
+                let cr = csys.clone();
                 cr.perlin.clone()
             };
             
@@ -5678,7 +5677,7 @@ impl Game {
                             BREAK_TIME = 0.0;
                             LAST_BLOCK_POS = hit;
                         }
-                        csys.read().blockat(hit) & Blocks::block_id_bits()
+                        csys.clone().blockat(hit) & Blocks::block_id_bits()
                     }
                     None => {
                         MOUSE_ON_CUBE = false;
@@ -5803,7 +5802,7 @@ impl Game {
             //unsafe { GLCHUNKS } {
                 let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
 
-            let ugqarc = csys.read().finished_user_geo_queue.clone();
+            let ugqarc = csys.clone().finished_user_geo_queue.clone();
 
             match ugqarc.pop() {
                 Some(ready) => {
@@ -5817,9 +5816,9 @@ impl Game {
                             unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
                    
 
-                    let bankarc = csys.read().geobank[ready.geo_index].clone();
+                    let bankarc = csys.clone().geobank[ready.geo_index].clone();
 
-                    let cs = csys.read();
+                    let cs = csys.clone();
 
                     let mut cmemlock = cs.chunk_memories.lock();
 
@@ -5891,7 +5890,7 @@ impl Game {
                 None => {}
             }
 
-            let gqarc = csys.read().finished_geo_queue.clone();
+            let gqarc = csys.clone().finished_geo_queue.clone();
 
             match gqarc.pop() {
                 Some(ready) => {
@@ -5903,7 +5902,7 @@ impl Game {
                             unsafe { let _ = &GIS_QUEUED.remove(&ready.geo_index); };
                     
 
-                    let cs = csys.read();
+                    let cs = csys.clone();
                     //info!("Weird!");
 
                     let bankarc = cs.geobank[ready.geo_index].clone();
@@ -5985,7 +5984,7 @@ impl Game {
                                 //info!("Some user queue");
                                 // info!("Weird!");
 
-                                let bankarc = csys.read().geobank[ready.geo_index].clone();
+                                let bankarc = csys.clone().geobank[ready.geo_index].clone();
 
                                 //let mut cmemlock = self.chunksys.chunk_memories.lock();
 
@@ -6170,7 +6169,7 @@ impl Game {
             gl::Uniform4f(FOGCOL_LOC, fc.0, fc.1, fc.2, fc.3);
         }
 
-        let cs = csys.read();
+        let cs = csys.clone();
         let mut cmem = cs.chunk_memories.lock();
         for (_index, cfl) in cmem.memories.iter_mut().enumerate() {
             if cfl.used {
@@ -6577,7 +6576,7 @@ impl Game {
 
         self.non_static_model_entities.clear();
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
-        csys.write().exit();
+
     }
 
     pub fn start_chunks_with_radius(&mut self, newradius: u8, seed: u32, nt: usize) {
@@ -6596,9 +6595,8 @@ impl Game {
 
         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
 
-        csys.write().reset(newradius, seed, nt);
 
-        csys.write().voxel_models = Some(self.voxel_models.clone());
+
 
         //self.drops.csys = self.chunksys.clone();
 
@@ -6714,7 +6712,7 @@ impl Game {
     // pub fn chunk_thread_function(
     //     runcheck: &AtomicBool,
     //     cam_arc: Arc<Mutex<Camera>>,
-    //     csys_arc: Arc<RwLock<ChunkSystem>>,
+    //     csys_arc: Arc<ChunkSystem>,
     // ) {
         
     //     while runcheck.load(Ordering::Relaxed) {
@@ -6794,7 +6792,7 @@ impl Game {
     }
 
     pub fn set_block_recursively(
-        chunksys: &Arc<RwLock<ChunkSystem>>,
+        chunksys: &Arc<ChunkSystem>,
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
@@ -6805,7 +6803,6 @@ impl Game {
         while let Some(current) = stack.pop() {
             // Check if the block at the current position is already deleted
 
-            let chunksys = chunksys.read();
 
             if chunksys.blockat(current) != target {
                 // Set the block at the current position
@@ -6826,7 +6823,7 @@ impl Game {
     }
 
     pub fn set_block_recursively_locked(
-        chunksys: &parking_lot::lock_api::RwLockReadGuard<'_, parking_lot::RawRwLock, ChunkSystem>,
+        chunksys: &ChunkSystem,
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
@@ -6859,7 +6856,7 @@ impl Game {
     
     //return amount of blocks it broke
     pub fn delete_block_recursively(
-        chunksys: &Arc<RwLock<ChunkSystem>>,
+        chunksys: &Arc<ChunkSystem>,
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
@@ -6868,7 +6865,7 @@ impl Game {
     }
 
     pub fn delete_block_recursively_or_leaves(
-        chunksys: &Arc<RwLock<ChunkSystem>>,
+        chunksys: &Arc<ChunkSystem>,
         id: u32,
         at: IVec3,
         set: &mut HashSet<IVec2>,
@@ -6879,7 +6876,7 @@ impl Game {
         while let Some(current) = stack.pop() {
             // Check if the block at the current position is already deleted
 
-            let csys  = chunksys.read();
+            let csys  = chunksys;
 
             if csys.blockat(current) != 0 {
                 // Set the block at the current position
@@ -6918,7 +6915,7 @@ impl Game {
             self.vars.walkbobtimer,
         ) {
             Some((tip, block_hit)) => {
-                let blockbits = csys.read().blockat(block_hit);
+                let blockbits = csys.clone().blockat(block_hit);
                 let blockat = blockbits & Blocks::block_id_bits();
 
                 let mut defaultprocedure = || {
@@ -6938,7 +6935,7 @@ impl Game {
                         // self.netconn.send(&message);
                     } else {
                         csys
-                            .read()
+                     
                             .set_block_and_queue_rerender(block_hit, 0, true, true, false);
                     }
                 };
@@ -6949,7 +6946,7 @@ impl Game {
                         Game::delete_block_recursively(&csys, 16, block_hit, &mut set);
                         for key in set {
                             csys
-                                .read()
+                           
                                 .queue_rerender_with_key(key, true, false);
                         }
                         #[cfg(feature = "glfw")]
@@ -6966,7 +6963,7 @@ impl Game {
                                             let amount = Game::delete_block_recursively_or_leaves(&csys, blockat, block_hit, &mut set);
                                             for key in set {
                                                 csys
-                                                    .read()
+                                             
                                                     .queue_rerender_with_key(key, true, false);
                                             }
                                             #[cfg(feature = "glfw")]
@@ -7012,9 +7009,9 @@ impl Game {
 
                             // self.netconn.send(&message);
                         } else {
-                            csys.read().set_block(block_hit, 0, true);
+                            csys.clone().set_block(block_hit, 0, true);
                             csys
-                                .read()
+                         
                                 .set_block_and_queue_rerender(other_half, 0, true, true, false);
                         }
                     }
@@ -7667,9 +7664,9 @@ impl Game {
                 self.vars.walkbobtimer,
             ) {
                 Some((tip, block_hit)) => {
-                    let mut blockbitshere = csys.read().blockat(block_hit);
+                    let mut blockbitshere = csys.clone().blockat(block_hit);
                     let blockidhere = blockbitshere & Blocks::block_id_bits();
-                    //FIRST WE CHECK IF THE PLAYER "RIGHT-CLICKED" A BLOCK THAT HAS SOME ACTION E.G. CHEST OR CRAFTING TABLE
+                    //FIRST WE CHECK IF THE PLAYER "RIGHT-CLICKED" A BLOCK THAT HAS SOME ACTION E.G. A DOOR,  CHEST,  OR  CRAFTING TABLE
                     if blockidhere == 19 {
                         let top = DoorInfo::get_door_top_bit(blockbitshere);
                         let otherhalf;
@@ -7679,7 +7676,7 @@ impl Game {
                         } else {
                             otherhalf = block_hit + IVec3::new(0, 1, 0);
                         }
-                        let mut otherhalfbits = csys.read().blockat(otherhalf);
+                        let mut otherhalfbits = csys.clone().blockat(otherhalf);
 
                         DoorInfo::toggle_door_open_bit(&mut blockbitshere);
                         DoorInfo::toggle_door_open_bit(&mut otherhalfbits);
@@ -7700,9 +7697,8 @@ impl Game {
                             // self.netconn.send(&message);
                         } else {
                             csys
-                                .write()
-                                .set_block(otherhalf, otherhalfbits, true);
-                            csys.write().set_block_and_queue_rerender(
+                                .set_block_no_sound(otherhalf, otherhalfbits, true);
+                            csys.set_block_and_queue_rerender(
                                 block_hit,
                                 blockbitshere,
                                 true,
@@ -7766,7 +7762,7 @@ impl Game {
                         );
 
                         //Don't allow placing blocks where solid blocks or the player are
-                        let blockbitsatplacepoint = csys.read().blockat(place_point);
+                        let blockbitsatplacepoint = csys.clone().blockat(place_point);
                         let blockidatplacepoint = blockbitsatplacepoint & Blocks::block_id_bits();
 
                         if !Blocks::is_overwritable(blockidatplacepoint) {
@@ -7798,7 +7794,7 @@ impl Game {
                             let place_above = place_point + IVec3::new(0, 1, 0);
                             let place_below = place_point + IVec3::new(0, -1, 0);
 
-                            let csysread = csys.read();
+                            let csysread = csys.clone();
 
                             let condition1 = csysread.blockat(place_above) == 0;
                             let condition2 = csysread.blockat(place_below) != 0;
@@ -7836,7 +7832,7 @@ impl Game {
                                     right = place_point - neighbor_axes[direction as usize];
                                 }
 
-                                let csysread = csys.read();
+                                let csysread = csys.clone();
 
                                 let mut blockbitsright = csysread.blockat(right);
                                 let mut blockbitsleft = csysread.blockat(left);
@@ -7848,7 +7844,7 @@ impl Game {
                                     if neighdir == direction
                                         && DoorInfo::get_door_top_bit(blockbitsright) == 0
                                     {
-                                        let csysread = csys.read();
+                                        let csysread = csys.clone();
 
                                         let rightup = right + IVec3::new(0, 1, 0);
                                         let mut neightopbits = csysread.blockat(rightup);
@@ -7878,14 +7874,14 @@ impl Game {
 
                                             // self.netconn.send(&message);
                                         } else {
-                                            csys.read().set_block_and_queue_rerender(
+                                            csys.clone().set_block_and_queue_rerender(
                                                 right,
                                                 blockbitsright,
                                                 false,
                                                 true,
                                                 true,
                                             );
-                                            csys.read().set_block_and_queue_rerender(
+                                            csys.clone().set_block_and_queue_rerender(
                                                 rightup,
                                                 neightopbits,
                                                 false,
@@ -7903,7 +7899,7 @@ impl Game {
                                     {
                                         let leftup = left + IVec3::new(0, 1, 0);
 
-                                        let csysread = csys.read();
+                                        let csysread = csys.clone();
 
                                         let mut neightopbits = csysread.blockat(leftup);
 
@@ -7932,14 +7928,14 @@ impl Game {
 
                                             // self.netconn.send(&message);
                                         } else {
-                                            csys.read().set_block_and_queue_rerender(
+                                            csys.clone().set_block_and_queue_rerender(
                                                 left,
                                                 blockbitsleft,
                                                 false,
                                                 true,
                                                 true,
                                             );
-                                            csys.read().set_block_and_queue_rerender(
+                                            csys.clone().set_block_and_queue_rerender(
                                                 leftup,
                                                 neightopbits,
                                                 false,
@@ -7967,14 +7963,14 @@ impl Game {
 
                                     // self.netconn.send(&message);
                                 } else {
-                                    csys.read().set_block_and_queue_rerender(
+                                    csys.clone().set_block_and_queue_rerender(
                                         place_point,
                                         bottom_id,
                                         false,
                                         true,
                                         true,
                                     );
-                                    csys.read().set_block_and_queue_rerender(
+                                    csys.clone().set_block_and_queue_rerender(
                                         place_above,
                                         top_id,
                                         false,
@@ -8015,7 +8011,7 @@ impl Game {
 
                                 // self.netconn.send(&message);
                             } else {
-                                csys.read().set_block_and_queue_rerender(
+                                csys.clone().set_block_and_queue_rerender(
                                     place_point,
                                     conveyor_id,
                                     false,
@@ -8055,7 +8051,7 @@ impl Game {
 
                                 // self.netconn.send(&message);
                             } else {
-                                csys.read().set_block_and_queue_rerender(
+                                csys.clone().set_block_and_queue_rerender(
                                     place_point,
                                     jol_id,
                                     false,
@@ -8095,7 +8091,7 @@ impl Game {
 
                                 // self.netconn.send(&message);
                             } else {
-                                csys.read().set_block_and_queue_rerender(
+                                csys.clone().set_block_and_queue_rerender(
                                     place_point,
                                     ladder_id,
                                     false,
@@ -8135,7 +8131,7 @@ impl Game {
 
                                 // self.netconn.send(&message);
                             } else {
-                                csys.read().set_block_and_queue_rerender(
+                                csys.clone().set_block_and_queue_rerender(
                                     place_point,
                                     chest_id,
                                     false,
@@ -8157,17 +8153,17 @@ impl Game {
 
                             let mut anyneighbs = false;
 
-                            let neighb1 = csys.read().blockat(place_point + NEIGHBS[0]);
-                            let neighb2 = csys.read().blockat(place_point + NEIGHBS[1]);
-                            let neighb3 = csys.read().blockat(place_point + NEIGHBS[2]);
-                            let neighb4 = csys.read().blockat(place_point + NEIGHBS[3]);
+                            let neighb1 = csys.clone().blockat(place_point + NEIGHBS[0]);
+                            let neighb2 = csys.clone().blockat(place_point + NEIGHBS[1]);
+                            let neighb3 = csys.clone().blockat(place_point + NEIGHBS[2]);
+                            let neighb4 = csys.clone().blockat(place_point + NEIGHBS[3]);
 
                             let xbit = match (neighb1 & Blocks::block_id_bits()) {
                                 63 => {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb1;
                                     let newcombinedhere = previouscombinedhere | CONNECT_NEGX_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[0], newcombinedhere, true);
+                                    csys.clone().set_block_no_sound(place_point + NEIGHBS[0], newcombinedhere, true);
                                     CONNECT_X_BIT
                                 }
                                 _ => {0}
@@ -8177,7 +8173,7 @@ impl Game {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb2;
                                     let newcombinedhere = previouscombinedhere | CONNECT_X_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[1], newcombinedhere, true);
+                                    csys.clone().set_block_no_sound(place_point + NEIGHBS[1], newcombinedhere, true);
                                     CONNECT_NEGX_BIT
                                 }
                                 _ => {0}
@@ -8187,7 +8183,7 @@ impl Game {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb3;
                                     let newcombinedhere = previouscombinedhere | CONNECT_NEGZ_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[2], newcombinedhere, true);
+                                    csys.clone().set_block_no_sound(place_point + NEIGHBS[2], newcombinedhere, true);
                                     CONNECT_Z_BIT
                                 }
                                 _ => {0}
@@ -8197,7 +8193,7 @@ impl Game {
                                     anyneighbs = true;
                                     let previouscombinedhere = neighb4;
                                     let newcombinedhere = previouscombinedhere | CONNECT_Z_BIT;
-                                    csys.read().set_block_no_sound(place_point + NEIGHBS[3], newcombinedhere, true);
+                                    csys.clone().set_block_no_sound(place_point + NEIGHBS[3], newcombinedhere, true);
                                     CONNECT_NEGZ_BIT
                                 }
                                 _ => {0}
@@ -8222,7 +8218,7 @@ impl Game {
                                 if anyneighbs {
 
                                 }
-                                csys.read().set_block_and_queue_rerender(
+                                csys.clone().set_block_and_queue_rerender(
                                     place_point,
                                     combined_bits,
                                     anyneighbs,
@@ -8245,7 +8241,7 @@ impl Game {
                                     // );
                                     // self.netconn.send(&message);
                                 } else {
-                                    csys.read().set_block_and_queue_rerender(
+                                    csys.clone().set_block_and_queue_rerender(
                                         place_point,
                                         id,
                                         false,
@@ -8625,13 +8621,11 @@ impl Game {
                                             implic.insert(chunkspot);
                                             //println!("Setting a block {} at {}", block, spot);
                                             csys
-                                                .read()
                                                 .set_block_no_sound(spot, block, true);
                                         }
 
                                         for imp in implic {
                                             csys
-                                                .read()
                                                 .queue_rerender_with_key(imp, true, false);
                                         }
                                     }
@@ -8686,7 +8680,7 @@ impl Game {
 
                 let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
 
-                info!("Now noise type is {}", csys.read().planet_type);
+                info!("Now noise type is {}", csys.clone().planet_type);
             }
         }
 

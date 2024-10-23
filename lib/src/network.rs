@@ -31,7 +31,7 @@
 //     pub recvthread: Option<JoinHandle<()>>,
 //     pub sendthread: Option<JoinHandle<()>>,
 //     pub shouldrun: Arc<AtomicBool>,
-//     pub csys: Arc<RwLock<ChunkSystem>>,
+//     pub csys: Arc<ChunkSystem>,
 //     pub received_world: Arc<AtomicBool>,
 //     pub commqueue: Arc<Queue<Message>>,
 //     pub highprioritycommqueue: Arc<Queue<Message>>,
@@ -47,7 +47,7 @@
 // }
 
 // impl NetworkConnector {
-//     pub fn new(csys: &Arc<RwLock<ChunkSystem>>, commqueue: &Arc<Queue<Message>>, commqueue2: &Arc<Queue<Message>>, gkc: &Arc<DashMap<Uuid, Vec3>>,
+//     pub fn new(csys: &Arc<ChunkSystem>, commqueue: &Arc<Queue<Message>>, commqueue2: &Arc<Queue<Message>>, gkc: &Arc<DashMap<Uuid, Vec3>>,
 //                 my_uuid: &Arc<RwLock<Option<Uuid>>>, nsme: &Arc<DashMap<u32, ModelEntity>>, mycam: &Arc<Mutex<Camera>>, pme: &Arc<DashMap<Uuid, ModelEntity>>,
 //                 chest_reg: &Arc<DashMap<vec::IVec3, ChestInventory>>, sendqueue: &Arc<Queue<Message>>) -> NetworkConnector {
 //         NetworkConnector {

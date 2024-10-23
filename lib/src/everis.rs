@@ -67,7 +67,7 @@ pub fn wait_or_visit_queued_spots(
                         for x in 0..CH_W {
                             for z in 0..CH_W {
                                 let spothere = vec::IVec3::new(CURRENT_VISIT_SPOT.x * CH_W + x, y, CURRENT_VISIT_SPOT.y * CH_W + z);
-                                let blockhere = csys.read().blockat(spothere);
+                                let blockhere = csys.blockat(spothere);
                                 let idhere = blockhere & Blocks::block_id_bits();
 
                                 if Blocks::is_light(idhere) {
@@ -79,7 +79,7 @@ pub fn wait_or_visit_queued_spots(
                     }
 
                     for vec in implic {
-                        csys.read().queue_rerender_with_key(vec, true, true);
+                        csys.queue_rerender_with_key(vec, true, true);
                     }
 
                     
@@ -375,7 +375,7 @@ impl Game {
                                 modelent.position.z as i32
                             );
                             let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
-                            let csyslock = csys.read();
+                            let csyslock = csys;
                             let lmlock = csyslock.lightmap.lock();
 
                             match lmlock.get(&samplingcoord) {

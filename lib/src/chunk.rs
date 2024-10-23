@@ -64,6 +64,7 @@ use crate::game::CURRSEED;
 
 // use crate::game::PLAYERCHUNKPOS;
 use crate::game::PLAYERPOS;
+use crate::game::VOXEL_MODELS;
 use crate::game::WEATHERTYPE;
 use crate::packedvertex::PackedVertex;
 use crate::planetinfo::Planets;
@@ -364,7 +365,6 @@ pub struct ChunkSystem {
     pub justcollisionmap: DashMap<vec::IVec3, u8>,
     pub radius: u8,
     pub perlin: Arc<RwLock<Perlin>>,
-    pub voxel_models: Option<Arc<Vec<JVoxModel>>>,
     pub chunk_memories: Mutex<ChunkRegistry>,
     pub planet_type: u8,
 
@@ -395,6 +395,7 @@ impl ChunkSystem {
 
                 NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
             }
+
         let mut cs = ChunkSystem {
             chunks: Vec::new(),
             geobank: Vec::new(),
@@ -410,7 +411,6 @@ impl ChunkSystem {
             justcollisionmap: DashMap::new(),
             radius,
             perlin: Arc::new(RwLock::new(Perlin::new(seed))),
-            voxel_models: None,
             chunk_memories: Mutex::new(ChunkRegistry {
                 memories: Vec::new(),
             }),
@@ -812,7 +812,6 @@ impl ChunkSystem {
         self.radius = radius;
         *(self.perlin.write()) = Perlin::new(seed);
 
-        self.voxel_models = None;
         self.planet_type = noisetype as u8;
         unsafe { CURRSEED.store(seed, std::sync::atomic::Ordering::Relaxed) };
 
@@ -856,7 +855,7 @@ impl ChunkSystem {
         };
     }
     pub fn initial_rebuild_on_main_thread(
-        csys: &Arc<RwLock<ChunkSystem>>,
+        csys: &Arc<ChunkSystem>,
         _shader: &Shader,
         campos: &Vec3,
     ) {
@@ -871,8 +870,6 @@ impl ChunkSystem {
         };
 
         let mut neededspots = Vec::new();
-
-        let csys = csys.read();
 
         for i in -(csys.radius as i32)..(csys.radius as i32) {
             for k in -(csys.radius as i32)..(csys.radius as i32) {
@@ -2135,7 +2132,7 @@ impl ChunkSystem {
 
                                 uvdata.extend_from_slice(&CraftTableInfo::get_craft_table_uvs());
                             }
-                            _ => {
+                            _ =>  {
                                 {
                                     if Blocks::is_transparent(block) || Blocks::is_semi_transparent(block) {
                                         for (indie, neigh) in Cube::get_neighbors().iter().enumerate() {
@@ -2902,7 +2899,7 @@ impl ChunkSystem {
 
                                     let decidedvox = &vox[rng.gen_range(0..vox.len())];
 
-                                    let decidedjvox = &self.voxel_models.as_ref().unwrap()[(*decidedvox) as usize];
+                                    let decidedjvox = &unsafe { &VOXEL_MODELS }[(*decidedvox) as usize];
 
                                     let item2: u32 = rng.gen_range(0..128);
 
@@ -3242,13 +3239,6 @@ impl ChunkSystem {
         perlin: &Perlin,
         spot: vec::IVec3,
     ) -> u32 {
-        // if self.headless {
-        //     if self.generated_chunks.contains_key(&ChunkSystem::spot_to_chunk_pos(&spot)) {
-
-        //     } else {
-        //         self.generate_chunk(&ChunkSystem::spot_to_chunk_pos(&spot))
-        //     }
-        // }
 
         match userdatamap.get(&spot) {
             Some(id) => {

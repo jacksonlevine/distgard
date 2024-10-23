@@ -81,7 +81,7 @@ pub struct ModelEntity {
     pub up: Vec3,
     pub behavior_timer: f32,
     pub rng: StdRng,
-    pub csys: Arc<RwLock<ChunkSystem>>,
+    pub csys: Arc<ChunkSystem>,
     pub cam: Arc<Mutex<Camera>>,
     pub target: AggroTarget,
     pub speedfactor: f32,
@@ -108,7 +108,7 @@ pub static SERVER_GENERATED_CHUNKS: Lazy<DashMap<vec::IVec2, bool>> = Lazy::new(
 impl ModelEntity {
 
 
-    pub fn new_with_jump_height(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<RwLock<ChunkSystem>>, cam: &Arc<Mutex<Camera>>, jump_height: f32, hostile: bool) -> ModelEntity {
+    pub fn new_with_jump_height(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, jump_height: f32, hostile: bool) -> ModelEntity {
         let mut modent = ModelEntity::new(model_index, pos, scale, rot, csys, cam, hostile);
         modent.allowable_jump_height = jump_height;
         modent
@@ -137,7 +137,7 @@ impl ModelEntity {
         let chunkpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(self.position.x as i32, self.position.y as i32, self.position.z as i32));
         if self.lastchunkpos != chunkpos {
 
-            let csys = self.csys.write();
+            let csys = self.csys.clone();
 
             for neigh in NEIGHS {
                 let thisspot = chunkpos + neigh;
@@ -153,7 +153,7 @@ impl ModelEntity {
     }
 
 
-    pub fn new(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<RwLock<ChunkSystem>>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
+    pub fn new(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
             //let csys_arc = Arc::clone(&chunksys);
@@ -213,7 +213,7 @@ impl ModelEntity {
 
 
 
-    pub fn new_with_id(id: u32, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<RwLock<ChunkSystem>>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
+    pub fn new_with_id(id: u32, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
             //let csys_arc = Arc::clone(&chunksys);
@@ -342,7 +342,7 @@ impl ModelEntity {
             self.sounding = false;
         }
 
-            let block = {let blockbitshere = self.csys.read().blockat(IVec3::new(self.position.x.floor() as i32, self.position.y.floor() as i32, self.position.z.floor() as i32));
+            let block = {let blockbitshere = self.csys.clone().blockat(IVec3::new(self.position.x.floor() as i32, self.position.y.floor() as i32, self.position.z.floor() as i32));
             let block = blockbitshere & Blocks::block_id_bits();
             block
             };
@@ -367,7 +367,7 @@ impl ModelEntity {
                     Some(res) => {
                         let block = 
                         {
-                            let blockbitshere = self.csys.read().blockat(res.1);
+                            let blockbitshere = self.csys.clone().blockat(res.1);
                             let block = blockbitshere & Blocks::block_id_bits();
                             block
                         };

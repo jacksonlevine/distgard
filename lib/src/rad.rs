@@ -349,7 +349,7 @@ impl Game {
                                 modelent.position.z as i32
                             );
                             let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
-                            let csyslock = csys.read();
+                            let csyslock = csys.clone();
                             let lmlock = csyslock.lightmap.lock();
 
                             match lmlock.get(&samplingcoord) {

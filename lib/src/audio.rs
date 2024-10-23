@@ -326,11 +326,18 @@ impl AudioPlayer {
                         let cursor = Cursor::new(sound.clone());
                         let reader = BufReader::new(cursor);
                         let source = Decoder::new(reader).unwrap();
-
-                        //sink.stop();
+                        if !sink.is_paused() {
+                            sink.clear();
+                        }
         
                         sink.append(source);
+                        sink.play();
                         sink.set_emitter_position((pos).into());
+
+                        
+                        
+
+
                         sink.set_volume(vol);
                     },
                     None => {
@@ -355,7 +362,6 @@ impl AudioPlayer {
                     println!("Couldn't play or preload {}", id);
                 }
             }
-            
         }
         
     }

@@ -185,7 +185,7 @@ impl Game {
                         });
                         let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
                         // Rasterize the triangle and update the collision map
-                        rasterize_triangle(transformed_triangle, &csys.read().justcollisionmap);
+                        rasterize_triangle(transformed_triangle, &csys.justcollisionmap);
                     }
                 }
             }
@@ -209,7 +209,7 @@ impl Game {
             let csys_arc = Arc::clone(&csys);
             //println!("This thing thinks the seed is {}", csys_arc.read().currentseed.read());
             Box::new(move |v: vec::IVec3| {
-                return csys_arc.read().collision_predicate(v);
+                return csys_arc.collision_predicate(v);
             })
         };
 
@@ -233,7 +233,7 @@ impl Game {
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
             let csys_arc = Arc::clone(&csys);
             Box::new(move |v: vec::IVec3| {
-                return csys_arc.read().collision_predicate(v);
+                return csys_arc.collision_predicate(v);
             })
         };
 
@@ -258,7 +258,7 @@ impl Game {
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
             let csys_arc = Arc::clone(&csys);
             Box::new(move |v: vec::IVec3| {
-                return csys_arc.read().collision_predicate(v);
+                return csys_arc.collision_predicate(v);
             })
         };
 
@@ -718,7 +718,7 @@ impl Game {
                                         entity.position.z as i32
                                     );
                                     let csys = (*addr_of!(CHUNKSYS)).as_ref().unwrap();
-                                    let csyslock = csys.read();
+                                    let csyslock = csys.clone();
                                     let lmlock = csyslock.lightmap.lock();
 
                                     match lmlock.get(&samplingcoord) {

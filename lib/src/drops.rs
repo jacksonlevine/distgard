@@ -27,12 +27,12 @@ pub struct Drop {
 }
 
 impl Drop {
-    pub fn new(block_id: u32, position: Vec3, csys: &Arc<RwLock<ChunkSystem>>, amt: u32) -> Drop {
+    pub fn new(block_id: u32, position: Vec3, csys: &Arc<ChunkSystem>, amt: u32) -> Drop {
 
         let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
             let csys_arc = Arc::clone(&csys);
             Box::new(move |v: vec::IVec3| {
-                return csys_arc.read().collision_predicate(v);
+                return csys_arc.collision_predicate(v);
             })
         };
 
@@ -58,7 +58,7 @@ pub struct Drops {
     pub drops: Vec<Drop>,
     pub texture: GLuint,
     pub cam: Arc<Mutex<Camera>>,
-    pub csys: Arc<RwLock<ChunkSystem>>,
+    pub csys: Arc<ChunkSystem>,
     pub inv: Arc<RwLock<Inventory>>,
 
     pub in_multiplayer: bool,
@@ -67,7 +67,7 @@ pub struct Drops {
 
 impl Drops {
 
-    pub fn new(texture: GLuint, cam: &Arc<Mutex<Camera>>, csys: &Arc<RwLock<ChunkSystem>>, inv: &Arc<RwLock<Inventory>>, in_m: bool) -> Drops {
+    pub fn new(texture: GLuint, cam: &Arc<Mutex<Camera>>, csys: &Arc<ChunkSystem>, inv: &Arc<RwLock<Inventory>>, in_m: bool) -> Drops {
 
 
         let shader = Shader::new(path!("assets/dropvert.glsl"), path!("assets/dropfrag.glsl"));

@@ -55,7 +55,7 @@
 // fn handle_client(
 //     client_id: Uuid,
 //     clients: Arc<Mutex<HashMap<Uuid, Client>>>,
-//     csys: &Arc<RwLock<ChunkSystem>>,
+//     csys: &Arc<ChunkSystem>,
 //     knowncams: &Arc<DashMap<Uuid, Vec3>>,
 //     mobspawnqueued: &Arc<AtomicBool>,
 //     shutupmobmsgs: &Arc<AtomicBool>,
