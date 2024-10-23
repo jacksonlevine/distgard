@@ -517,7 +517,7 @@ impl Blocks {
             4 => {
                 "dirtstepseries"
             }
-            10 | 53 | 56 | 58 => {
+            10 | 53 | 56 | 58 | 63 => {
                 "woodstepseries"
             }
             22 => {

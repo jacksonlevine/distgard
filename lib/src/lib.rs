@@ -53,3 +53,4 @@ pub mod climates;
 pub mod rad;
 pub mod everis;
 pub mod aabb;
+pub mod deltaencode;

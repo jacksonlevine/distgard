@@ -1,3 +1,4 @@
+use crate::vec::IVec3;
 #[macro_export]
 macro_rules! cfg_steam { 
     ($($item:item)*) => {
@@ -69,3 +70,5 @@ macro_rules! path {
         }
     }}
 }
+
+

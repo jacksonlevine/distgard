@@ -264,8 +264,8 @@ pub struct ChunkFacade {
     pub pos: vec::IVec2,
 }
 
-pub static CH_W: i32 = 15;
-pub static CH_H: i32 = 200;
+pub const CH_W: i32 = 15;
+pub const CH_H: i32 = 200;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
@@ -488,7 +488,7 @@ impl ChunkSystem {
 
     pub fn start_with_seed(_seed: u32) {}
 
-    pub fn do_automata(&mut self, _cam: &Arc<Mutex<Camera>>) {
+    pub fn do_automata(&self, _cam: &Arc<Mutex<Camera>>) {
         pub const ODDBIT: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
         //let chunkslist = self.chunks.clone();
 
