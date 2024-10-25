@@ -46,10 +46,10 @@ impl Planets {
     pub fn get_mob_sound(modelindex: usize) -> Option<&'static str> {
         match modelindex {
             6 => {
-                Some("assets/sfx/cricket1.mp3")
+                Some(path!("assets/sfx/cricket1.mp3"))
             }
             3 => {
-                Some("assets/sfx/monster2.mp3")
+                Some(path!("assets/sfx/monster2.mp3"))
             }
             _ => {
                 None

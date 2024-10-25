@@ -5446,7 +5446,7 @@ impl Game {
                             self.faders.write()[FaderNames::VisionsFader as usize].up();
                             #[cfg(feature = "audio")]
                             unsafe {
-                                AUDIOPLAYER.play_in_head("assets/sfx/dreambell.mp3");
+                                AUDIOPLAYER.play_in_head(path!("assets/sfx/dreambell.mp3"));
                             }
 
                 }
