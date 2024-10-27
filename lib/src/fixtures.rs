@@ -66,7 +66,7 @@ impl Fixtures {
             gl::GenVertexArrays(1, &mut vao);
         }
         let mut texture: gl::types::GLuint = 0;
-        let img = match image::open("assets/gui.png") {
+        let img = match image::open(path!("assets/gui.png")) {
             Ok(img) => img,
             Err(e) => return Err(format!("Failed to load texture: {}", e))
         };

@@ -466,7 +466,7 @@ impl Game {
                             if !model.was_grounded && model.model_index == 2 {
                                 #[cfg(feature = "audio")]
                                 unsafe {
-                                    AUDIOPLAYER.play("assets/sfx/slam.mp3", &makebelievepos, &model.velocity, 1.0);
+                                    AUDIOPLAYER.play(path!("assets/sfx/slam.mp3"), &makebelievepos, &model.velocity, 1.0);
                                 }
                                 
                             }
