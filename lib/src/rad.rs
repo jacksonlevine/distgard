@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use bevy::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, vec};
+use crate::{game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets};
 
 
 
@@ -343,7 +343,7 @@ impl Game {
 
                             let mut blocklighthere = 0.0;
 
-                            let samplingcoord = vec::IVec3::new(
+                            let samplingcoord =IVec3::new(
                                 modelent.position.x as i32,
                                 modelent.position.y as i32,
                                 modelent.position.z as i32

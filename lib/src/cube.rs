@@ -1,6 +1,7 @@
-use crate::vec::{self};
+
 
 use num_enum::FromPrimitive;
+use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy, FromPrimitive, PartialEq)]
 #[repr(usize)]
@@ -15,14 +16,14 @@ pub enum CubeSide {
 }
 pub struct Cube {}
 impl Cube {
-    pub fn get_neighbors() -> &'static [vec::IVec3] {
-        static NEIGHBORS: [vec::IVec3; 6] = [
-            vec::IVec3 { x: -1, y: 0, z: 0 },
-            vec::IVec3 { x: 1, y: 0, z: 0 },
-            vec::IVec3 { x: 0, y: -1, z: 0 },
-            vec::IVec3 { x: 0, y: 1, z: 0 },
-            vec::IVec3 { x: 0, y: 0, z: -1 },
-            vec::IVec3 { x: 0, y: 0, z: 1 },
+    pub fn get_neighbors() -> &'static [IVec3] {
+        static NEIGHBORS: [IVec3; 6] = [
+           IVec3 { x: -1, y: 0, z: 0 },
+           IVec3 { x: 1, y: 0, z: 0 },
+           IVec3 { x: 0, y: -1, z: 0 },
+           IVec3 { x: 0, y: 1, z: 0 },
+           IVec3 { x: 0, y: 0, z: -1 },
+           IVec3 { x: 0, y: 0, z: 1 },
         ];
         return NEIGHBORS.as_slice();
     }
@@ -81,205 +82,205 @@ impl Cube {
 
         return SIDES[side as usize].as_slice();
     }
-    pub fn get_amb_occul_spots(side: CubeSide, corner: u8) -> &'static [vec::IVec3; 3]{
+    pub fn get_amb_occul_spots(side: CubeSide, corner: u8) -> &'static [IVec3; 3]{
         #[rustfmt::skip]
-        static SPOTS: [[[vec::IVec3; 3]; 6]; 6] = [
+        static SPOTS: [[[IVec3; 3]; 6]; 6] = [
     // left
     [
         [
-            vec::IVec3 { x: -1, y: -1, z: 1 },
-            vec::IVec3 { x: -1, y: -1, z: 0 },
-            vec::IVec3 { x: -1, y: 0, z: 1 }
+           IVec3 { x: -1, y: -1, z: 1 },
+           IVec3 { x: -1, y: -1, z: 0 },
+           IVec3 { x: -1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: -1, y: -1, z: 0 },
-            vec::IVec3 { x: -1, y: -1, z: -1 },
-            vec::IVec3 { x: -1, y: 0, z: -1 }
+           IVec3 { x: -1, y: -1, z: 0 },
+           IVec3 { x: -1, y: -1, z: -1 },
+           IVec3 { x: -1, y: 0, z: -1 }
         ],
         [
-            vec::IVec3 { x: -1, y: 0, z: -1 },
-            vec::IVec3 { x: -1, y: 1, z: -1 },
-            vec::IVec3 { x: -1, y: 1, z: 0 }
+           IVec3 { x: -1, y: 0, z: -1 },
+           IVec3 { x: -1, y: 1, z: -1 },
+           IVec3 { x: -1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: -1, y: 0, z: -1 },
-            vec::IVec3 { x: -1, y: 1, z: -1 },
-            vec::IVec3 { x: -1, y: 1, z: 0 }
+           IVec3 { x: -1, y: 0, z: -1 },
+           IVec3 { x: -1, y: 1, z: -1 },
+           IVec3 { x: -1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: -1, y: 1, z: 0 },
-            vec::IVec3 { x: -1, y: 1, z: 1 },
-            vec::IVec3 { x: -1, y: 0, z: 1 }
+           IVec3 { x: -1, y: 1, z: 0 },
+           IVec3 { x: -1, y: 1, z: 1 },
+           IVec3 { x: -1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: -1, y: -1, z: 1 },
-            vec::IVec3 { x: -1, y: -1, z: 0 },
-            vec::IVec3 { x: -1, y: 0, z: 1 }
+           IVec3 { x: -1, y: -1, z: 1 },
+           IVec3 { x: -1, y: -1, z: 0 },
+           IVec3 { x: -1, y: 0, z: 1 }
         ],
     ],
     // right
     [
         [
-            vec::IVec3 { x: 1, y: -1, z: 0 },
-            vec::IVec3 { x: 1, y: -1, z: -1 },
-            vec::IVec3 { x: 1, y: 0, z: -1 }
+           IVec3 { x: 1, y: -1, z: 0 },
+           IVec3 { x: 1, y: -1, z: -1 },
+           IVec3 { x: 1, y: 0, z: -1 }
         ],
         [
-            vec::IVec3 { x: 1, y: -1, z: 0 },
-            vec::IVec3 { x: 1, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: 0, z: 1 }
+           IVec3 { x: 1, y: -1, z: 0 },
+           IVec3 { x: 1, y: -1, z: 1 },
+           IVec3 { x: 1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: 1, y: 0, z: 1 },
-            vec::IVec3 { x: 1, y: 1, z: 1 },
-            vec::IVec3 { x: 1, y: 1, z: 0 }
+           IVec3 { x: 1, y: 0, z: 1 },
+           IVec3 { x: 1, y: 1, z: 1 },
+           IVec3 { x: 1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: 1, y: 0, z: 1 },
-            vec::IVec3 { x: 1, y: 1, z: 1 },
-            vec::IVec3 { x: 1, y: 1, z: 0 }
+           IVec3 { x: 1, y: 0, z: 1 },
+           IVec3 { x: 1, y: 1, z: 1 },
+           IVec3 { x: 1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: 1, y: 1, z: 0 },
-            vec::IVec3 { x: 1, y: 1, z: -1 },
-            vec::IVec3 { x: 1, y: 0, z: -1 }
+           IVec3 { x: 1, y: 1, z: 0 },
+           IVec3 { x: 1, y: 1, z: -1 },
+           IVec3 { x: 1, y: 0, z: -1 }
         ],
         [
-            vec::IVec3 { x: 1, y: -1, z: 0 },
-            vec::IVec3 { x: 1, y: -1, z: -1 },
-            vec::IVec3 { x: 1, y: 0, z: -1 }
+           IVec3 { x: 1, y: -1, z: 0 },
+           IVec3 { x: 1, y: -1, z: -1 },
+           IVec3 { x: 1, y: 0, z: -1 }
         ],
     ],
     // bottom
     [
         [
-            vec::IVec3 { x: -1, y: -1, z: 0 },
-            vec::IVec3 { x: -1, y: -1, z: 1 },
-            vec::IVec3 { x: 0, y: -1, z: 1 }
+           IVec3 { x: -1, y: -1, z: 0 },
+           IVec3 { x: -1, y: -1, z: 1 },
+           IVec3 { x: 0, y: -1, z: 1 }
         ],
         [
-            vec::IVec3 { x: 0, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: -1, z: 0 }
+           IVec3 { x: 0, y: -1, z: 1 },
+           IVec3 { x: 1, y: -1, z: 1 },
+           IVec3 { x: 1, y: -1, z: 0 }
         ],
         [
-            vec::IVec3 { x: 1, y: -1, z: 0 },
-            vec::IVec3 { x: 1, y: -1, z: -1 },
-            vec::IVec3 { x: 0, y: -1, z: -1 }
+           IVec3 { x: 1, y: -1, z: 0 },
+           IVec3 { x: 1, y: -1, z: -1 },
+           IVec3 { x: 0, y: -1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 1, y: -1, z: 0 },
-            vec::IVec3 { x: 1, y: -1, z: -1 },
-            vec::IVec3 { x: 0, y: -1, z: -1 }
+           IVec3 { x: 1, y: -1, z: 0 },
+           IVec3 { x: 1, y: -1, z: -1 },
+           IVec3 { x: 0, y: -1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 0, y: -1, z: -1 },
-            vec::IVec3 { x: -1, y: -1, z: -1 },
-            vec::IVec3 { x: -1, y: -1, z: 0 }
+           IVec3 { x: 0, y: -1, z: -1 },
+           IVec3 { x: -1, y: -1, z: -1 },
+           IVec3 { x: -1, y: -1, z: 0 }
         ],
         [
-            vec::IVec3 { x: -1, y: -1, z: 0 },
-            vec::IVec3 { x: -1, y: -1, z: 1 },
-            vec::IVec3 { x: 0, y: -1, z: 1 }
+           IVec3 { x: -1, y: -1, z: 0 },
+           IVec3 { x: -1, y: -1, z: 1 },
+           IVec3 { x: 0, y: -1, z: 1 }
         ],
     ],
     // top
     [
         [
-            vec::IVec3 { x: -1, y: 1, z: 0 },
-            vec::IVec3 { x: -1, y: 1, z: -1 },
-            vec::IVec3 { x: 0, y: 1, z: -1 }
+           IVec3 { x: -1, y: 1, z: 0 },
+           IVec3 { x: -1, y: 1, z: -1 },
+           IVec3 { x: 0, y: 1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 0, y: 1, z: -1 },
-            vec::IVec3 { x: 1, y: 1, z: -1 },
-            vec::IVec3 { x: 1, y: 1, z: 0 }
+           IVec3 { x: 0, y: 1, z: -1 },
+           IVec3 { x: 1, y: 1, z: -1 },
+           IVec3 { x: 1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: 1, y: 1, z: 0 },
-            vec::IVec3 { x: 1, y: 1, z: 1 },
-            vec::IVec3 { x: 0, y: 1, z: 1 }
+           IVec3 { x: 1, y: 1, z: 0 },
+           IVec3 { x: 1, y: 1, z: 1 },
+           IVec3 { x: 0, y: 1, z: 1 }
         ],
         [
-            vec::IVec3 { x: 1, y: 1, z: 0 },
-            vec::IVec3 { x: 1, y: 1, z: 1 },
-            vec::IVec3 { x: 0, y: 1, z: 1 }
+           IVec3 { x: 1, y: 1, z: 0 },
+           IVec3 { x: 1, y: 1, z: 1 },
+           IVec3 { x: 0, y: 1, z: 1 }
         ],
         [
-            vec::IVec3 { x: 0, y: 1, z: 1 },
-            vec::IVec3 { x: -1, y: 1, z: 1 },
-            vec::IVec3 { x: -1, y: 1, z: 0 }
+           IVec3 { x: 0, y: 1, z: 1 },
+           IVec3 { x: -1, y: 1, z: 1 },
+           IVec3 { x: -1, y: 1, z: 0 }
         ],
         [
-            vec::IVec3 { x: -1, y: 1, z: 0 },
-            vec::IVec3 { x: -1, y: 1, z: -1 },
-            vec::IVec3 { x: 0, y: 1, z: -1 }
+           IVec3 { x: -1, y: 1, z: 0 },
+           IVec3 { x: -1, y: 1, z: -1 },
+           IVec3 { x: 0, y: 1, z: -1 }
         ],
     ],
     // back
     [
         [
-            vec::IVec3 { x: -1, y: 0, z: -1 },
-            vec::IVec3 { x: -1, y: -1, z: -1 },
-            vec::IVec3 { x: 0, y: -1, z: -1 }
+           IVec3 { x: -1, y: 0, z: -1 },
+           IVec3 { x: -1, y: -1, z: -1 },
+           IVec3 { x: 0, y: -1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 0, y: -1, z: -1 },
-            vec::IVec3 { x: 1, y: -1, z: -1 },
-            vec::IVec3 { x: 1, y: 0, z: -1 }
+           IVec3 { x: 0, y: -1, z: -1 },
+           IVec3 { x: 1, y: -1, z: -1 },
+           IVec3 { x: 1, y: 0, z: -1 }
         ],
         [
-            vec::IVec3 { x: 1, y: 0, z: -1 },
-            vec::IVec3 { x: 1, y: 1, z: -1 },
-            vec::IVec3 { x: 0, y: 1, z: -1 }
+           IVec3 { x: 1, y: 0, z: -1 },
+           IVec3 { x: 1, y: 1, z: -1 },
+           IVec3 { x: 0, y: 1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 1, y: 0, z: -1 },
-            vec::IVec3 { x: 1, y: 1, z: -1 },
-            vec::IVec3 { x: 0, y: 1, z: -1 }
+           IVec3 { x: 1, y: 0, z: -1 },
+           IVec3 { x: 1, y: 1, z: -1 },
+           IVec3 { x: 0, y: 1, z: -1 }
         ],
         [
-            vec::IVec3 { x: 0, y: 1, z: -1 },
-            vec::IVec3 { x: -1, y: 1, z: -1 },
-            vec::IVec3 { x: -1, y: 0, z: -1 }
+           IVec3 { x: 0, y: 1, z: -1 },
+           IVec3 { x: -1, y: 1, z: -1 },
+           IVec3 { x: -1, y: 0, z: -1 }
         ],
         [
-            vec::IVec3 { x: -1, y: 0, z: -1 },
-            vec::IVec3 { x: -1, y: -1, z: -1 },
-            vec::IVec3 { x: 0, y: -1, z: -1 }
+           IVec3 { x: -1, y: 0, z: -1 },
+           IVec3 { x: -1, y: -1, z: -1 },
+           IVec3 { x: 0, y: -1, z: -1 }
         ],
     ],
     // front
     [
         [
-            vec::IVec3 { x: 0, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: 0, z: 1 }
+           IVec3 { x: 0, y: -1, z: 1 },
+           IVec3 { x: 1, y: -1, z: 1 },
+           IVec3 { x: 1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: 0, y: -1, z: 1 },
-            vec::IVec3 { x: -1, y: -1, z: 1 },
-            vec::IVec3 { x: -1, y: 0, z: 1 }
+           IVec3 { x: 0, y: -1, z: 1 },
+           IVec3 { x: -1, y: -1, z: 1 },
+           IVec3 { x: -1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: -1, y: 0, z: 1 },
-            vec::IVec3 { x: -1, y: 1, z: 1 },
-            vec::IVec3 { x: 0, y: 1, z: 1 }
+           IVec3 { x: -1, y: 0, z: 1 },
+           IVec3 { x: -1, y: 1, z: 1 },
+           IVec3 { x: 0, y: 1, z: 1 }
         ],
         [
-            vec::IVec3 { x: -1, y: 0, z: 1 },
-            vec::IVec3 { x: -1, y: 1, z: 1 },
-            vec::IVec3 { x: 0, y: 1, z: 1 }
+           IVec3 { x: -1, y: 0, z: 1 },
+           IVec3 { x: -1, y: 1, z: 1 },
+           IVec3 { x: 0, y: 1, z: 1 }
         ],
         [
-            vec::IVec3 { x: 0, y: 1, z: 1 },
-            vec::IVec3 { x: 1, y: 1, z: 1 },
-            vec::IVec3 { x: 1, y: 0, z: 1 }
+           IVec3 { x: 0, y: 1, z: 1 },
+           IVec3 { x: 1, y: 1, z: 1 },
+           IVec3 { x: 1, y: 0, z: 1 }
         ],
         [
-            vec::IVec3 { x: 0, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: -1, z: 1 },
-            vec::IVec3 { x: 1, y: 0, z: 1 }
+           IVec3 { x: 0, y: -1, z: 1 },
+           IVec3 { x: 1, y: -1, z: 1 },
+           IVec3 { x: 1, y: 0, z: 1 }
         ],
     ],
 ];

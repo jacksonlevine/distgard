@@ -5,7 +5,6 @@ use bevy::{a11y::accesskit::Tree, utils::HashMap};
 use num_enum::FromPrimitive;
 use once_cell::sync::Lazy;
 
-use crate::vec;
 
 pub const VOX_MODEL_PATHS: [&'static str; 52] = [
     path!("assets/voxelmodels/bush.vox"),

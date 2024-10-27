@@ -43,13 +43,13 @@
 //     pub shouldsend: Arc<AtomicBool>,
 //     pub pme: Arc<DashMap<Uuid, ModelEntity>>,
 //     pub sendqueue: Arc<Queue<Message>>,
-//     pub chest_registry: Arc<DashMap<vec::IVec3, ChestInventory>>,
+//     pub chest_registry: Arc<DashMap<IVec3, ChestInventory>>,
 // }
 
 // impl NetworkConnector {
 //     pub fn new(csys: &Arc<ChunkSystem>, commqueue: &Arc<Queue<Message>>, commqueue2: &Arc<Queue<Message>>, gkc: &Arc<DashMap<Uuid, Vec3>>,
 //                 my_uuid: &Arc<RwLock<Option<Uuid>>>, nsme: &Arc<DashMap<u32, ModelEntity>>, mycam: &Arc<Mutex<Camera>>, pme: &Arc<DashMap<Uuid, ModelEntity>>,
-//                 chest_reg: &Arc<DashMap<vec::IVec3, ChestInventory>>, sendqueue: &Arc<Queue<Message>>) -> NetworkConnector {
+//                 chest_reg: &Arc<DashMap<IVec3, ChestInventory>>, sendqueue: &Arc<Queue<Message>>) -> NetworkConnector {
 //         NetworkConnector {
 //             stream: None,
 //             recvthread: None,

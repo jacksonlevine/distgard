@@ -116,7 +116,7 @@ pub enum Message {
 //     pub info2: u32,
 //     pub infof: f32,
 //     pub goose: (u64, u64),
-//     pub otherpos: vec::IVec3,
+//     pub otherpos:IVec3,
 //     pub bo: bool,
 //     pub hostile: bool,
 
@@ -312,7 +312,7 @@ pub enum Message {
 //             info2: 0,
 //             infof: 1.0,
 //             goose: Uuid::new_v4().as_u64_pair(),
-//             otherpos: vec::IVec3::new(0,0,0),
+//             otherpos:IVec3::new(0,0,0),
 //             bo: false,
 //             hostile: false,
 
@@ -338,7 +338,7 @@ pub enum Message {
 //     pub info2: u32,
 //     pub infof: f32,
 //     pub goose: (u64, u64),
-//     pub otherpos: vec::IVec3,
+//     pub otherpos:IVec3,
 //     pub bo: bool,
 //     pub hostile: bool,
 // }
@@ -349,7 +349,7 @@ pub enum Message {
 //     #[inline]
 //     #[must_use]
 //     pub const fn new() -> Self {
-//         Self { message_type: MessageType::None, x:0.0, y: 0.0, z: 0.0, rot: 0.0, info: 0, info2: 0, infof: 0.0, goose: (0, 0), otherpos: vec::IVec3{x:0, y:0, z:0}, bo: false, hostile: false}
+//         Self { message_type: MessageType::None, x:0.0, y: 0.0, z: 0.0, rot: 0.0, info: 0, info2: 0, infof: 0.0, goose: (0, 0), otherpos:IVec3{x:0, y:0, z:0}, bo: false, hostile: false}
 //     }
 
 //     #[inline]
@@ -367,7 +367,7 @@ pub enum Message {
 
 // #[derive(Serialize, Deserialize)]
 // pub struct Entry {
-//     pub key: vec::IVec3,
+//     pub key:IVec3,
 //     pub value: u32,
 // }
 

@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
+use crate::borshnewtypes::BorshIVec3;
 use crate::game::{Game, CAMERA, PLAYERPOS, SPAWNPOINT, WAYPOINTS, WEATHERTYPE};
 use crate::blockinfo::BLOCK_NAME_TO_ID;
 use crate::statics::MISCSETTINGS;
-use crate::vec::IVec3;
 use bevy::reflect::Map;
 use logos::Logos;
+use bevy::prelude::*;
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n\f]+")] // Ignore this regex pattern between tokens
@@ -158,7 +159,7 @@ impl Cmd {
                         if unsafe { WAYPOINTS.contains_key(waypointname) } {
                             let cam = unsafe { CAMERA.as_ref().unwrap() };
                             let mut camlock = cam.lock();
-                            unsafe { camlock.position = WAYPOINTS[waypointname].as_vec3(); }
+                            unsafe { camlock.position = WAYPOINTS[waypointname].0.as_vec3(); }
                             camlock.velocity = bevy::prelude::Vec3::ZERO;
                             drop(camlock);
                         }
@@ -168,7 +169,7 @@ impl Cmd {
                             Some(Ok(Token::Word)) => {
                                 let waypointname = lexer.slice();
                                 let snapshot = unsafe { PLAYERPOS.snapshot() };
-                                unsafe { WAYPOINTS.insert(waypointname.to_string(), unsafe { crate::vec::IVec3::new( snapshot.pos.0.round() as i32, snapshot.pos.1.round() as i32, snapshot.pos.2.round() as i32) }) };
+                                unsafe { WAYPOINTS.insert(waypointname.to_string(), unsafe { BorshIVec3(IVec3::new( snapshot.pos.0.round() as i32, snapshot.pos.1.round() as i32, snapshot.pos.2.round() as i32)) }) };
                             }
                             _ => {}
                         }

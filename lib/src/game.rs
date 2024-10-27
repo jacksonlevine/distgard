@@ -70,6 +70,7 @@ pub const PLAYERSCALE: f32 = 1.0;
 
 use crate::blockinfo::{Blocks, BLOCK_MARKED_FOR_DELETION};
 use crate::blockoverlay::BlockOverlay;
+use crate::borshnewtypes::BorshIVec3;
 use crate::chunk::{ChunkFacade, ChunkSystem, AUTOMATA_QUEUED_CHANGES, CH_W, NONUSERDATAMAP, USERDATAMAPANDMISCMAP};
 use crate::climates::VOX_MODEL_PATHS;
 use crate::database::{get_misc_entry, put_misc_entry, UserDataMapAndMiscMap};
@@ -88,7 +89,7 @@ pub static mut BUILD_MODEL_OFFSET: IVec3 = IVec3::new(0, 0, 0);
 
 pub static mut PLAYER_DECIDED_SEED: u32 = 0;
 
-pub static mut WAYPOINTS: Lazy<HashMap<String, IVec3>> = Lazy::new(|| HashMap::new());
+pub static mut WAYPOINTS: Lazy<HashMap<String, BorshIVec3>> = Lazy::new(|| HashMap::new());
 
 pub static TILEWID: f32 =  0.10;
 
@@ -136,7 +137,7 @@ use crate::statics::{MISCSETTINGS, MY_MULTIPLAYER_UUID, save_misc};
 use crate::texture::Texture;
 use crate::textureface::TextureFace;
 use crate::tools::{get_block_material, get_tools_target_material, Material};
-use crate::vec::{self, IVec2, IVec3};
+
 use crate::voxmodel::JVoxModel;
 use crate::windowandkey::{UNCAPKB, MAINMENUSONG};
 use crate::worldgeometry::WorldGeometry;
@@ -576,7 +577,7 @@ pub struct Game {
     pub crafting_open: bool,
     pub stamina: Arc<AtomicI32>,
     pub weathertype: f32,
-    pub chest_registry: Arc<DashMap<vec::IVec3, ChestInventory>>,
+    pub chest_registry: Arc<DashMap<IVec3, ChestInventory>>,
 }
 
 pub const ROWLENGTH: i32 = 8;
@@ -1419,9 +1420,9 @@ impl Game {
 
         let chunksys = Arc::new(csys);
 
-        let solid_pred: Box<dyn Fn(vec::IVec3) -> bool + Send + Sync> = {
+        let solid_pred: Box<dyn Fn(IVec3) -> bool + Send + Sync> = {
             let csys_arc = Arc::clone(&chunksys);
-            Box::new(move |v: vec::IVec3| {
+            Box::new(move |v:IVec3| {
                 let csys = csys_arc.clone();
                 let bitshere = csys.blockat(v.clone());
 
@@ -1462,7 +1463,7 @@ impl Game {
                         let r = csysclone.clone();
                         let mut lastblock = 0;
                         while !hitblock && pos.y < 128.0 {
-                            let ppos = vec::IVec3::new(
+                            let ppos =IVec3::new(
                                 pos.x.floor() as i32,
                                 pos.y.round() as i32,
                                 pos.z.floor() as i32,
@@ -2895,10 +2896,10 @@ impl Game {
     }
 
     fn auto_set_spawn_point(&mut self) -> Vec3 {
-        let mut ship_pos = vec::IVec3::new(20, 200, 0);
+        let mut ship_pos =IVec3::new(20, 200, 0);
 
         // Function to decrement y until a block is found
-        fn find_ground_y(position: &mut vec::IVec3, _game: &Game) {
+        fn find_ground_y(position: &mut IVec3, _game: &Game) {
             let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref().unwrap() };
             while csys.clone().blockat(*position) == 0 {
                 position.y -= 1;
@@ -5066,23 +5067,23 @@ impl Game {
 
         let underfeetpos = feetpos - Vec3::new(0.0, 1.0, 0.0);
 
-        let feetposi = vec::IVec3::new(
+        let feetposi =IVec3::new(
             feetpos.x.floor() as i32,
             feetpos.y.floor() as i32,
             feetpos.z.floor() as i32,
         );
-        let headposi = vec::IVec3::new(
+        let headposi =IVec3::new(
             cam_clone.position.x.floor() as i32,
             cam_clone.position.y.floor() as i32,
             cam_clone.position.z.floor() as i32,
         );
-        let feetposi2 = vec::IVec3::new(
+        let feetposi2 =IVec3::new(
             feetpos.x.floor() as i32,
             (feetpos.y - 0.25).floor() as i32,
             feetpos.z.floor() as i32,
         );
 
-        let underfeetposi = vec::IVec3::new(
+        let underfeetposi =IVec3::new(
             underfeetpos.x.floor() as i32,
             underfeetpos.y.floor() as i32,
             underfeetpos.z.floor() as i32,
@@ -6554,7 +6555,7 @@ impl Game {
 
         // self.chunk_thread = Some(handle);
 
-        //self.chunksys.voxel_models[0].stamp_here(&vec::IVec3::new(0, 40, 0), &self.chunksys, None);
+        //self.chunksys.voxel_models[0].stamp_here(&IVec3::new(0, 40, 0), &self.chunksys, None);
     }
 
     pub fn add_ship_colliders(&self) {
@@ -7740,14 +7741,14 @@ impl Game {
                         // Determine the primary axis of intersection
                         if (diff.x).abs() > (diff.y).abs() && (diff.x).abs() > (diff.z).abs() {
                             // The hit was primarily along the X-axis
-                            hit_normal = vec::IVec3::new(if diff.x > 0.0 { 1 } else { -1 }, 0, 0);
+                            hit_normal =IVec3::new(if diff.x > 0.0 { 1 } else { -1 }, 0, 0);
                         } else if (diff.y).abs() > (diff.x).abs() && (diff.y).abs() > (diff.z).abs()
                         {
                             // The hit was primarily along the Y-axis
-                            hit_normal = vec::IVec3::new(0, if diff.y > 0.0 { 1 } else { -1 }, 0);
+                            hit_normal =IVec3::new(0, if diff.y > 0.0 { 1 } else { -1 }, 0);
                         } else {
                             // The hit was primarily along the Z-axis
-                            hit_normal = vec::IVec3::new(0, 0, if diff.z > 0.0 { 1 } else { -1 });
+                            hit_normal =IVec3::new(0, 0, if diff.z > 0.0 { 1 } else { -1 });
                         }
 
                         info!(
@@ -8144,11 +8145,11 @@ impl Game {
 
                             let mut fence_id = id;
 
-                            static NEIGHBS: [vec::IVec3; 4] = [
-                                vec::IVec3::new(1, 0, 0),
-                                vec::IVec3::new(-1, 0, 0),
-                                vec::IVec3::new(0, 0, 1),
-                                vec::IVec3::new(0, 0, -1),
+                            static NEIGHBS: [IVec3; 4] = [
+                               IVec3::new(1, 0, 0),
+                               IVec3::new(-1, 0, 0),
+                               IVec3::new(0, 0, 1),
+                               IVec3::new(0, 0, -1),
                             ];
 
                             let mut anyneighbs = false;

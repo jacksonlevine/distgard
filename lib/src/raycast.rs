@@ -3,7 +3,7 @@ use parking_lot::RwLock;
 use bevy::prelude::*;
 
 use crate::chunk::ChunkSystem;
-use crate::vec::IVec3;
+
 
 
 pub fn raycast_voxel(origin: Vec3, direction: Vec3, csys: &ChunkSystem, max_distance: f32) -> Option<(Vec3, IVec3)> {

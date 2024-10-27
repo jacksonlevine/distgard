@@ -2,9 +2,10 @@
 
 use gl::types::GLuint;
 
-use crate::{chunk::ChunkGeo, vec};
+use crate::{chunk::ChunkGeo};
 
 
+use bevy::prelude::*;
 
 pub struct ChunkMemory {
     pub used: bool,
@@ -29,7 +30,7 @@ pub struct ChunkMemory {
     pub vlength: i32,
     pub wvlength: i32,
 
-    pub pos: vec::IVec2
+    pub pos: IVec2
 }
 
 impl ChunkMemory {

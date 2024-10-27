@@ -82,8 +82,7 @@ use crate::specialblocks::torch::TorchInfo;
 use crate::textureface::TextureFace;
 use crate::textureface::ONE_OVER_16;
 use crate::textureface::TEXTURE_WIDTH;
-use crate::vec::IVec3;
-use crate::vec::{self, IVec2};
+use crate::vechelp::ivec2length;
 
 use arrayvec::ArrayVec;
 
@@ -96,12 +95,12 @@ use std::io::Write;
 
 pub type LightColor = U16Vec3;
 
-//pub static check_for_intercepting: Lazy<Queue<vec::IVec3>> = Lazy::new(|| Queue::new());
+//pub static check_for_intercepting: Lazy<Queue<IVec3>> = Lazy::new(|| Queue::new());
 
 #[derive(Clone)]
 pub struct LightRay {
     pub value: LightColor,
-    pub origin: vec::IVec3,
+    pub origin:IVec3,
     pub directions: Vec<CubeSide>,
 }
 
@@ -124,7 +123,7 @@ pub struct ChunkGeo {
     pub data8: Mutex<Vec<u8>>,
     pub data8rgb: Mutex<Vec<u16>>,
 
-    pub pos: Mutex<vec::IVec2>,
+    pub pos: Mutex<IVec2>,
 
     pub vbo32: gl::types::GLuint,
     pub vbo8: gl::types::GLuint,
@@ -261,7 +260,7 @@ impl ChunkGeo {
 pub struct ChunkFacade {
     pub geo_index: usize,
     pub used: bool,
-    pub pos: vec::IVec2,
+    pub pos:IVec2,
 }
 
 pub const CH_W: i32 = 15;
@@ -269,7 +268,7 @@ pub const CH_H: i32 = 200;
 
 pub struct ReadyMesh {
     pub geo_index: usize,
-    pub newpos: vec::IVec2,
+    pub newpos:IVec2,
     pub newlength: i32,
     pub newtlength: i32,
     pub newvlength: i32,
@@ -279,7 +278,7 @@ pub struct ReadyMesh {
 impl ReadyMesh {
     pub fn new(
         index: usize,
-        newpos: &vec::IVec2,
+        newpos: &IVec2,
         newlength: i32,
         newtlength: i32,
         newvlength: i32,
@@ -332,7 +331,7 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 
 //MEMBERS TAKEN OUT AS PER BEVY MIGRATION PLAN STEP 1
 
-//pub static mut USERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+//pub static mut USERDATAMAP: Option<Arc<DashMap<IVec3, u32>>> = None;
 
 
 pub static mut USERDATAMAPANDMISCMAP: Option<UserDataMapAndMiscMap> = None;
@@ -340,7 +339,7 @@ pub static mut USERDATAMAPANDMISCMAP: Option<UserDataMapAndMiscMap> = None;
 
 
 
-pub static mut NONUSERDATAMAP: Option<Arc<DashMap<vec::IVec3, u32>>> = None;
+pub static mut NONUSERDATAMAP: Option<Arc<DashMap<IVec3, u32>>> = None;
 
 
 
@@ -351,7 +350,7 @@ pub static mut LIGHT_GIS_QUEUED: Lazy<DashMap<usize, bool>> = Lazy::new(|| DashM
 pub struct ChunkSystem {
     pub chunks: Vec<Arc<Mutex<ChunkFacade>>>,
     pub geobank: Vec<Arc<ChunkGeo>>,
-    pub takencare: Arc<DashMap<vec::IVec2, ChunkFacade>>,
+    pub takencare: Arc<DashMap<IVec2, ChunkFacade>>,
     pub finished_user_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
     pub finished_geo_queue: Arc<lockfree::queue::Queue<ReadyMesh>>,
     pub user_rebuild_requests: lockfree::queue::Queue<usize>,
@@ -359,20 +358,20 @@ pub struct ChunkSystem {
     pub light_rebuild_requests: lockfree::queue::Queue<usize>,
     pub background_rebuild_requests: lockfree::queue::Queue<usize>,
     
-    // pub userdatamap: Arc<DashMap<vec::IVec3, u32>>,
-    // pub nonuserdatamap: Arc<DashMap<vec::IVec3, u32>>,
+    // pub userdatamap: Arc<DashMap<IVec3, u32>>,
+    // pub nonuserdatamap: Arc<DashMap<IVec3, u32>>,
     
-    pub justcollisionmap: DashMap<vec::IVec3, u8>,
+    pub justcollisionmap: DashMap<IVec3, u8>,
     pub radius: u8,
     pub perlin: Arc<RwLock<Perlin>>,
     pub chunk_memories: Mutex<ChunkRegistry>,
     pub planet_type: u8,
 
     pub headless: bool,
-    pub hashadinitiallightpass: Arc<Mutex<HashMap<vec::IVec2, bool>>>,
-    pub lightmap: Arc<Mutex<HashMap<vec::IVec3, LightSegment>>>,
+    pub hashadinitiallightpass: Arc<Mutex<HashMap<IVec2, bool>>>,
+    pub lightmap: Arc<Mutex<HashMap<IVec3, LightSegment>>>,
 
-    pub generated_chunks: Arc<DashMap<vec::IVec2, bool>>,
+    pub generated_chunks: Arc<DashMap<IVec2, bool>>,
 }
 
 impl ChunkSystem {
@@ -460,7 +459,7 @@ impl ChunkSystem {
     }
     
     
-    pub fn write_new_udm_entry(&self, spot: vec::IVec3, block: u32) {
+    pub fn write_new_udm_entry(&self, spot:IVec3, block: u32) {
         let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);
 
@@ -478,7 +477,7 @@ impl ChunkSystem {
             .unwrap();
     }
 
-    pub fn collision_predicate(&self, vec: vec::IVec3) -> bool {
+    pub fn collision_predicate(&self, vec:IVec3) -> bool {
         let isntwater = (self.blockat(vec.clone()) & Blocks::block_id_bits()) != 2;
         let isnttallgrass = (self.blockat(vec.clone()) & Blocks::block_id_bits()) != 23;
 
@@ -533,13 +532,13 @@ impl ChunkSystem {
                                 let c = c.value();
                                 
 
-                                let cdist = (c.pos - poshere).length() as i32;
+                                let cdist = ivec2length(&(c.pos - poshere)) as i32;
 
                                 for i in 0..CH_W {
                                     for k in 0..CH_W {
                                         // let hit_block = false;
                                         for j in (0..CH_H).rev() {
-                                            let spot = vec::IVec3 {
+                                            let spot =IVec3 {
                                                 x: ((c.pos.x) * CH_W) + i,
                                                 y: j,
                                                 z: (c.pos.y * CH_W) + k,
@@ -842,14 +841,14 @@ impl ChunkSystem {
     }
 
     
-    pub fn spot_to_chunk_pos(spot: &vec::IVec3) -> vec::IVec2 {
-        return vec::IVec2 {
+    pub fn spot_to_chunk_pos(spot: &IVec3) ->IVec2 {
+        return IVec2 {
             x: (spot.x as f32 / CH_W as f32).floor() as i32,
             y: (spot.z as f32 / CH_W as f32).floor() as i32,
         };
     }
-    pub fn spot_to_chunk_pos_bevyvec3(spot: &bevy::prelude::Vec3) -> vec::IVec2 {
-        return vec::IVec2 {
+    pub fn spot_to_chunk_pos_bevyvec3(spot: &bevy::prelude::Vec3) ->IVec2 {
+        return IVec2 {
             x: (spot.x as f32 / CH_W as f32).floor() as i32,
             y: (spot.z as f32 / CH_W as f32).floor() as i32,
         };
@@ -979,7 +978,7 @@ impl ChunkSystem {
             }
         }
     }
-    pub fn queue_rerender(&self, spot: vec::IVec3, user_power: bool, light: bool) {
+    pub fn queue_rerender(&self, spot:IVec3, user_power: bool, light: bool) {
         let chunk_key = &Self::spot_to_chunk_pos(&spot);
         match self.takencare.get(chunk_key) {
             Some(cf) => {
@@ -996,7 +995,7 @@ impl ChunkSystem {
     }
     pub fn set_block_and_queue_rerender(
         &self,
-        spot: vec::IVec3,
+        spot:IVec3,
         block: u32,
         neighbors: bool,
         user_power: bool,
@@ -1045,7 +1044,7 @@ impl ChunkSystem {
         }
 
         if neighbors {
-            let mut neighbs: HashSet<vec::IVec2> = HashSet::new();
+            let mut neighbs: HashSet<IVec2> = HashSet::new();
 
             for i in Cube::get_neighbors() {
                 let thisspot = spot + *i;
@@ -1062,7 +1061,7 @@ impl ChunkSystem {
 
     pub fn set_block_and_queue_rerender_no_sound(
         &self,
-        spot: vec::IVec3,
+        spot:IVec3,
         block: u32,
         neighbors: bool,
         user_power: bool,
@@ -1111,7 +1110,7 @@ impl ChunkSystem {
         }
 
         if neighbors {
-            let mut neighbs: HashSet<vec::IVec2> = HashSet::new();
+            let mut neighbs: HashSet<IVec2> = HashSet::new();
 
             for i in Cube::get_neighbors() {
                 let thisspot = spot + *i;
@@ -1126,7 +1125,7 @@ impl ChunkSystem {
         }
     }
 
-    pub fn set_block(&self, spot: vec::IVec3, block: u32, user_power: bool) {
+    pub fn set_block(&self, spot:IVec3, block: u32, user_power: bool) {
         let udm = unsafe {USERDATAMAPANDMISCMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
@@ -1165,7 +1164,7 @@ impl ChunkSystem {
         }
     }
 
-    pub fn set_block_no_sound(&self, spot: vec::IVec3, block: u32, user_power: bool) {
+    pub fn set_block_no_sound(&self, spot:IVec3, block: u32, user_power: bool) {
         let udm = unsafe {USERDATAMAPANDMISCMAP.as_ref().unwrap()};
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         match user_power {
@@ -1179,7 +1178,7 @@ impl ChunkSystem {
             }
         }
     }
-    pub fn move_and_rebuild(&self, index: usize, cpos: vec::IVec2) {
+    pub fn move_and_rebuild(&self, index: usize, cpos:IVec2) {
         //info!("MBeing asked to move and rebuild to {} {}", cpos.x, cpos.y);
 
         let tc = self.takencare.clone();
@@ -1247,9 +1246,9 @@ impl ChunkSystem {
         }
     }
 
-    pub fn depropagate_light_origin(&self, origin: vec::IVec3, imp: &mut HashSet<vec::IVec2>) {
+    pub fn depropagate_light_origin(&self, origin:IVec3, imp: &mut HashSet<IVec2>) {
         //info!("Starting depropagating light origin");
-        let mut stack: Vec<vec::IVec3> = Vec::new();
+        let mut stack: Vec<IVec3> = Vec::new();
 
         stack.push(origin);
 
@@ -1291,14 +1290,14 @@ impl ChunkSystem {
     }
     pub fn propagate_light_origin(
         &self,
-        spot: vec::IVec3,
-        origin: vec::IVec3,
+        spot:IVec3,
+        origin:IVec3,
         value: LightColor,
-        imp: &mut HashSet<vec::IVec2>,
+        imp: &mut HashSet<IVec2>,
     ) {
         //info!("Starting propagating light origin");
-        let mut stack: Vec<(LightColor, vec::IVec3)> = Vec::new();
-        let mut visited: HashSet<vec::IVec3> = HashSet::new();
+        let mut stack: Vec<(LightColor,IVec3)> = Vec::new();
+        let mut visited: HashSet<IVec3> = HashSet::new();
 
         stack.push((value, spot));
         visited.insert(spot);
@@ -1491,7 +1490,7 @@ impl ChunkSystem {
         //info!("Got to end of propagating light origin");
     }
 
-    pub fn lightpass_on_chunk(&self, pos: vec::IVec2) {
+    pub fn lightpass_on_chunk(&self, pos:IVec2) {
         //println!("Doing lightpass on chunk! {} {}", pos.x, pos.y);
 
         let hashadarc = self.hashadinitiallightpass.clone();
@@ -1501,12 +1500,12 @@ impl ChunkSystem {
 
         drop(hashadlock);
 
-        let mut implicated: HashSet<vec::IVec2> = HashSet::new();
+        let mut implicated: HashSet<IVec2> = HashSet::new();
 
-        let mut lightsources: HashMap<vec::IVec3, u32> = HashMap::new();
-        //let mut lightsources: HashSet<(vec::IVec3, u32)> = HashSet::new();
+        let mut lightsources: HashMap<IVec3, u32> = HashMap::new();
+        //let mut lightsources: HashSet<(IVec3, u32)> = HashSet::new();
 
-        let mut existingsources: HashSet<vec::IVec3> = HashSet::new();
+        let mut existingsources: HashSet<IVec3> = HashSet::new();
 
         let mut highest = 0;
 
@@ -1637,7 +1636,7 @@ impl ChunkSystem {
 
         geobankarc.clear();
 
-        let mut memo: HashMap<vec::IVec3, u32> = HashMap::new();
+        let mut memo: HashMap<IVec3, u32> = HashMap::new();
 
         let mut data32 = geobankarc.data32.lock();
         let mut data8 = geobankarc.data8.lock();
@@ -1653,14 +1652,14 @@ impl ChunkSystem {
         let mut data8rgb = geobankarc.data8rgb.lock();
         let mut tdata8rgb = geobankarc.tdata8rgb.lock();
 
-        let mut weatherstoptops: HashMap<vec::IVec2, i32> = HashMap::new();
-        let mut tops: HashMap<vec::IVec2, i32> = HashMap::new();
+        let mut weatherstoptops: HashMap<IVec2, i32> = HashMap::new();
+        let mut tops: HashMap<IVec2, i32> = HashMap::new();
 
         for i in 0..CH_W {
             for k in 0..CH_W {
                 let mut hit_block: bool;
                 for j in (0..CH_H).rev() {
-                    let spot = vec::IVec3 {
+                    let spot =IVec3 {
                         x: (chunklock.pos.x * CH_W) + i,
                         y: j,
                         z: (chunklock.pos.y * CH_W) + k,
@@ -1682,7 +1681,7 @@ impl ChunkSystem {
                     //                         0, 3, 6, 10
                     //                     ];
 
-                    //                     let amb_spots: &[vec::IVec3; 3] = Cube::get_amb_occul_spots(cubeside, ind as u8);
+                    //                     let amb_spots: &[IVec3; 3] = Cube::get_amb_occul_spots(cubeside, ind as u8);
 
                     //                     let amb_change = amb_spots.iter()
                     //                                               .map(|vec| self.blockatmemo(*vec + spot, &mut memo))
@@ -1718,8 +1717,8 @@ impl ChunkSystem {
                     if block != 0 {
                         let isgrass = if block == 3 { 1u8 } else { 0u8 };
 
-                        if !weatherstoptops.contains_key(&vec::IVec2 { x: i, y: k }) {
-                            weatherstoptops.insert(vec::IVec2 { x: i, y: k }, spot.y);
+                        if !weatherstoptops.contains_key(&IVec2 { x: i, y: k }) {
+                            weatherstoptops.insert(IVec2 { x: i, y: k }, spot.y);
                         }
 
                         match block {
@@ -2157,7 +2156,7 @@ impl ChunkSystem {
                                             // }
                                             drop(lmlock);
         
-                                            hit_block = match tops.get(&vec::IVec2 {
+                                            hit_block = match tops.get(&IVec2 {
                                                 x: i + neigh.x,
                                                 y: k + neigh.z,
                                             }) {
@@ -2178,7 +2177,7 @@ impl ChunkSystem {
                                                 for (ind, v) in side.chunks(4).enumerate() {
                                                     static AMB_CHANGES: [u8; 4] = [0, 3, 6, 10];
         
-                                                    let amb_spots: &[vec::IVec3; 3] =
+                                                    let amb_spots: &[IVec3; 3] =
                                                         Cube::get_amb_occul_spots(cubeside, ind as u8);
         
                                                     let amb_change = amb_spots
@@ -2267,7 +2266,7 @@ impl ChunkSystem {
                                                 tdata8rgb.extend_from_slice(packed8rgb.as_slice());
                                             } else {
                                                 tops.insert(
-                                                    vec::IVec2 {
+                                                   IVec2 {
                                                         x: i + neigh.x,
                                                         y: k + neigh.z,
                                                     },
@@ -2285,7 +2284,7 @@ impl ChunkSystem {
                                             let neighbor_transparent = Blocks::is_transparent(neigh_block)
                                                 || Blocks::is_semi_transparent(neigh_block);
         
-                                            hit_block = match tops.get(&vec::IVec2 {
+                                            hit_block = match tops.get(&IVec2 {
                                                 x: i + neigh.x,
                                                 y: k + neigh.z,
                                             }) {
@@ -2315,7 +2314,7 @@ impl ChunkSystem {
                                                 for (ind, v) in side.chunks(4).enumerate() {
                                                     static AMB_CHANGES: [u8; 4] = [0, 3, 6, 10];
         
-                                                    let amb_spots: &[vec::IVec3; 3] =
+                                                    let amb_spots: &[IVec3; 3] =
                                                         Cube::get_amb_occul_spots(cubeside, ind as u8);
         
                                                     let amb_change = amb_spots
@@ -2365,7 +2364,7 @@ impl ChunkSystem {
         
                                                 if Blocks::is_semi_transparent(neigh_block) {
                                                     tops.insert(
-                                                        vec::IVec2 {
+                                                       IVec2 {
                                                             x: i + neigh.x,
                                                             y: k + neigh.z,
                                                         },
@@ -2374,7 +2373,7 @@ impl ChunkSystem {
                                                 }
                                             } else {
                                                 tops.insert(
-                                                    vec::IVec2 {
+                                                   IVec2 {
                                                         x: i + neigh.x,
                                                         y: k + neigh.z,
                                                     },
@@ -2391,7 +2390,7 @@ impl ChunkSystem {
 
                 //BEGIN ADD WEATHER PANES FOR RAIN/SNOW/ETC, nOT EVERY BLOCK
 
-                let topy = match weatherstoptops.get(&vec::IVec2 { x: i, y: k }) {
+                let topy = match weatherstoptops.get(&IVec2 { x: i, y: k }) {
                     Some(top) => {
                         //println!("Found top {}", *top);
                         *top
@@ -2403,7 +2402,7 @@ impl ChunkSystem {
                     //let mut rng = StdRng::from_entropy();
 
                     //spot xz top
-                    let spoint: IVec3 = vec::IVec3 {
+                    let spoint: IVec3 =IVec3 {
                         x: (chunklock.pos.x * CH_W) + i,
                         y: topy,
                         z: (chunklock.pos.y * CH_W) + k,
@@ -2696,7 +2695,7 @@ impl ChunkSystem {
 
     pub fn stamp_here(
         &self,
-        spot: &vec::IVec3,
+        spot: &IVec3,
         model: &JVoxModel,
         implicated: Option<&mut HashSet<IVec2>>,
     ) {
@@ -2751,7 +2750,7 @@ impl ChunkSystem {
         }
     }
 
-    pub fn is_illuminite(spot: &vec::IVec3) -> bool {
+    pub fn is_illuminite(spot: &IVec3) -> bool {
         let cpos = ChunkSystem::spot_to_chunk_pos(spot);
         let seed: [u8; 32] = [
             (cpos.x % 255) as u8,
@@ -2799,7 +2798,7 @@ impl ChunkSystem {
         return res;
     }
 
-    pub fn generate_chunk(&self, cpos: &vec::IVec2) {
+    pub fn generate_chunk(&self, cpos: &IVec2) {
         // Seed for the RNG.
         let seed: [u8; 32] = [
             (cpos.x % 255) as u8,
@@ -2842,7 +2841,7 @@ impl ChunkSystem {
         // // Generate some random numbers
         // let rand_number1: u32 = rng.gen();
         // let rand_number2: u32 = rng.gen();
-        let mut implicated: HashSet<vec::IVec2> = HashSet::new();
+        let mut implicated: HashSet<IVec2> = HashSet::new();
 
         let should_break = false;
         
@@ -2947,11 +2946,11 @@ impl ChunkSystem {
         a * (1.0 - t) + b * t
     }
 
-    pub fn biome_noise(&self, spot: vec::IVec2) -> f64 {
+    pub fn biome_noise(&self, spot:IVec2) -> f64 {
         return Self::_biome_noise(&self.perlin.read(), spot);
     }
 
-    pub fn _biome_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
+    pub fn _biome_noise(perlin: &Perlin, spot:IVec2) -> f64 {
         const XZDIVISOR1: f64 = 100.35 * 4.0;
 
         let y = 20;
@@ -2967,10 +2966,10 @@ impl ChunkSystem {
 
         noise1 * 10.0
     }
-    pub fn temp_noise(&self, spot: vec::IVec3) -> f64 {
+    pub fn temp_noise(&self, spot:IVec3) -> f64 {
         return Self::_temp_noise(&self.perlin.read(), spot);
     }
-    pub fn _temp_noise(perlin: &Perlin, spot: vec::IVec3) -> f64 {
+    pub fn _temp_noise(perlin: &Perlin, spot:IVec3) -> f64 {
         const XZDIVISOR1: f64 = 105.35 * 4.0;
 
 
@@ -2986,10 +2985,10 @@ impl ChunkSystem {
        // println!("Temp noise: {}", noise1 * 10.0);
        ( noise1 * 2.0)  - ((spot.y as f64 - 60.0) / 500.0)
     }
-    pub fn humidity_noise(&self, spot: vec::IVec3) -> f64 {
+    pub fn humidity_noise(&self, spot:IVec3) -> f64 {
         return Self::_humidity_noise(&self.perlin.read(), spot);
     }
-    pub fn _humidity_noise(perlin: &Perlin, spot: vec::IVec3) -> f64 {
+    pub fn _humidity_noise(perlin: &Perlin, spot:IVec3) -> f64 {
         const XZDIVISOR1: f64 = 55.35 * 4.0;
 
 
@@ -3003,11 +3002,11 @@ impl ChunkSystem {
         //println!("Humidity noise: {}", noise1*10.0);
         (noise1 * 2.0 ) - ((spot.y as f64 - 60.0) / 500.0)
     }
-    pub fn ore_noise(&self, spot: vec::IVec3) -> f64 {
+    pub fn ore_noise(&self, spot:IVec3) -> f64 {
         return Self::_ore_noise(&self.perlin.read(), spot);
     }
 
-    pub fn _ore_noise(perlin: &Perlin, spot: vec::IVec3) -> f64 {
+    pub fn _ore_noise(perlin: &Perlin, spot:IVec3) -> f64 {
         const XYZDIVISOR: f64 = 15.53;
 
         let noise1 = f64::max(
@@ -3021,11 +3020,11 @@ impl ChunkSystem {
 
         noise1 * ((60.0 - spot.y as f64).max(0.0) / 7.0)
     }
-    pub fn feature_noise(&self, spot: vec::IVec2) -> f64 {
+    pub fn feature_noise(&self, spot:IVec2) -> f64 {
         return Self::_feature_noise(&self.perlin.read(), spot);
     }
 
-    pub fn _feature_noise(perlin: &Perlin, spot: vec::IVec2) -> f64 {
+    pub fn _feature_noise(perlin: &Perlin, spot:IVec2) -> f64 {
         const XZDIVISOR1: f64 = 45.35 * 4.0;
 
         let y = 20;
@@ -3042,11 +3041,11 @@ impl ChunkSystem {
         noise1
     }
 
-    pub fn cave_noise(&self, spot: vec::IVec3) -> f64 {
+    pub fn cave_noise(&self, spot:IVec3) -> f64 {
         return Self::_cave_noise(&self.perlin.read(), spot);
     }
 
-    pub fn _cave_noise(perlin: &Perlin, spot: vec::IVec3) -> f64 {
+    pub fn _cave_noise(perlin: &Perlin, spot:IVec3) -> f64 {
         const XZDIVISOR1: f64 = 25.35;
 
         let noise1 = f64::max(
@@ -3061,11 +3060,11 @@ impl ChunkSystem {
         noise1
     }
 
-    pub fn noise_func(&self, spot: vec::IVec3) -> f64 {
+    pub fn noise_func(&self, spot:IVec3) -> f64 {
         return Self::_noise_func(&self.perlin.read(), spot);
     }
 
-    pub fn _noise_func(perlin: &Perlin, spot: vec::IVec3) -> f64 {
+    pub fn _noise_func(perlin: &Perlin, spot:IVec3) -> f64 {
         let per = perlin;
 
         let mut spot = spot;
@@ -3156,7 +3155,7 @@ impl ChunkSystem {
         ChunkSystem::mix(noisemix + texture, noise3, p2.clamp(0.0, 1.0)).min(20.0) + p3
     }
 
-    pub fn noise_func2(&self, spot: vec::IVec3) -> f64 {
+    pub fn noise_func2(&self, spot:IVec3) -> f64 {
         let p2 = self.perlin.read();
         let mut y = spot.y - 20;
 
@@ -3200,7 +3199,7 @@ impl ChunkSystem {
         ChunkSystem::mix(noise1, noise2, p * 0.5)
     }
 
-    pub fn blockatmemo(&self, spot: vec::IVec3, memo: &mut HashMap<vec::IVec3, u32>) -> u32 {
+    pub fn blockatmemo(&self, spot:IVec3, memo: &mut HashMap<IVec3, u32>) -> u32 {
         // return memo.get(&spot).map_or_else(|| {
         //     let b = self.blockat(spot);
         //     memo.insert(spot, b);
@@ -3224,7 +3223,7 @@ impl ChunkSystem {
         //     return b;
         // }
     }
-    pub fn blockat(&self, spot: vec::IVec3) -> u32 {
+    pub fn blockat(&self, spot:IVec3) -> u32 {
         let nudm = unsafe {NONUSERDATAMAP.as_ref().unwrap()};
         Self::_blockat(
             &nudm.clone(),
@@ -3237,7 +3236,7 @@ impl ChunkSystem {
         nonuserdatamap: &Arc<DashMap<IVec3, u32>>,
         userdatamap: &UserDataMapAndMiscMap,
         perlin: &Perlin,
-        spot: vec::IVec3,
+        spot:IVec3,
     ) -> u32 {
 
         match userdatamap.get(&spot) {
@@ -3255,11 +3254,11 @@ impl ChunkSystem {
         }
     }
 
-    pub fn natural_blockat(&self, spot: vec::IVec3) -> u32 {
+    pub fn natural_blockat(&self, spot:IVec3) -> u32 {
         return Self::_natural_blockat(&self.perlin.read(), spot);
     }
 
-    pub fn _natural_blockat(perlin: &Perlin, spot: vec::IVec3) -> u32 {
+    pub fn _natural_blockat(perlin: &Perlin, spot:IVec3) -> u32 {
         let per = perlin;
         if spot.y == 0 {
             return 15;
@@ -3273,7 +3272,7 @@ impl ChunkSystem {
         let ret = match 0 {
             // 1 => {
             //     if self.noise_func2(spot) > 10.0 {
-            //         if self.noise_func2(spot + vec::IVec3 { x: 0, y: 1, z: 0 }) < 10.0 {
+            //         if self.noise_func2(spot +IVec3 { x: 0, y: 1, z: 0 }) < 10.0 {
             //             14
             //         } else {
             //             1
@@ -3310,7 +3309,7 @@ impl ChunkSystem {
                 
 
                 if Self::_noise_func(per, spot) > 10.0 {
-                    if Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 10, z: 0 }) > 10.0 {
+                    if Self::_noise_func(per, spot +IVec3 { x: 0, y: 10, z: 0 }) > 10.0 {
                         if Self::_ore_noise(per, spot) > 1.0 {
                             35
                         } else {
@@ -3323,9 +3322,9 @@ impl ChunkSystem {
                             spot.x as f64 / 7.5,
                         ]);
                         if spot.y > (WL + beachnoise as f32) as i32
-                            || Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 5, z: 0 }) > 10.0
+                            || Self::_noise_func(per, spot +IVec3 { x: 0, y: 5, z: 0 }) > 10.0
                         {
-                            if Self::_noise_func(per, spot + vec::IVec3 { x: 0, y: 1, z: 0 }) < 10.0
+                            if Self::_noise_func(per, spot +IVec3 { x: 0, y: 1, z: 0 }) < 10.0
                             {
                                 surface
                             } else {

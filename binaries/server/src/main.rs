@@ -20,7 +20,7 @@
 // use bevy::prelude::*;
 // use voxelland::chunk::ChunkSystem;
 // use voxelland::game::{Game, CURRSEED, ROWLENGTH, SONGINDEX, STARTINGITEMS, WEATHERTYPE};
-// use voxelland::vec::{self, IVec3};
+// use voxelland::{self, IVec3};
 // use voxelland::server_types::{self, *};
 // use dashmap::DashMap;
 // use crossbeam::queue::SegQueue;
@@ -63,7 +63,7 @@
 //     _wl: &Arc<Mutex<u8>>,
 //     tod: &Arc<Mutex<f32>>,
 //     queued_sql: &Arc<SegQueue<QueuedSqlType>>,
-//     chest_reg: &Arc<DashMap<vec::IVec3, ChestInventory>>,
+//     chest_reg: &Arc<DashMap<IVec3, ChestInventory>>,
 // ) {
 //     let mut buffer;
 //     unsafe {

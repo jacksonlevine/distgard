@@ -1,3 +1,6 @@
+use bevy::prelude::*;
+
+use crate::chunk::{CH_H, CH_W, USERDATAMAPANDMISCMAP};
 
 #[macro_export]
 macro_rules! block_seq {
@@ -37,15 +40,17 @@ pub fn rlencode_chunk(cpos: &IVec2) -> String {
     let mut lastblock: i32 = -1;
     let mut count = 0;
 
+    let udm = unsafe { USERDATAMAPANDMISCMAP.as_ref().unwrap() };
+
     for (index, spot) in BLOCK_SEQ.iter().enumerate() {
-        let realspot = cpos_to_world(cpos) + spot;
-        let blockat = unsafe { HASH.get(&realspot).unwrap_or(&0) };
-        if lastblock as u32 != *blockat  {
+        let realspot = cpos_to_world(cpos) + *spot;
+        let blockat = unsafe { udm.get(&realspot).unwrap_or(0) };
+        if lastblock as u32 != blockat  {
             //if its a new block, put the last run count and start a new run
             if count > 0 {
                 result += (count.to_string() + "\n").as_str(); //put last count
             }
-            lastblock = *blockat as i32;
+            lastblock = blockat as i32;
             count = 1;
             result += (blockat.to_string() + " ").as_str(); //put new block id
 
@@ -66,6 +71,8 @@ pub fn rlencode_chunk(cpos: &IVec2) -> String {
 }
 
 pub fn rldecode_chunk(data: String) {
+
+    let udm = unsafe { USERDATAMAPANDMISCMAP.as_ref().unwrap() };
     let mut tokens = data.split_whitespace();
     let mut seq_index = 0;
     
@@ -76,7 +83,7 @@ pub fn rldecode_chunk(data: String) {
             let count = count_str.parse::<usize>().unwrap_or(0);
             if block != 0 {
                 for i in seq_index..(seq_index+count) {
-                    unsafe { HASH.insert(BLOCK_SEQ[i], block) };
+                    unsafe { udm.insert(BLOCK_SEQ[i], block) };
                 }
             }
             seq_index += count;
@@ -84,53 +91,52 @@ pub fn rldecode_chunk(data: String) {
     }
 }
 
-fn main() {
+
+
+
+
+
+
+// fn test_encode_decode() {
+//     for i in 0..100 {
+//         for x in 0..10 {
+//             unsafe { HASH.insert(IVec3::new(x, i, 0), 12) };
+//         }
+//     }
+//     let encoded = rlencode_chunk(&IVec2::new(0,0));
+
+//     unsafe { HASH.clear() };
     
-    test_encode_decode();
-    test_encode_decode2();
-}
+//     rldecode_chunk(encoded.clone());
 
+//     let encoded2 = rlencode_chunk(&IVec2::new(0,0));
 
-fn test_encode_decode() {
-    for i in 0..100 {
-        for x in 0..10 {
-            unsafe { HASH.insert(IVec3::new(x, i, 0), 12) };
-        }
-    }
-    let encoded = rlencode_chunk(&IVec2::new(0,0));
+//     if encoded == encoded2 {
+//         println!("The blocks remain the same!");
+//     } else {
+//         println!("Stuff is messed up!");
+//     }
+// }
 
-    unsafe { HASH.clear() };
+// fn test_encode_decode2() {
+//     for i in 0..CH_H {
+//         for x in 0..CH_W {
+//             for z in 0..CH_W {
+//                 unsafe { HASH.insert(IVec3::new(x, i, z), 12) };
+//             }
+//         }
+//     }
+//     let encoded = rlencode_chunk(&IVec2::new(0,0));
+
+//     unsafe { HASH.clear() };
     
-    rldecode_chunk(encoded.clone());
+//     rldecode_chunk(encoded.clone());
 
-    let encoded2 = rlencode_chunk(&IVec2::new(0,0));
+//     let encoded2 = rlencode_chunk(&IVec2::new(0,0));
 
-    if encoded == encoded2 {
-        println!("The blocks remain the same!");
-    } else {
-        println!("Stuff is messed up!");
-    }
-}
-
-fn test_encode_decode2() {
-    for i in 0..CH_H {
-        for x in 0..CH_W {
-            for z in 0..CH_W {
-                unsafe { HASH.insert(IVec3::new(x, i, z), 12) };
-            }
-        }
-    }
-    let encoded = rlencode_chunk(&IVec2::new(0,0));
-
-    unsafe { HASH.clear() };
-    
-    rldecode_chunk(encoded.clone());
-
-    let encoded2 = rlencode_chunk(&IVec2::new(0,0));
-
-    if encoded == encoded2 {
-        println!("The blocks remain the same!");
-    } else {
-        println!("Stuff is messed up!");
-    }
-}
+//     if encoded == encoded2 {
+//         println!("The blocks remain the same!");
+//     } else {
+//         println!("Stuff is messed up!");
+//     }
+// }

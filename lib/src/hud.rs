@@ -10,7 +10,6 @@ use glfw::PWindow;
 use crate::game::ROWLENGTH;
 use crate::shader::Shader;
 use crate::textureface::{TextureFace, ONE_OVER_16};
-use crate::vec::{self, IVec3};
 use crate::windowandkey::{WINDOWHEIGHT, WINDOWWIDTH};
 use crate::{game, windowandkey};
 
@@ -117,7 +116,7 @@ pub struct Hud {
     pub bumped_slot: usize,
 
     //Chest inventory stuff
-    pub current_chest: vec::IVec3,
+    pub current_chest:IVec3,
     pub chest_open: bool,
     pub chestvao: GLuint,
     pub healthvao: GLuint,
@@ -251,7 +250,7 @@ impl Hud {
             self.dirty = false;
         }
     }
-    pub fn set_current_chest(&mut self, newspot: vec::IVec3) {
+    pub fn set_current_chest(&mut self, newspot:IVec3) {
         self.current_chest = newspot;
         self.chestdirty = true;
     }

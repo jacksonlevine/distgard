@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::vec;
+
 use num_enum::FromPrimitive;
 
 #[derive(Debug, Clone, Copy, FromPrimitive, PartialEq)]
@@ -58,7 +58,7 @@ pub struct CollCage {
     pub penetrations: Vec<f32>,
     pub normals: Vec<Vec3>,
     pub positions: Vec<IVec3>,
-    pub solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync>,
+    pub solid_pred: Box<dyn Fn(IVec3) -> bool  + Send + Sync>,
     pub smoothed_y_offset: f32,
 }
 
@@ -111,7 +111,7 @@ impl BoundBox {
 }
 
 impl CollCage {
-    pub fn new(solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> ) -> CollCage {
+    pub fn new(solid_pred: Box<dyn Fn(IVec3) -> bool  + Send + Sync> ) -> CollCage {
         let num_boxes = 19;
         let colliding: Vec<Side> = Vec::new();
         let solid: Vec<Side> = Vec::new();
@@ -270,7 +270,7 @@ impl CollCage {
         self.solid.clear();
         for i in 0..self.num_boxes {
             let spot = self.boxes[i as usize].center;
-            let tup = vec::IVec3 {
+            let tup =IVec3 {
                 x: spot.x as i32,
                 y: spot.y as i32,
                 z: spot.z as i32,

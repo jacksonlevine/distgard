@@ -8,7 +8,7 @@ use glfw::ffi::glfwGetTime;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use tracing::info;
-use crate::{camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage, Side}, game::Game, shader::Shader, vec};
+use crate::{camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage, Side}, game::Game, shader::Shader};
 
 use crate::inventory::Inventory;
 
@@ -29,9 +29,9 @@ pub struct Drop {
 impl Drop {
     pub fn new(block_id: u32, position: Vec3, csys: &Arc<ChunkSystem>, amt: u32) -> Drop {
 
-        let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
+        let solid_pred: Box<dyn Fn(IVec3) -> bool  + Send + Sync> = {
             let csys_arc = Arc::clone(&csys);
-            Box::new(move |v: vec::IVec3| {
+            Box::new(move |v:IVec3| {
                 return csys_arc.collision_predicate(v);
             })
         };

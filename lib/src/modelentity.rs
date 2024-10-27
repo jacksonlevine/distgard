@@ -1,21 +1,18 @@
-
-
-use std::{sync::{Arc}};
+use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
-use dashmap::DashMap;
 use bevy::prelude::*;
+use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use uuid::Uuid;
-
 
 pub enum AggroTarget {
     ThisCamera,
     ModelEntityID(u32),
     NoAggro,
-    UUID(Uuid)
+    UUID(Uuid),
 }
 
 /// Converts a direction vector to Euler angles (yaw, pitch, roll).
@@ -42,7 +39,7 @@ pub fn euler_to_direction(euler_angles: Vec3) -> Vec3 {
         EulerRot::XYZ,  // Rotation order: first pitch (X), then yaw (Y), then roll (Z)
         euler_angles.x, // Yaw around the Y-axis
         euler_angles.y, // Pitch around the X-axis
-        euler_angles.z  // Roll around the Z-axis
+        euler_angles.z, // Roll around the Z-axis
     );
 
     // Assume forward direction is along positive z-axis
@@ -55,8 +52,15 @@ pub fn euler_to_direction(euler_angles: Vec3) -> Vec3 {
     direction.normalize()
 }
 
-
-use crate::{blockinfo::Blocks, camera::Camera, chunk::ChunkSystem, collisioncage::{BoundBox, CollCage}, game::{Animation, ControlsState, JGltfNode, AMBIENTBRIGHTNESS}, planetinfo::Planets, raycast::raycast_voxel, vec::{self, IVec3}};
+use crate::{
+    blockinfo::Blocks,
+    camera::Camera,
+    chunk::ChunkSystem,
+    collisioncage::{BoundBox, CollCage},
+    game::{Animation, ControlsState, JGltfNode, AMBIENTBRIGHTNESS},
+    planetinfo::Planets,
+    raycast::raycast_voxel,
+};
 
 static mut CURRENT_ID: u32 = 0;
 
@@ -100,43 +104,42 @@ pub struct ModelEntity {
     pub soundvolume: f32,
     pub attackinterval: f32,
     pub soundinterval: f32,
-    pub lastchunkpos: vec::IVec2
+    pub lastchunkpos: IVec2,
 }
 
-pub static SERVER_GENERATED_CHUNKS: Lazy<DashMap<vec::IVec2, bool>> = Lazy::new(|| DashMap::new());
+pub static SERVER_GENERATED_CHUNKS: Lazy<DashMap<IVec2, bool>> = Lazy::new(|| DashMap::new());
 
 impl ModelEntity {
-
-
-    pub fn new_with_jump_height(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, jump_height: f32, hostile: bool) -> ModelEntity {
+    pub fn new_with_jump_height(
+        model_index: usize,
+        pos: Vec3,
+        scale: f32,
+        rot: Vec3,
+        csys: &Arc<ChunkSystem>,
+        cam: &Arc<Mutex<Camera>>,
+        jump_height: f32,
+        hostile: bool,
+    ) -> ModelEntity {
         let mut modent = ModelEntity::new(model_index, pos, scale, rot, csys, cam, hostile);
         modent.allowable_jump_height = jump_height;
         modent
     }
 
     pub fn generate_chunk_on_server_if_not_generated(&mut self) {
-        
-        static NEIGHS: [vec::IVec2; 5] = [
-            vec::IVec2{
-                x: 0, y: 0
-            },
-            vec::IVec2{
-                x: -1, y: 0
-            },
-            vec::IVec2{
-                x: 1, y: 0
-            },
-            vec::IVec2{
-                x: 0, y: 1
-            },
-            vec::IVec2{
-                x: 0, y: -1
-            }
+        static NEIGHS: [IVec2; 5] = [
+           IVec2 { x: 0, y: 0 },
+           IVec2 { x: -1, y: 0 },
+           IVec2 { x: 1, y: 0 },
+           IVec2 { x: 0, y: 1 },
+           IVec2 { x: 0, y: -1 },
         ];
 
-        let chunkpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(self.position.x as i32, self.position.y as i32, self.position.z as i32));
+        let chunkpos = ChunkSystem::spot_to_chunk_pos(&IVec3::new(
+            self.position.x as i32,
+            self.position.y as i32,
+            self.position.z as i32,
+        ));
         if self.lastchunkpos != chunkpos {
-
             let csys = self.csys.clone();
 
             for neigh in NEIGHS {
@@ -145,23 +148,27 @@ impl ModelEntity {
                     csys.generate_chunk(&thisspot);
                     SERVER_GENERATED_CHUNKS.insert(thisspot, true);
                 }
-                
             }
 
             self.lastchunkpos = chunkpos;
         }
     }
 
-
-    pub fn new(model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
-
-        let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
+    pub fn new(
+        model_index: usize,
+        pos: Vec3,
+        scale: f32,
+        rot: Vec3,
+        csys: &Arc<ChunkSystem>,
+        cam: &Arc<Mutex<Camera>>,
+        hostile: bool,
+    ) -> ModelEntity {
+        let solid_pred: Box<dyn Fn(IVec3) -> bool + Send + Sync> = {
             //let csys_arc = Arc::clone(&chunksys);
-            Box::new(move |_: vec::IVec3| {
+            Box::new(move |_:IVec3| {
                 return false;
             })
         };
-
 
         unsafe {
             CURRENT_ID += 1;
@@ -179,7 +186,7 @@ impl ModelEntity {
                 jumping_up: false,
                 allowable_jump_height: 7.0,
                 current_jump_y: 0.0,
-                bound_box: BoundBox::new(Vec3::new(0.0,0.0,0.0)),
+                bound_box: BoundBox::new(Vec3::new(0.0, 0.0, 0.0)),
                 controls: ControlsState::new(),
                 direction: Vec3::new(0.0, 0.0, 0.0),
                 right: Vec3::new(0.0, 0.0, 0.0),
@@ -205,69 +212,70 @@ impl ModelEntity {
                 soundvolume: 0.0,
                 attackinterval: Planets::get_mob_attack_interval(model_index),
                 soundinterval: Planets::get_mob_sound_interval(model_index),
-                lastchunkpos: vec::IVec2::new(-99,99)
+                lastchunkpos:IVec2::new(-99, 99),
             }
         }
-        
     }
 
-
-
-    pub fn new_with_id(id: u32, model_index: usize, pos: Vec3, scale: f32, rot: Vec3, csys: &Arc<ChunkSystem>, cam: &Arc<Mutex<Camera>>, hostile: bool) -> ModelEntity {
-
-        let solid_pred: Box<dyn Fn(vec::IVec3) -> bool  + Send + Sync> = {
+    pub fn new_with_id(
+        id: u32,
+        model_index: usize,
+        pos: Vec3,
+        scale: f32,
+        rot: Vec3,
+        csys: &Arc<ChunkSystem>,
+        cam: &Arc<Mutex<Camera>>,
+        hostile: bool,
+    ) -> ModelEntity {
+        let solid_pred: Box<dyn Fn(IVec3) -> bool + Send + Sync> = {
             //let csys_arc = Arc::clone(&chunksys);
-            Box::new(move |_: vec::IVec3| {
+            Box::new(move |_:IVec3| {
                 return false;
             })
         };
 
-
-
-            ModelEntity {
-                model_index,
-                position: pos,
-                lastpos: pos,
-                id,
-                scale,
-                rot,
-                coll_cage: CollCage::new(solid_pred),
-                velocity: Vec3::new(0.0, 0.0, 0.0),
-                grounded: false,
-                time_falling_scalar: 1.0,
-                jumping_up: false,
-                allowable_jump_height: 7.0,
-                current_jump_y: 0.0,
-                bound_box: BoundBox::new(Vec3::new(0.0,0.0,0.0)),
-                controls: ControlsState::new(),
-                direction: Vec3::new(0.0, 0.0, 0.0),
-                right: Vec3::new(0.0, 0.0, 0.0),
-                up: Vec3::new(0.0, 1.0, 0.0),
-                behavior_timer: 0.0,
-                rng: StdRng::from_entropy(),
-                csys: csys.clone(),
-                cam: cam.clone(),
-                target: AggroTarget::NoAggro,
-                speedfactor: 1.0,
-                soundtimer: 0.0,
-                was_grounded: false,
-                current_animation: None,
-                animation_time: 0.0,
-                animations: Vec::new(),
-                nodes: Vec::new(),
-                time_stamp: 0.0,
-                hostile,
-                lastrot: Vec3::ZERO,
-                sounding: false,
-                sound: Planets::get_mob_sound(model_index),
-                attacktimer: 0.0,
-                soundvolume: 0.0,
-                attackinterval: Planets::get_mob_attack_interval(model_index),
-                soundinterval: Planets::get_mob_sound_interval(model_index),
-                lastchunkpos: vec::IVec2::new(-99,99)
-            }
-     
-        
+        ModelEntity {
+            model_index,
+            position: pos,
+            lastpos: pos,
+            id,
+            scale,
+            rot,
+            coll_cage: CollCage::new(solid_pred),
+            velocity: Vec3::new(0.0, 0.0, 0.0),
+            grounded: false,
+            time_falling_scalar: 1.0,
+            jumping_up: false,
+            allowable_jump_height: 7.0,
+            current_jump_y: 0.0,
+            bound_box: BoundBox::new(Vec3::new(0.0, 0.0, 0.0)),
+            controls: ControlsState::new(),
+            direction: Vec3::new(0.0, 0.0, 0.0),
+            right: Vec3::new(0.0, 0.0, 0.0),
+            up: Vec3::new(0.0, 1.0, 0.0),
+            behavior_timer: 0.0,
+            rng: StdRng::from_entropy(),
+            csys: csys.clone(),
+            cam: cam.clone(),
+            target: AggroTarget::NoAggro,
+            speedfactor: 1.0,
+            soundtimer: 0.0,
+            was_grounded: false,
+            current_animation: None,
+            animation_time: 0.0,
+            animations: Vec::new(),
+            nodes: Vec::new(),
+            time_stamp: 0.0,
+            hostile,
+            lastrot: Vec3::ZERO,
+            sounding: false,
+            sound: Planets::get_mob_sound(model_index),
+            attacktimer: 0.0,
+            soundvolume: 0.0,
+            attackinterval: Planets::get_mob_attack_interval(model_index),
+            soundinterval: Planets::get_mob_sound_interval(model_index),
+            lastchunkpos:IVec2::new(-99, 99),
+        }
     }
 
     pub fn recalculate(&mut self) {
@@ -292,8 +300,7 @@ impl ModelEntity {
                         self.controls.forward = true;
                     }
                 }
-                
-            },
+            }
             2 => {
                 self.controls.clear();
                 let res = raycast_voxel(self.position, self.direction, &self.csys, 5.0);
@@ -306,21 +313,15 @@ impl ModelEntity {
                         self.controls.forward = true;
                     }
                 }
-            },
+            }
             3 => {
                 self.controls.clear();
-            },
-            _ => {
-                
             }
+            _ => {}
         }
     }
 
     pub fn cricket_behavior(&mut self, _delta: &f32) {
-
-
-        
-
         let rand = self.rng.gen_range(0..6);
 
         match rand {
@@ -328,85 +329,68 @@ impl ModelEntity {
                 self.controls.clear();
             }
             _ => {
+                let night = unsafe { AMBIENTBRIGHTNESS <= 0.5 };
 
-                
-        let night = unsafe {
-            AMBIENTBRIGHTNESS <= 0.5
-        };
-
-
-
-        if night {
-            self.sounding = true;
-        } else {
-            self.sounding = false;
-        }
-
-            let block = {let blockbitshere = self.csys.clone().blockat(IVec3::new(self.position.x.floor() as i32, self.position.y.floor() as i32, self.position.z.floor() as i32));
-            let block = blockbitshere & Blocks::block_id_bits();
-            block
-            };
-    
-
-            if block == 23u32 {
-                self.controls.clear();
-                //We're where we wanna be, in some tall grass
-            } else {
-                self.controls.up = true;
-                self.controls.forward = true;
-
-                if rand > 3 {
-                    self.controls.lookingleft = true;
+                if night {
+                    self.sounding = true;
                 } else {
-                    self.controls.lookingright = true;
+                    self.sounding = false;
                 }
 
+                let block = {
+                    let blockbitshere = self.csys.clone().blockat(IVec3::new(
+                        self.position.x.floor() as i32,
+                        self.position.y.floor() as i32,
+                        self.position.z.floor() as i32,
+                    ));
+                    let block = blockbitshere & Blocks::block_id_bits();
+                    block
+                };
 
-                let res = raycast_voxel(self.position, self.direction, &self.csys, 10.0);
-                match res {
-                    Some(res) => {
-                        let block = 
-                        {
-                            let blockbitshere = self.csys.clone().blockat(res.1);
-                            let block = blockbitshere & Blocks::block_id_bits();
-                            block
-                        };
-                        if block == 23u32 {
-                            self.controls.clear();
-                            self.controls.up = true;
-                            self.controls.forward = true;
-                        } else {
-                            if rand > 3 {
-                                self.controls.lookingleft = true;
+                if block == 23u32 {
+                    self.controls.clear();
+                    //We're where we wanna be, in some tall grass
+                } else {
+                    self.controls.up = true;
+                    self.controls.forward = true;
+
+                    if rand > 3 {
+                        self.controls.lookingleft = true;
+                    } else {
+                        self.controls.lookingright = true;
+                    }
+
+                    let res = raycast_voxel(self.position, self.direction, &self.csys, 10.0);
+                    match res {
+                        Some(res) => {
+                            let block = {
+                                let blockbitshere = self.csys.clone().blockat(res.1);
+                                let block = blockbitshere & Blocks::block_id_bits();
+                                block
+                            };
+                            if block == 23u32 {
+                                self.controls.clear();
+                                self.controls.up = true;
+                                self.controls.forward = true;
                             } else {
-                                self.controls.lookingright = true;
+                                if rand > 3 {
+                                    self.controls.lookingleft = true;
+                                } else {
+                                    self.controls.lookingright = true;
+                                }
                             }
                         }
-                        
-                    }
-                    None => {
-                        self.controls.up = true;
-                        self.controls.forward = true;
+                        None => {
+                            self.controls.up = true;
+                            self.controls.forward = true;
+                        }
                     }
                 }
-
-
-
-            }
-
-
-
-
             }
         }
-
-
-
-
     }
 
     pub fn behavior_loop(&mut self, delta: &f32, knowncams: &Arc<DashMap<Uuid, Vec3>>) {
-        
         if self.behavior_timer < 1.0 {
             self.behavior_timer += delta;
         } else {
@@ -421,10 +405,9 @@ impl ModelEntity {
                             self.random_behavior(delta);
                         }
                     }
-                    
                 }
                 AggroTarget::ModelEntityID(_id) => {
-                    //let modent = 
+                    //let modent =
                 }
                 AggroTarget::ThisCamera => {
                     self.speedfactor = 2.5;
@@ -438,9 +421,7 @@ impl ModelEntity {
                 AggroTarget::UUID(targ_id) => {
                     self.speedfactor = 2.5;
                     let campos = match knowncams.get(&targ_id) {
-                        Some(vec3) => {
-                            *vec3.value()
-                        }
+                        Some(vec3) => *vec3.value(),
                         None => {
                             self.target = AggroTarget::NoAggro;
                             Vec3::ZERO
@@ -449,27 +430,22 @@ impl ModelEntity {
                     let mut diff = campos - self.position;
                     let distance = campos.distance(self.position);
 
-                    
                     diff.y = 0.0;
                     self.set_direction(diff.normalize());
                     self.controls.up = true;
                     self.controls.forward = true;
                     self.sounding = true;
 
-
                     if distance > 30.0 {
                         self.controls.clear();
                         self.target = AggroTarget::NoAggro;
                         self.sounding = false;
                     }
-                },
+                }
             }
-            
-            
-            self.behavior_timer = 0.0;
 
+            self.behavior_timer = 0.0;
         }
-        
     }
 
     pub fn set_direction(&mut self, dir: Vec3) {
@@ -479,19 +455,14 @@ impl ModelEntity {
     }
 
     //Mutate own velocity based on internal controlsstate
-    pub fn respond_to_own_controls(
-        &mut self,
-        delta: &f32,
-        speed_mult: f32,
-    ) {
-        
+    pub fn respond_to_own_controls(&mut self, delta: &f32, speed_mult: f32) {
         self.recalculate();
 
-
-        
-
         if self.controls.forward {
-            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize() * *delta * speed_mult * self.speedfactor;
+            self.velocity += (self.direction * Vec3::new(1.0, 0.0, 1.0)).normalize()
+                * *delta
+                * speed_mult
+                * self.speedfactor;
         }
         if self.controls.lookingleft {
             self.rot.y += 1.0 * *delta;
@@ -499,7 +470,7 @@ impl ModelEntity {
         if self.controls.lookingright {
             self.rot.y -= 1.0 * *delta;
         }
-        
+
         if self.velocity.length() > 0.0 {
             let amt_to_subtract = self.velocity * *delta * speed_mult;
             self.velocity -= amt_to_subtract;
@@ -510,8 +481,6 @@ impl ModelEntity {
         //     self.position.x, self.position.y, self.position.z
         // );
     }
-
-
 
     pub fn set_pos(&mut self, newpos: Vec3) {
         self.lastpos = self.position;

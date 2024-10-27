@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use bevy::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, rad::calculate_rotation, vec};
+use crate::{blockinfo::Blocks, chunk::{ChunkSystem, CH_H, CH_W}, game::{DeathType, Game, AUDIOPLAYER, CAMERA, CHUNKSYS, DEATHTYPE, PLAYERPOS}, modelentity::ModelEntity, planetinfo::Planets, rad::calculate_rotation};
 
 
 
@@ -66,7 +66,7 @@ pub fn wait_or_visit_queued_spots(
                     for y in 0..CH_H {
                         for x in 0..CH_W {
                             for z in 0..CH_W {
-                                let spothere = vec::IVec3::new(CURRENT_VISIT_SPOT.x * CH_W + x, y, CURRENT_VISIT_SPOT.y * CH_W + z);
+                                let spothere =IVec3::new(CURRENT_VISIT_SPOT.x * CH_W + x, y, CURRENT_VISIT_SPOT.y * CH_W + z);
                                 let blockhere = csys.blockat(spothere);
                                 let idhere = blockhere & Blocks::block_id_bits();
 
@@ -86,7 +86,7 @@ pub fn wait_or_visit_queued_spots(
                     QUEUED_FOR_EVERIS.remove(&CURRENT_VISIT_SPOT);
 
                     // for source in unsafe { &currentdeletespots } {
-                    //     csys.read().set_block_no_sound(vec::IVec3::new(source.x, source.y, source.z), 0, true);
+                    //     csys.read().set_block_no_sound(IVec3::new(source.x, source.y, source.z), 0, true);
                     //     implic.insert(ChunkSystem::spot_to_chunk_pos(source));
                     // }
                     // for vec in implic {
@@ -369,7 +369,7 @@ impl Game {
 
                             let mut blocklighthere = 0.0;
 
-                            let samplingcoord = vec::IVec3::new(
+                            let samplingcoord =IVec3::new(
                                 modelent.position.x as i32,
                                 modelent.position.y as i32,
                                 modelent.position.z as i32
