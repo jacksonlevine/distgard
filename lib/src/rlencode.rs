@@ -53,8 +53,7 @@ pub fn rlencode_chunk(cpos: &IVec2) -> String {
             lastblock = blockat as i32;
             count = 1;
             result += (blockat.to_string() + " ").as_str(); //put new block id
-
-        } 
+        }
         else {
             //if its the same block continue the same run
             count += 1;

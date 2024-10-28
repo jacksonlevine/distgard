@@ -34,6 +34,8 @@ use parking_lot::{Mutex, RwLock};
 use jeffy_quintet::client::QuintetClientPlugin;
 use jeffy_quintet::server::QuintetServerPlugin;
 
+pub static SAVE_QUEUED: AtomicBool = AtomicBool::new(false);
+
 pub static mut REND_RAD: bool = false;
 pub static mut SPECIAL_TOOL_OVERLAY: bool = false;
 #[derive(FromPrimitive, Clone)]
@@ -1804,6 +1806,7 @@ impl Game {
 
         let chest_registry = Arc::new(DashMap::new());
 
+       
 
         //INITIALIZING PREVIOUS GAME RESOURCES HERE
 
@@ -1989,6 +1992,18 @@ impl Game {
                 let _ = AUDIOPLAYER.preload(string, string);
             }
         }
+
+
+        let chestregclone = g.chest_registry.clone();
+        let todclone = g.timeofday.clone();
+        let invclone = g.inventory.clone();
+        let healthclone = g.health.clone();
+        thread::spawn(move || {
+            Self::save_world_thread_fn(&chestregclone, 
+                &todclone, 
+                &invclone, 
+                &healthclone);
+        });
 
         #[cfg(feature = "audio")]
         {
@@ -2306,12 +2321,36 @@ impl Game {
         });
     }
 
+    pub fn save_world_thread_fn(chest_registry: &Arc<DashMap<IVec3, ChestInventory>>,
+    timeofday: &Arc<Mutex<f32>>,
+    inventory: &Arc<RwLock<Inventory>>,
+    health: &Arc<AtomicI32>
+    ) {
+        loop {
+            if SAVE_QUEUED.load(Ordering::Relaxed) {
+                {
+                    Self::_save_current_chests_to_file(chest_registry);
+                }
+                {
+                    Self::_save_world_aspects_to_db(timeofday, inventory, health);
+                }
+            }
+            thread::sleep(Duration::from_secs(3));
+        }
+    }
+
     pub fn save_world_aspects_to_db(&self) {
-        put_misc_entry("timeofday", self.timeofday.lock().to_string().as_bytes().to_vec());
+      Self::_save_world_aspects_to_db(&self.timeofday, &self.inventory, &self.health);
+    }
+
+
+
+    pub fn _save_world_aspects_to_db(timeofday: &Arc<Mutex<f32>>, inventory: &Arc<RwLock<Inventory>>, health: &Arc<AtomicI32>) {
+        put_misc_entry("timeofday", timeofday.lock().to_string().as_bytes().to_vec());
         put_misc_entry("playerposition", borsh::to_vec(unsafe { &PLAYERPOS.snapshot().pos }).unwrap());
         put_misc_entry("weather", unsafe { WEATHERTYPE.to_string().as_bytes().to_vec() });
-        put_misc_entry("inventory", borsh::to_vec(&self.inventory.read().inv).unwrap());
-        put_misc_entry("health", self.health.load(Ordering::Relaxed).to_string().as_bytes().to_vec());
+        put_misc_entry("inventory", borsh::to_vec(&inventory.read().inv).unwrap());
+        put_misc_entry("health", health.load(Ordering::Relaxed).to_string().as_bytes().to_vec());
         put_misc_entry("waypoints", borsh::to_vec(unsafe { &(*WAYPOINTS) }).unwrap());
     }
     
@@ -2450,8 +2489,10 @@ impl Game {
             Err(_e) => {}
         };
     }
-
     pub fn save_current_chests_to_file(&self) {
+        Self::_save_current_chests_to_file(&self.chest_registry);
+    }
+    pub fn _save_current_chests_to_file(chest_registry: &Arc<DashMap<IVec3, ChestInventory>>) {
         let seed = {
 
             let s = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
@@ -2486,7 +2527,7 @@ impl Game {
             ))
             .unwrap();
 
-        for entry in self.chest_registry.iter() {
+        for entry in chest_registry.iter() {
             let key = entry.key();
             let chest_inventory = entry.value();
             let inv_bin = bincode::serialize(&chest_inventory.inv).unwrap();
@@ -4149,8 +4190,10 @@ impl Game {
             saveworldaspectstimer += self.delta_time;
             if saveworldaspectstimer > 5.0 {
                 saveworldaspectstimer = 0.0;
-                self.save_world_aspects_to_db();
-                self.save_current_chests_to_file();
+
+                SAVE_QUEUED.store(true, Ordering::Relaxed);
+                // self.save_world_aspects_to_db();
+                // self.save_current_chests_to_file();
             }
         }
 

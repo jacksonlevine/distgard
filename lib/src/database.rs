@@ -1,7 +1,7 @@
 use crate::{chunk::USERDATAMAPANDMISCMAP,*};
 
 use sled::Db;
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 
 #[derive(Clone)]
 pub struct UserDataMapAndMiscMap(pub Db);
@@ -53,6 +53,8 @@ pub fn get_entry(prefix: Vec<u8>, key: Vec<u8>) -> Option<Vec<u8>> {
     }
 }
 
+
+
 pub fn put_entry(prefix: Vec<u8>, key: Vec<u8>, value: Vec<u8>) {
     match unsafe { &USERDATAMAPANDMISCMAP } {
         Some(db) => {
@@ -77,6 +79,8 @@ pub fn get_udm_entry(key: &IVec3) -> Option<u32>
     return get_entry(b"udm".to_vec(), key_to_bytes(key).unwrap())
             .map(|v| u32::from_le_bytes(v.try_into().unwrap()));
 }
+
+
 
 pub fn put_udm_entry(key: &IVec3, block: u32) {
     put_entry(b"udm".to_vec(), key_to_bytes(key).unwrap(), block.to_le_bytes().to_vec());
