@@ -17,14 +17,16 @@ pub struct LevelSaver {
 
 impl LevelSaver {
     pub fn loadpos(seed: u32, cpos: &IVec2) {
-        let paths = path!((seed.to_string() + "/") + cpos.to_string().as_str());
+        println!("Loading {}", cpos.to_string());
+        let paths = path!((seed.to_string().replace("-", "N").replace("1", "A") + "/") + cpos.to_string().replace("-", "N").replace("[", "C").replace("]", "C").replace(",", "X").replace(" ", "").as_str());
         let path = Path::new(&paths);
         match OpenOptions::new().read(true).open(path) {
             Ok(mut file) => {
                 let mut string = String::new();
                 match file.read_to_string(&mut string) {
                     Ok(_) => {
-                        rldecode_chunk(string);
+                        println!("File exists: {}", string);
+                        rldecode_chunk(string, cpos);
                     }
                     Err(e) => {
                         println!("Failed to read file {}, {}", paths, e);
@@ -34,18 +36,22 @@ impl LevelSaver {
                 
             }
             Err(e) => {
-                println!("Failed to open file {}, {}", paths, e);
-                info!("Failed to open file {}, {}", paths, e);
+
             }
         }
     }
 
     pub fn savepos(seed: u32, cpos: &IVec2) {
-        let paths = path!((seed.to_string() + "/") + cpos.to_string().as_str());
+        println!("Saving: {}", cpos.to_string());
+        let paths = path!((seed.to_string().replace("-", "N").replace("1", "A") + "/") + cpos.to_string().replace("-", "N").replace("[", "C").replace("]", "C").replace(",", "X").replace(" ", "").as_str());
         let path = Path::new(&paths);
 
-        let savestring = rlencode_chunk(cpos);
+        let prefix = path.parent().unwrap();
+        std::fs::create_dir_all(prefix).unwrap();
 
+        println!("about to encode chunk");
+        let savestring = rlencode_chunk(cpos);
+        println!("encoded chunk");
         match File::create(path) {
             Ok(mut file) => {
                 match file.write_all(savestring.as_bytes()) {
@@ -66,7 +72,7 @@ impl LevelSaver {
         
     }
 
-    pub fn unloadpos(cpos: &IVec2) {
-        
-    }
+    // pub fn unloadpos(cpos: &IVec2) {
+
+    // }
 }

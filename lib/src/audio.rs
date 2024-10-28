@@ -128,13 +128,20 @@ impl AudioPlayer {
     }
 
     pub fn _preload(&mut self, _id: String, file_path: String) -> Result<(), AudioError> {
-        let mut file = File::open(&file_path).unwrap();
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).unwrap();
-        self.sounds.insert(file_path.clone(), buffer);
-        self.sinks.insert(file_path.clone(), SoundSink::new(&self.output, Vec3::ZERO, Vec3::ZERO, Vec3::ZERO));
-        self.headsinks.insert(file_path.to_string(), Sink::try_new(&self.output).unwrap());
-
+        match File::open(&file_path) {
+            Ok(mut file) => {
+                let mut buffer = Vec::new();
+                file.read_to_end(&mut buffer).unwrap();
+                self.sounds.insert(file_path.clone(), buffer);
+                self.sinks.insert(file_path.clone(), SoundSink::new(&self.output, Vec3::ZERO, Vec3::ZERO, Vec3::ZERO));
+                self.headsinks.insert(file_path.to_string(), Sink::try_new(&self.output).unwrap());
+            }
+            Err(e) => {
+                info!("Error: {e} with file path \"{file_path}\"");
+                println!("Error: {e} with file path \"{file_path}\"");
+            }
+        }
+     
         Ok(())
     }
 

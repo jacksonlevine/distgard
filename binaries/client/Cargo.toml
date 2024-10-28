@@ -9,7 +9,7 @@ steam = ["voxelland/steam"]
 localpath = ["voxelland/localpath"]
 
 [dependencies]
-voxelland = { path = "../../lib", features = ["audio", "glfw"] }
+voxelland = { path = "../../lib", features = ["audio", "glfw", "localpath"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 vox-format = "0.1.0"

@@ -12,11 +12,12 @@ macro_rules! block_seq {
             while x < $ch_w {
                 let mut z = 0;
                 while z < $ch_w {
-                    let mut y = 0;
-                    while y < $ch_h {
+                    let mut y = $ch_h;
+                    while y > 0 {
+                        y -= 1;
                         arr[i] = IVec3{x: x as i32, y: y as i32, z: z as i32};
                         i += 1;
-                        y += 1;
+                        
                     }
                     z += 1;
                 }
@@ -58,7 +59,6 @@ pub fn rlencode_chunk(cpos: &IVec2) -> String {
         else {
             //if its the same block continue the same run
             count += 1;
-
         }
 
         if index == BLOCK_SEQ.len() - 1 {
@@ -70,7 +70,7 @@ pub fn rlencode_chunk(cpos: &IVec2) -> String {
     return result;
 }
 
-pub fn rldecode_chunk(data: String) {
+pub fn rldecode_chunk(data: String, cpos: &IVec2) {
 
     let udm = unsafe { USERDATAMAPANDMISCMAP.as_ref().unwrap() };
     let mut tokens = data.split_whitespace();
@@ -83,7 +83,7 @@ pub fn rldecode_chunk(data: String) {
             let count = count_str.parse::<usize>().unwrap_or(0);
             if block != 0 {
                 for i in seq_index..(seq_index+count) {
-                    unsafe { udm.insert(BLOCK_SEQ[i], block) };
+                    unsafe { udm.insert(BLOCK_SEQ[i] + cpos_to_world(cpos), block) };
                 }
             }
             seq_index += count;

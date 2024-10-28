@@ -17,21 +17,6 @@ debug = true   # Includes debug information even in release builds
 
 [profile.release.package.voxelland]
 opt-level = 3       # Highest level of optimization
-# lto = true          # Enable Link Time Optimization
-# panic = 'abort'     # Abort on panic, which can reduce binary size and slightly increase performance
-# codegen-units = 1   # This may increase compilation time but can improve runtime performance
-
-[profile.release.package.voxelland-client]
-opt-level = 3  # Maximum optimization level
-# lto = true     # Enables Link Time Optimization
-debug = true   # Includes debug information even in release builds
-codegen-units = 1   # This may increase compilation time but can improve runtime performance
-
-[profile.release.package.voxelland-server]
-opt-level = 3       # Highest level of optimization
-# lto = true          # Enable Link Time Optimization
-# panic = 'abort'     # Abort on panic, which can reduce binary size and slightly increase performance
-codegen-units = 1   # This may increase compilation time but can improve runtime performance
 
 [profile.deploy]
 inherits = "release"

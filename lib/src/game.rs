@@ -602,7 +602,7 @@ pub fn popuserstuff(csys_arc: &ChunkSystem) -> bool {
 pub fn poplightstuff(csys_arc: &ChunkSystem) -> bool {
     match csys_arc.light_rebuild_requests.pop() {
         Some(index) => {
-            csys_arc.rebuild_index(index, true, true);
+            csys_arc.rebuild_index(index, false, true);
             return true;
         }
         None => {
@@ -737,7 +737,7 @@ pub fn attend_chunk_queues() {
         
                 match csys_arc.light_rebuild_requests.pop() {
                     Some(index) => {
-                        csys_arc.rebuild_index(index, true, true);
+                        csys_arc.rebuild_index(index, false, true);
                         //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
                         unsafe {
                             let mut implic = HashSet::new();
@@ -788,7 +788,7 @@ pub fn attend_chunk_queues() {
                             for imp in implic {
                                 csys_arc.queue_rerender_with_key(
                                     imp,
-                                    true,
+                                    false,
                                     false,
                                 );
                             }
@@ -814,7 +814,7 @@ pub fn attend_chunk_queues() {
                         match csys_arc.light_rebuild_requests.pop() {
                             Some(index) => {
                                 //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
+                                csys_arc.rebuild_index(index, false, true);
                                 unsafe {
                                     let mut implic = HashSet::new();
                                     let mut more = true;
@@ -886,7 +886,7 @@ pub fn attend_chunk_queues() {
         
                 match csys_arc.gen_rebuild_requests.pop() {
                     Some(index) => {
-                        csys_arc.rebuild_index(index, true, false);
+                        csys_arc.rebuild_index(index, false, false);
                         // info!("Popping stuff GEN {}", rng.gen_range(0..255));
                         match csys_arc.user_rebuild_requests.pop() {
                             Some(index) => {
@@ -898,7 +898,7 @@ pub fn attend_chunk_queues() {
                         match csys_arc.light_rebuild_requests.pop() {
                             Some(index) => {
                                 // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
+                                csys_arc.rebuild_index(index, false, true);
                                 unsafe {
                                     let mut implic = HashSet::new();
                                     let mut more = true;
@@ -987,7 +987,7 @@ pub fn attend_chunk_queues() {
                         match csys_arc.light_rebuild_requests.pop() {
                             Some(index) => {
                                 // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
+                                csys_arc.rebuild_index(index, false, true);
                                 unsafe {
                                     let mut implic = HashSet::new();
                                     let mut more = true;
@@ -1051,12 +1051,12 @@ pub fn attend_chunk_queues() {
                         match csys_arc.gen_rebuild_requests.pop() {
                             Some(index) => {
                                 // info!("Popping stuff GEN {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
+                                csys_arc.rebuild_index(index, false, false);
                                 let mut genstuff = true;
                                 while genstuff {
                                     match csys_arc.gen_rebuild_requests.pop() {
                                         Some(index) => {
-                                            csys_arc.rebuild_index(index, true, false);
+                                            csys_arc.rebuild_index(index, false, false);
                                         }
                                         None => {
                                             genstuff = false;

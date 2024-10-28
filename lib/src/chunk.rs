@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use bevy::math::U16Vec3;
 use borsh::BorshSerialize;
+use dashmap::mapref::entry;
 use dashmap::DashMap;
 
 pub static CHUNKPOSDEFAULT: i32 = 999999;
@@ -66,8 +67,11 @@ use crate::game::CURRSEED;
 use crate::game::PLAYERPOS;
 use crate::game::VOXEL_MODELS;
 use crate::game::WEATHERTYPE;
+use crate::levelsaver::LevelSaver;
 use crate::packedvertex::PackedVertex;
 use crate::planetinfo::Planets;
+use crate::rlencode::cpos_to_world;
+use crate::rlencode::BLOCK_SEQ;
 use crate::shader::Shader;
 use crate::specialblocks::awds::AwdsInfo;
 use crate::specialblocks::chest::ChestInfo;
@@ -336,7 +340,7 @@ pub static mut AUTOMATA_QUEUED_CHANGES: Lazy<VecDeque<ACSet>> = Lazy::new(|| Vec
 
 pub static mut USERDATAMAPANDMISCMAP: Option<UserDataMapAndMiscMap> = None;
 
-
+pub static mut CHUNKS_LOADED_FROM_FILE: Option<Arc<DashMap<IVec2, u32>>> = None;
 
 
 pub static mut NONUSERDATAMAP: Option<Arc<DashMap<IVec3, u32>>> = None;
@@ -384,7 +388,7 @@ impl ChunkSystem {
                 match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
                     Ok(db) => {
                         println!("Opened db, assigning to USERDATAMAP");
-                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
+                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db, DashMap::new()));
                         println!("Opened db");
                     }
                     Err(e) => {
@@ -393,6 +397,7 @@ impl ChunkSystem {
                 }
 
                 NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+                CHUNKS_LOADED_FROM_FILE = Some(Arc::new(DashMap::new()));
             }
 
         let mut cs = ChunkSystem {
@@ -945,6 +950,9 @@ impl ChunkSystem {
         // }
     }
     pub fn queue_geoindex_rerender(&self, geo_index: usize, user_power: bool, light: bool) {
+        self._queue_geoindex_rerender(geo_index, user_power, light);
+    }
+    pub fn _queue_geoindex_rerender(&self, geo_index: usize, user_power: bool, light: bool) {
         if light {
             match unsafe { &LIGHT_GIS_QUEUED.get(&geo_index) } {
                 Some(_) => {}
@@ -979,6 +987,9 @@ impl ChunkSystem {
         }
     }
     pub fn queue_rerender(&self, spot:IVec3, user_power: bool, light: bool) {
+        self._queue_rerender(spot, user_power, light);
+    }
+    pub fn _queue_rerender(&self, spot:IVec3, user_power: bool, light: bool) {
         let chunk_key = &Self::spot_to_chunk_pos(&spot);
         match self.takencare.get(chunk_key) {
             Some(cf) => {
@@ -988,6 +999,9 @@ impl ChunkSystem {
         }
     }
     pub fn queue_rerender_with_key(&self, chunk_key: IVec2, user_power: bool, light: bool) {
+        self._queue_rerender_with_key(chunk_key, user_power, light);
+    }
+    pub fn _queue_rerender_with_key(&self, chunk_key: IVec2, user_power: bool, light: bool) {
         match self.takencare.get(&chunk_key) {
             Some(cf) => self.queue_geoindex_rerender(cf.geo_index, user_power, light),
             None => {}
@@ -1612,13 +1626,32 @@ impl ChunkSystem {
     }
 
     pub fn rebuild_index(&self, index: usize, user_power: bool, light: bool) {
-        self._rebuild_index(index, user_power, light);
+        self._rebuild_index(index, user_power, light,false);
     }
-    pub fn _rebuild_index(&self, index: usize, user_power: bool, light: bool) {
+    pub fn _rebuild_index(&self, index: usize, user_power: bool, light: bool, save: bool) {
+
+        
+
+
         //info!("Rebuilding!");
         let chunkarc = self.chunks[index].clone();
         let mut chunklock = chunkarc.lock();
         chunklock.used = true;
+
+
+        let clff = unsafe { CHUNKS_LOADED_FROM_FILE.as_ref().unwrap() };
+
+        let clffentry = clff.get(&chunklock.pos);
+
+        match clffentry {
+            Some(entry) => {
+
+            }
+            None => {
+                LevelSaver::loadpos(unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) }, &chunklock.pos);
+                clff.insert(chunklock.pos, 0);
+            }
+        }
 
         let chunklock = chunklock.clone();
 
@@ -1654,6 +1687,20 @@ impl ChunkSystem {
 
         let mut weatherstoptops: HashMap<IVec2, i32> = HashMap::new();
         let mut tops: HashMap<IVec2, i32> = HashMap::new();
+
+        let udm = unsafe { USERDATAMAPANDMISCMAP.as_ref().unwrap() };
+
+        for (index, spot) in BLOCK_SEQ.iter().enumerate() {
+            //let mut hit
+            let spot = cpos_to_world(&chunklock.pos);
+            
+            let combined = self.blockatmemo(spot, &mut memo);
+            
+            let inudmhere = udm.get(&spot).unwrap_or(0);
+
+            let block = combined & Blocks::block_id_bits();
+            let flags = combined & Blocks::block_flag_bits();
+        }
 
         for i in 0..CH_W {
             for k in 0..CH_W {
@@ -2679,6 +2726,9 @@ impl ChunkSystem {
 
         match user_power {
             true => {
+                println!("about to savepos");
+                LevelSaver::savepos(unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) }, &chunklock.pos);
+                println!("savedpos");
                 ugqarc.push(rm);
             }
             false => {
