@@ -130,21 +130,12 @@ pub fn handle_server_messages(
     //mut animstates: Query<(&mut JMoveState, &ChildJId)>
 ) {
     //client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) }));
-  
 
-    match client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) })) {
-        Ok(_) => {
-            println!("Sent bytes!2");
-        },
-        Err(_) => {
-            println!("Failed to send");
-        }
-    }
     println!("Checking for server messages...");
     loop {
         match client.connection_mut().receive_message::<Message>() {
             Ok(None) => {
-                println!("none");
+                //println!("none");
             }
             Ok(Some(message)) => {
                 //println!("Finally receiing");
