@@ -14,12 +14,13 @@ use jeffy_quintet::{client::*, shared::channels::ChannelsConfiguration};
 // use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use connection::ClientEndpointConfiguration;
 
+use crate::game::CURRSEED;
 use crate::server_types::Message;
 //use crate::{add_player_to_scene, ChildJId, JId, JMoveState, JMyCollider, JMyId, JMyPlayer, JOtherPlayers};
 
 
 
-
+static mut GLOBAL_CLIENT: *mut QuintetClient = std::ptr::null_mut();
 
 
 #[derive(Component)]
@@ -74,17 +75,17 @@ pub static mut THEENTEREDADDRESS: String = String::new();
 pub static mut ADDRESSENTERED: AtomicBool = AtomicBool::new(false);
 
 pub fn start_connection(mut client: ResMut<QuintetClient>) {
+    // unsafe { GLOBAL_CLIENT = &mut *client as *mut QuintetClient };
+    // while !unsafe { ADDRESSENTERED.load(Ordering::Relaxed) } {
+    //     thread::sleep(Duration::from_millis(500));
+    // }
 
-    while !unsafe { ADDRESSENTERED.load(Ordering::Relaxed) } {
-        thread::sleep(Duration::from_millis(500));
-    }
-
-    let address = unsafe { THEENTEREDADDRESS.clone() }; // Remove any trailing newline characters
-
+    // let address = unsafe { THEENTEREDADDRESS.clone() }; // Remove any trailing newline characters
+    println!("Starting connection0");
     // handle potential error?
     let _ = client.open_connection(
         ClientEndpointConfiguration::from_strings(
-                             &address,
+                             "127.0.0.1:6000",
                              "0.0.0.0:0"
                          ).unwrap(),
         CertificateVerificationMode::SkipVerification,
@@ -96,6 +97,15 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
         ])
         .unwrap(),
     );
+    println!("Starting connection1");
+    match client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) })) {
+        Ok(_) => {
+            println!("Sent bytes!");
+        },
+        Err(_) => {
+            println!("Failed to send");
+        }
+    }
 }
 
 // pub fn update_otherplayers_interps(
@@ -114,98 +124,126 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
 
 pub fn handle_server_messages(
     _commands: Commands,
-    _asset_server: Res<AssetServer>,
     mut client: ResMut<QuintetClient>,
     //mut opl: ResMut<JOtherPlayers>,
     //mut otherplayerbodies: Query<(&mut Transform, &JId, &mut InterpolationThing)>, /*...*/
     //mut animstates: Query<(&mut JMoveState, &ChildJId)>
 ) {
-    //println!("Checking for server messages...");
-    while let Ok(Some(message)) = client.connection_mut().receive_message::<Message>() {
-       // println!("Finally receiing");
+    //client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) }));
+  
 
-        match message {
-            _ => {
-                    
-            }
-            // (channelid, Message::Disconnect) => {
-
-            // },
-            // (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
-
-            // },
-            // (channelid, Message::BlockSet(servec3, blockid)) => {
-
-            // },
-            // (channelid, Message::InvUpdate(slotindex, slot)) => {
-
-            // },
-            // (channelid, Message::ItemToYourMouse(slot)) => {
-
-            // },
-            // (channelid, Message::MobUpdate) => {
-
-            // },
-            // (channelid, Message::MobUpdateBatch) => {
-
-            // },
-            // (channelid, Message::MultiBlockSet(blocks)) => {
-
-            // },
-            // (channelid, Message::RequestWorldInfo) => {
-
-            // },
-            // (channelid, Message::TellYouMyID(id1, id2)) => {
-
-            // },
-            // (channelid, Message::YourId(id1, id2)) => {
-
-            // },
-            // (channelid, Message::TimeUpdate(newtime)) => {
-
-            // },
-            // (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
-            //     //ChestReg, Pt, Udm, Seed
-            // },
-            // (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
-
-            // }
-
-
-
-            // Match on your own message types ...
-            //(channelid, Message::PlayerUpdate(uuid, trans, rot, scale, mov)) => {
-               // println!("Got on {}: {}", channelid, uuid);
-
-                // if !opl.list.contains(&uuid) {
-                //     opl.list.insert(uuid);
-
-                //     add_player_to_scene(&mut commands, &asset_server, trans, uuid);
-                // } else {
-                //     for (mut transform, id, mut interp) in otherplayerbodies.iter_mut() {
-                //         let newtrans = Transform {
-                //             translation: trans,
-                //             rotation: rot,
-                //             scale,
-                //         };
-
-                        
-                        
-                        
-                //         if id.uuid == uuid {
-                //             (*interp).update(newtrans);
-                //             //(*transform) = newtrans; was causing glitch movement
-                //         }
-                //     }
-                //     for (mut movestate, jid) in animstates.iter_mut() {
-                //         if jid.uuid == uuid {
-                //             movestate.moving = mov;
-                //         }
-                //     }
-                // }
-            //} //ServerMessage::ClientConnected { client_id, username} => {/*...*/}
-              //ServerMessage::ClientDisconnected { client_id } => {/*...*/}
-              //ServerMessage::ChatMessage { client_id, message } => {/*...*/}
+    match client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) })) {
+        Ok(_) => {
+            println!("Sent bytes!2");
+        },
+        Err(_) => {
+            println!("Failed to send");
         }
     }
+    println!("Checking for server messages...");
+    loop {
+        match client.connection_mut().receive_message::<Message>() {
+            Ok(None) => {
+                println!("none");
+            }
+            Ok(Some(message)) => {
+                //println!("Finally receiing");
+    
+                match message {
+        
+                    (channelId, Message::Hello(seed)) => {
+                        println!("Received: {}", seed)
+                    }
+        
+                   
+                    // (channelid, Message::Disconnect) => {
+        
+                    // },
+                    // (channelid, Message::ChestUpdate(chestloc, slotindex, slot)) => {
+        
+                    // },
+                    // (channelid, Message::BlockSet(servec3, blockid)) => {
+        
+                    // },
+                    // (channelid, Message::InvUpdate(slotindex, slot)) => {
+        
+                    // },
+                    // (channelid, Message::ItemToYourMouse(slot)) => {
+        
+                    // },
+                    // (channelid, Message::MobUpdate) => {
+        
+                    // },
+                    // (channelid, Message::MobUpdateBatch) => {
+        
+                    // },
+                    // (channelid, Message::MultiBlockSet(blocks)) => {
+        
+                    // },
+                    // (channelid, Message::RequestWorldInfo) => {
+        
+                    // },
+                    // (channelid, Message::TellYouMyID(id1, id2)) => {
+        
+                    // },
+                    // (channelid, Message::YourId(id1, id2)) => {
+        
+                    // },
+                    // (channelid, Message::TimeUpdate(newtime)) => {
+        
+                    // },
+                    // (channelid, Message::WorldInfo(chestregbytes, pt, udmbytes, seed)) => {
+                    //     //ChestReg, Pt, Udm, Seed
+                    // },
+                    // (channelid, Message::PlayerUpdate(uuid, pos, rot)) => {
+        
+                    // }
+                    _ => {
+                            println!("Received something else");
+                    }
+        
+        
+        
+                    // Match on your own message types ...
+                    //(channelid, Message::PlayerUpdate(uuid, trans, rot, scale, mov)) => {
+                       // println!("Got on {}: {}", channelid, uuid);
+        
+                        // if !opl.list.contains(&uuid) {
+                        //     opl.list.insert(uuid);
+        
+                        //     add_player_to_scene(&mut commands, &asset_server, trans, uuid);
+                        // } else {
+                        //     for (mut transform, id, mut interp) in otherplayerbodies.iter_mut() {
+                        //         let newtrans = Transform {
+                        //             translation: trans,
+                        //             rotation: rot,
+                        //             scale,
+                        //         };
+        
+                                
+                                
+                                
+                        //         if id.uuid == uuid {
+                        //             (*interp).update(newtrans);
+                        //             //(*transform) = newtrans; was causing glitch movement
+                        //         }
+                        //     }
+                        //     for (mut movestate, jid) in animstates.iter_mut() {
+                        //         if jid.uuid == uuid {
+                        //             movestate.moving = mov;
+                        //         }
+                        //     }
+                        // }
+                    //} //ServerMessage::ClientConnected { client_id, username} => {/*...*/}
+                      //ServerMessage::ClientDisconnected { client_id } => {/*...*/}
+                      //ServerMessage::ChatMessage { client_id, message } => {/*...*/}
+                }
+            }
+            Err(e) => {
+                println!("Error: {e}");
+            }
+        }
+    }
+    
+
 }

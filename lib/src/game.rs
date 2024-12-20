@@ -2287,13 +2287,19 @@ impl Game {
             
             } else {
 
+
+                println!("DUDE THIS IS WHAT SHOULD BE FUCKING PRI(NTIUNG");
+
                 app.add_systems(Update, attend_needed_spots);
                 app.add_systems(Update, attend_chunk_queues);
                 // app.add_systems(Update, attend_chunk_queues2);
                 // app.add_systems(Update, attend_chunk_queues3);
 
-                if unsafe {!HEADLESS} && unsafe {!SINGLEPLAYER} { //Client multiplayer
 
+                println!("SINGLEPLAYER IS OBVIOUSLY FUCKING {} ", unsafe {SINGLEPLAYER});
+
+                if unsafe {!SINGLEPLAYER} { //Client multiplayer
+                    println!("THIS  SHOULD BE WHAT IS FUCKNGRPINTING");
                     app.init_resource::<PlayerUpdateTimer>();
                     app.add_plugins(QuintetClientPlugin::default());
                     app.add_systems(Startup, start_connection);
@@ -2646,9 +2652,9 @@ impl Game {
             //let mut address = String::new();
             //io::stdin().read_line(&mut address).expect("Failed to read line");
 
-            while !self.addressentered.load(Ordering::Relaxed) {
-                thread::sleep(Duration::from_millis(500));
-            }
+            // while !self.addressentered.load(Ordering::Relaxed) {
+            //     thread::sleep(Duration::from_millis(500));
+            // }
 
             // let address = self.address.lock().as_ref().unwrap().trim().to_string(); // Remove any trailing newline characters
 
@@ -8696,9 +8702,11 @@ impl Game {
             // let msg = Message::new(MessageType::RequestUdm, Vec3::ZERO, 0.0, 0);
             // self.netconn.send(&msg);
 
-            while !RECEIVED_WORLD.load(Ordering::Relaxed) {
-                thread::sleep(Duration::from_millis(500));
-            }
+
+
+            // while !RECEIVED_WORLD.load(Ordering::Relaxed) {
+            //     thread::sleep(Duration::from_millis(500));
+            // }
 
             let currseed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
             let nt = 0;

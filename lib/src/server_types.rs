@@ -74,6 +74,7 @@ impl BorshDeserialize for SerIVec3 {
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub enum Message {
     None,
+    Hello(u32),
     // RequestUdm,
     // RequestSeed,
     // RequestPt,

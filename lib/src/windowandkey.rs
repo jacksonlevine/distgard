@@ -55,6 +55,9 @@ pub static mut SEEDBUF: Lazy<String> = Lazy::new(|| String::with_capacity(128));
 
 pub static mut SELECTEDWORLDINDEX: usize = 0;
 
+
+pub static mut AM_I_A_FUCKING_SERVER: bool = false;
+
 pub struct WindowAndKeyContext {
     pub width: u32,
     pub height: u32,
@@ -692,8 +695,10 @@ impl WindowAndKeyContext {
                                 {
                                     AUDIOPLAYER.play_in_head(path!("assets/sfx/mclickgo.mp3"));
                                 }
+                                
                                 SINGLEPLAYER = false;
                                 DECIDEDSPORMP = true;
+                                
                             }
 
                             static mut ELEMENT2MOUSED: bool = false;

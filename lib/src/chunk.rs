@@ -64,6 +64,7 @@ use crate::game::CURRSEED;
 
 // use crate::game::PLAYERCHUNKPOS;
 use crate::game::PLAYERPOS;
+use crate::game::SINGLEPLAYER;
 use crate::game::VOXEL_MODELS;
 use crate::game::WEATHERTYPE;
 use crate::packedvertex::PackedVertex;
@@ -83,6 +84,7 @@ use crate::textureface::TextureFace;
 use crate::textureface::ONE_OVER_16;
 use crate::textureface::TEXTURE_WIDTH;
 use crate::vechelp::ivec2length;
+use crate::windowandkey::AM_I_A_FUCKING_SERVER;
 
 use arrayvec::ArrayVec;
 
@@ -378,22 +380,46 @@ impl ChunkSystem {
     
     pub fn new(radius: u8, seed: u32, noisetype: usize, headless: bool) -> ChunkSystem {
 
-            unsafe {
-                //USERDATAMAP = Some(Arc::new(DashMap::new()));
-                println!("Opening db");
-                match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
-                    Ok(db) => {
-                        println!("Opened db, assigning to USERDATAMAP");
-                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
-                        println!("Opened db");
-                    }
-                    Err(e) => {
-                        println!("Error opening db: {}", e);
-                    }
-                }
+            if(unsafe { AM_I_A_FUCKING_SERVER }) {
 
-                NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+                println!("IM A SERVER OR SINGLEPLAYER");
+                unsafe {
+                    //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                    println!("Opening db");
+                    match sled::open(String::from("dgsaves/") + seed.to_string().as_str()) {
+                        Ok(db) => {
+                            println!("Opened db, assigning to USERDATAMAP");
+                            USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
+                            println!("Opened db");
+                        }
+                        Err(e) => {
+                            println!("Error opening db: {}", e);
+                        }
+                    }
+    
+                    NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+                }
+            } else {
+                unsafe {
+                    println!("IM A CLIENT TRYING TO JOIN MULTIPLAYER");
+                    //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                    println!("Opening db");
+                    match sled::open(String::from("dgsavesmp/") + seed.to_string().as_str()) {
+                        Ok(db) => {
+                            println!("Opened db, assigning to USERDATAMAP");
+                            USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
+                            println!("Opened db");
+                        }
+                        Err(e) => {
+                            println!("Error opening db: {}", e);
+                        }
+                    }
+    
+                    NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+                }
             }
+            
+
 
         let mut cs = ChunkSystem {
             chunks: Vec::new(),

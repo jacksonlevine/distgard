@@ -40,6 +40,30 @@ pub fn handle_client_messages(
         while let Some(message) = endpoint.try_receive_message_from::<Message>(client_id) {
             match message {
                 _ => {
+                    println!("Received message on {}", message.0);
+                    // TODO: handle potential error
+
+                    loop {
+                        match endpoint.send_group_message_on(
+                        endpoint.clients().iter(),//.filter(|s| **s != client_id),
+                            3,
+                            message.1.clone(),
+                        ) {
+                            Ok(_) => {
+                                println!("Sent message to everyone");
+                            }
+                            Err(e) => {
+                                println!("Err sending to everyone: {e}");
+                            }
+                        }
+
+                        if let Err(e) = endpoint.broadcast_message_on(3, message.1.clone()) {
+                            println!("Error broadcasting message: {:?}", e);
+                        } else {
+                            println!("Broadcasted message to all clients.");
+                        }
+                    }
+                    
 
                 }
                 // (channelid, Message::Disconnect) => {

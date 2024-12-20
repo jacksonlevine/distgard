@@ -6,7 +6,7 @@ use tracing::{error, info};
 use std::env;
 use std::fs::File;
 
-use voxelland::windowandkey::{UNCAPKB, WindowAndKeyContext};
+use voxelland::windowandkey::{WindowAndKeyContext, AM_I_A_FUCKING_SERVER, UNCAPKB};
 
 use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, HEADLESS, RECEIVED_WORLD, SHOULDRUN, SINGLEPLAYER};
 
@@ -20,18 +20,23 @@ fn main() {
         if args[1] == "s" {
             println!("I AM SERVER");
             unsafe { ISSERVER = true };
+            unsafe { AM_I_A_FUCKING_SERVER = true };
         }
     }
 
 
     if unsafe { ISSERVER } {
 
-        let mut wak = WindowAndKeyContext::new("Server", 100, 100);
+        
+       
 
+        let mut wak = WindowAndKeyContext::new("Server", 100, 100);
+        println!("Got past this point");
         let gameh = Game::new(&wak.window, true, true, &wak.addressentered, &wak.serveraddress);
         let mut game = gameh.join().unwrap();
-
+        println!("Got past this point2");
         game.initialize_being_in_world();
+        println!("Got past this point3");
         wak.game = Some(game);
         
         while !wak.window.read().should_close() {
@@ -123,13 +128,9 @@ fn main() {
 
             //MULTIPLAYER
 
-            while !RECEIVED_WORLD.load(std::sync::atomic::Ordering::Relaxed) {
-                if !wak_context.window.read().should_close() {
-                    wak_context.run();
-                } else {
-                    return ();
-                }
-            }
+            
+
+
 
 
 
@@ -154,7 +155,6 @@ fn main() {
         } else {
             return ();
         }
-        
     }
 
 
