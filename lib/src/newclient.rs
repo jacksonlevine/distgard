@@ -14,7 +14,7 @@ use jeffy_quintet::{client::*, shared::channels::ChannelsConfiguration};
 // use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use connection::ClientEndpointConfiguration;
 
-use crate::game::{CHUNKSYS, CURRSEED, RECEIVED_WORLD};
+use crate::game::{CHUNKSYS, CURRSEED, RECEIVED_WORLD, WORLD_READY};
 use crate::server_types::Message;
 //use crate::{add_player_to_scene, ChildJId, JId, JMoveState, JMyCollider, JMyId, JMyPlayer, JOtherPlayers};
 
@@ -152,6 +152,7 @@ pub fn handle_server_messages(
                             if let Some(ref chunksys) = CHUNKSYS {
                                 println!("Received seed {} from server.", info.seed);
                                 chunksys.change_seed(info.seed);
+                                WORLD_READY.store(true, Ordering::Relaxed);
                             } else {
                                 panic!("CHUNKSYS is not initialized when received seed from server");
                             }

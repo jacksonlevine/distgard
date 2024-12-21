@@ -8,7 +8,7 @@ use std::fs::File;
 
 use voxelland::windowandkey::{WindowAndKeyContext, AM_I_A_FUCKING_SERVER, UNCAPKB};
 
-use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, HEADLESS, RECEIVED_WORLD, SHOULDRUN, SINGLEPLAYER};
+use voxelland::game::{Game, DECIDEDSEEDOREXISTS, DECIDEDSPORMP, DECIDEDWORLD, HEADLESS, RECEIVED_WORLD, SHOULDRUN, SINGLEPLAYER, WORLD_READY};
 
 pub static mut ISSERVER: bool = false;
 
@@ -107,6 +107,8 @@ fn main() {
 
 
         if SINGLEPLAYER {
+
+            WORLD_READY.store(true, std::sync::atomic::Ordering::Relaxed);
 
             while !DECIDEDWORLD {
                 if !wak_context.window.read().should_close() {

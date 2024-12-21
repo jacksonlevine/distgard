@@ -36,6 +36,9 @@ use jeffy_quintet::server::QuintetServerPlugin;
 
 pub static SAVE_QUEUED: AtomicBool = AtomicBool::new(false);
 
+
+pub static mut WORLD_READY: AtomicBool = AtomicBool::new(false);
+
 pub static mut REND_RAD: bool = false;
 pub static mut SPECIAL_TOOL_OVERLAY: bool = false;
 #[derive(FromPrimitive, Clone)]
@@ -672,410 +675,413 @@ pub fn popautomatastuff(csys_arc: &ChunkSystem) -> bool {
 
 
 pub fn attend_chunk_queues() {
-    let csys = unsafe {(*addr_of!(CHUNKSYS)).as_ref()};
-    match csys {
-        Some(csys) => {
-            unsafe {
-                let mut implic = HashSet::new();
-                let mut more = true;
-                
-                let csys_arc = csys.clone();
-                while more {
+    if(unsafe { WORLD_READY.load(Ordering::Relaxed) }) {
+        println!("Attending chunk queues");
+        let csys = unsafe {(*addr_of!(CHUNKSYS)).as_ref()};
+        match csys {
+            Some(csys) => {
+                unsafe {
+                    let mut implic = HashSet::new();
+                    let mut more = true;
                     
-                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                        Some(comm) => {
-                            //println!("Poppin one");
-                            for comm in comm.changes {
-        
-                            
-        
+                    let csys_arc = csys.clone();
+                    while more {
+                        
+                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                            Some(comm) => {
+                                //println!("Poppin one");
+                                for comm in comm.changes {
             
-                                if (csys_arc.blockat(comm.spot))
-                                    == comm.expectedhere
-                                {
-        
-        
-                                    // println!("Settin");
-                                    // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                    // csys_arc.queue_rerender_with_key(
-                                    //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                    //     false,
-                                    //     false,
-                                    // );
-                                    //csys_arc.rebuild_index(comm.geo_index, false, false);
-        
-                                    csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                    implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-        
-        
-                                } else {
-                                    // println!(
-                                    //     "Expected {} here but its {} for this change",
-                                    //     comm.expectedhere,
-                                    //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                    // );
+                                
+            
+                
+                                    if (csys_arc.blockat(comm.spot))
+                                        == comm.expectedhere
+                                    {
+            
+            
+                                        // println!("Settin");
+                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                        // csys_arc.queue_rerender_with_key(
+                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                        //     false,
+                                        //     false,
+                                        // );
+                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
+            
+                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+            
+            
+                                    } else {
+                                        // println!(
+                                        //     "Expected {} here but its {} for this change",
+                                        //     comm.expectedhere,
+                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                        // );
+                                    }
                                 }
+                            }
+                            None => {
+                                more = false;
+                            }
+                        }
+                    }
+                    for imp in implic {
+                        csys_arc.queue_rerender_with_key(
+                            imp,
+                            true,
+                            false,
+                        );
+                    }
+                    
+                }
+            
+                let mut lightstuff = true;
+                while lightstuff {
+                    
+                    let csys_arc = csys.clone();
+            
+                    match csys_arc.light_rebuild_requests.pop() {
+                        Some(index) => {
+                            csys_arc.rebuild_index(index, true, true);
+                            //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                            unsafe {
+                                let mut implic = HashSet::new();
+                                let mut more = true;
+                            // let csys_arc = csys_arc.read();
+                                while more {
+                                    
+                                    match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                        Some(comm) => {
+                                            //println!("Poppin one");
+                                            for comm in comm.changes {
+                    
+                                            
+                    
+                            
+                                                if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                    == comm.expectedhere
+                                                {
+                    
+                    
+                                                    // println!("Settin");
+                                                    // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                    // csys_arc.queue_rerender_with_key(
+                                                    //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                    //     false,
+                                                    //     false,
+                                                    // );
+                                                    //csys_arc.rebuild_index(comm.geo_index, false, false);
+                    
+                                                    csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                    implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                    
+                    
+                                                } else {
+                                                    // println!(
+                                                    //     "Expected {} here but its {} for this change",
+                                                    //     comm.expectedhere,
+                                                    //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                    // );
+                                                }
+                                            }
+                                        }
+                                        None => {
+                                            more = false;
+                                        }
+                                    }
+                                }
+                                for imp in implic {
+                                    csys_arc.queue_rerender_with_key(
+                                        imp,
+                                        true,
+                                        false,
+                                    );
+                                }
+                                
+                            }
+                    
+                        }
+                        None => {
+                            lightstuff = false;
+                        }
+                    }
+                }
+            
+                let mut userstuff = true;
+                while userstuff {
+                    let csys_arc = csys.clone();
+            
+                    match csys_arc.user_rebuild_requests.pop() {
+                        Some(index) => {
+                            //info!("Popping stuff USER {}", rng.gen_range(0..255));
+                            csys_arc.rebuild_index(index, true, false);
+            
+                            match csys_arc.light_rebuild_requests.pop() {
+                                Some(index) => {
+                                    //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, true);
+                                    unsafe {
+                                        let mut implic = HashSet::new();
+                                        let mut more = true;
+                                        //let csys_arc = csys_arc.read();
+                                        while more {
+                                            
+                                            match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                                Some(comm) => {
+                                                    //println!("Poppin one");
+                                                    for comm in comm.changes {
+                            
+                                                    
+                            
+                                    
+                                                        if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            == comm.expectedhere
+                                                        {
+                            
+                            
+                                                            // println!("Settin");
+                                                            // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                            // csys_arc.queue_rerender_with_key(
+                                                            //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                            //     false,
+                                                            //     false,
+                                                            // );
+                                                            //csys_arc.rebuild_index(comm.geo_index, false, false);
+                            
+                                                            csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                            implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                            
+                            
+                                                        } else {
+                                                            // println!(
+                                                            //     "Expected {} here but its {} for this change",
+                                                            //     comm.expectedhere,
+                                                            //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            // );
+                                                        }
+                                                    }
+                                                }
+                                                None => {
+                                                    more = false;
+                                                }
+                                            }
+                                        }
+                                        for imp in implic {
+                                            csys_arc.queue_rerender_with_key(
+                                                imp,
+                                                true,
+                                                false,
+                                            );
+                                        }
+                                        
+                                    }
+                            
+                                }
+                                None => {}
                             }
                         }
                         None => {
-                            more = false;
+                            userstuff = false;
                         }
                     }
                 }
-                for imp in implic {
-                    csys_arc.queue_rerender_with_key(
-                        imp,
-                        true,
-                        false,
-                    );
-                }
-                
-            }
-        
-            let mut lightstuff = true;
-            while lightstuff {
-                
-                let csys_arc = csys.clone();
-        
-                match csys_arc.light_rebuild_requests.pop() {
-                    Some(index) => {
-                        csys_arc.rebuild_index(index, true, true);
-                        //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                        unsafe {
-                            let mut implic = HashSet::new();
-                            let mut more = true;
-                           // let csys_arc = csys_arc.read();
-                            while more {
-                                
-                                match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                    Some(comm) => {
-                                        //println!("Poppin one");
-                                        for comm in comm.changes {
-                
-                                        
-                
-                        
-                                            if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                == comm.expectedhere
-                                            {
-                
-                
-                                                // println!("Settin");
-                                                // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                // csys_arc.queue_rerender_with_key(
-                                                //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                //     false,
-                                                //     false,
-                                                // );
-                                                //csys_arc.rebuild_index(comm.geo_index, false, false);
-                
-                                                csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                
-                
-                                            } else {
-                                                // println!(
-                                                //     "Expected {} here but its {} for this change",
-                                                //     comm.expectedhere,
-                                                //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                // );
-                                            }
-                                        }
-                                    }
-                                    None => {
-                                        more = false;
-                                    }
+                let mut genstuff = true;
+                while genstuff {
+                    let csys_arc = csys.clone();
+            
+                    match csys_arc.gen_rebuild_requests.pop() {
+                        Some(index) => {
+                            csys_arc.rebuild_index(index, true, false);
+                            // info!("Popping stuff GEN {}", rng.gen_range(0..255));
+                            match csys_arc.user_rebuild_requests.pop() {
+                                Some(index) => {
+                                    // info!("Popping stuff USER {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, false);
                                 }
+                                None => {}
                             }
-                            for imp in implic {
-                                csys_arc.queue_rerender_with_key(
-                                    imp,
-                                    true,
-                                    false,
-                                );
-                            }
+                            match csys_arc.light_rebuild_requests.pop() {
+                                Some(index) => {
+                                    // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, true);
+                                    unsafe {
+                                        let mut implic = HashSet::new();
+                                        let mut more = true;
+                                        //let csys_arc = csys_arc.read();
+                                        while more {
+                                            
+                                            match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                                Some(comm) => {
+                                                    //println!("Poppin one");
+                                                    for comm in comm.changes {
                             
-                        }
-                
-                    }
-                    None => {
-                        lightstuff = false;
-                    }
-                }
-            }
-        
-            let mut userstuff = true;
-            while userstuff {
-                let csys_arc = csys.clone();
-        
-                match csys_arc.user_rebuild_requests.pop() {
-                    Some(index) => {
-                        //info!("Popping stuff USER {}", rng.gen_range(0..255));
-                        csys_arc.rebuild_index(index, true, false);
-        
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                //info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
+                                                    
+                            
+                                    
+                                                        if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            == comm.expectedhere
+                                                        {
+                            
+                            
+                                                            // println!("Settin");
+                                                            // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                            // csys_arc.queue_rerender_with_key(
+                                                            //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                            //     false,
+                                                            //     false,
+                                                            // );
+                                                            //csys_arc.rebuild_index(comm.geo_index, false, false);
+                            
+                                                            csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                            implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                            
+                            
+                                                        } else {
+                                                            // println!(
+                                                            //     "Expected {} here but its {} for this change",
+                                                            //     comm.expectedhere,
+                                                            //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            // );
+                                                        }
                                                     }
                                                 }
-                                            }
-                                            None => {
-                                                more = false;
-                                            }
-                                        }
-                                    }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
-                                }
-                        
-                            }
-                            None => {}
-                        }
-                    }
-                    None => {
-                        userstuff = false;
-                    }
-                }
-            }
-            let mut genstuff = true;
-            while genstuff {
-                let csys_arc = csys.clone();
-        
-                match csys_arc.gen_rebuild_requests.pop() {
-                    Some(index) => {
-                        csys_arc.rebuild_index(index, true, false);
-                        // info!("Popping stuff GEN {}", rng.gen_range(0..255));
-                        match csys_arc.user_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                            }
-                            None => {}
-                        }
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
-                                                    }
+                                                None => {
+                                                    more = false;
                                                 }
                                             }
-                                            None => {
-                                                more = false;
-                                            }
                                         }
+                                        for imp in implic {
+                                            csys_arc.queue_rerender_with_key(
+                                                imp,
+                                                true,
+                                                false,
+                                            );
+                                        }
+                                        
                                     }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
+                            
                                 }
-                        
+                                None => {}
                             }
-                            None => {}
                         }
-                    }
-                    None => {
-                        genstuff = false;
+                        None => {
+                            genstuff = false;
+                        }
                     }
                 }
-            }
-        
-            let mut backgroundstuff = true;
-            while backgroundstuff {
-                
-                let csys_arc = csys.clone();
-        
-                match csys_arc.background_rebuild_requests.pop() {
-                    Some(index) => {
-                        // info!("Popping stuff BACKGROUND {}", rng.gen_range(0..255));
-                        csys_arc.rebuild_index(index, false, false);
-        
-                        match csys_arc.user_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff USER {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                                let _userstuff = true;
+            
+                let mut backgroundstuff = true;
+                while backgroundstuff {
+                    
+                    let csys_arc = csys.clone();
+            
+                    match csys_arc.background_rebuild_requests.pop() {
+                        Some(index) => {
+                            // info!("Popping stuff BACKGROUND {}", rng.gen_range(0..255));
+                            csys_arc.rebuild_index(index, false, false);
+            
+                            match csys_arc.user_rebuild_requests.pop() {
+                                Some(index) => {
+                                    // info!("Popping stuff USER {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, false);
+                                    let _userstuff = true;
+                                }
+                                None => {}
                             }
-                            None => {}
-                        }
-        
-                        match csys_arc.light_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, true);
-                                unsafe {
-                                    let mut implic = HashSet::new();
-                                    let mut more = true;
-                                    //let csys_arc = csys_arc.read();
-                                    while more {
-                                        
-                                        match AUTOMATA_QUEUED_CHANGES.pop_front() {
-                                            Some(comm) => {
-                                                //println!("Poppin one");
-                                                for comm in comm.changes {
-                        
-                                                
-                        
-                                
-                                                    if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        == comm.expectedhere
-                                                    {
-                        
-                        
-                                                        // println!("Settin");
-                                                        // csys_arc.set_block(comm.spot, comm.changeto, false);
-                                                        // csys_arc.queue_rerender_with_key(
-                                                        //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
-                                                        //     false,
-                                                        //     false,
-                                                        // );
-                                                        //csys_arc.rebuild_index(comm.geo_index, false, false);
-                        
-                                                        csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
-                                                        implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
-                        
-                        
-                                                    } else {
-                                                        // println!(
-                                                        //     "Expected {} here but its {} for this change",
-                                                        //     comm.expectedhere,
-                                                        //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
-                                                        // );
+            
+                            match csys_arc.light_rebuild_requests.pop() {
+                                Some(index) => {
+                                    // info!("Popping stuff LIGHT {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, true);
+                                    unsafe {
+                                        let mut implic = HashSet::new();
+                                        let mut more = true;
+                                        //let csys_arc = csys_arc.read();
+                                        while more {
+                                            
+                                            match AUTOMATA_QUEUED_CHANGES.pop_front() {
+                                                Some(comm) => {
+                                                    //println!("Poppin one");
+                                                    for comm in comm.changes {
+                            
+                                                    
+                            
+                                    
+                                                        if (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            == comm.expectedhere
+                                                        {
+                            
+                            
+                                                            // println!("Settin");
+                                                            // csys_arc.set_block(comm.spot, comm.changeto, false);
+                                                            // csys_arc.queue_rerender_with_key(
+                                                            //     ChunkSystem::spot_to_chunk_pos(&comm.spot),
+                                                            //     false,
+                                                            //     false,
+                                                            // );
+                                                            //csys_arc.rebuild_index(comm.geo_index, false, false);
+                            
+                                                            csys_arc.set_block_no_sound(comm.spot, comm.changeto, false);
+                                                            implic.insert(ChunkSystem::spot_to_chunk_pos(&comm.spot));
+                            
+                            
+                                                        } else {
+                                                            // println!(
+                                                            //     "Expected {} here but its {} for this change",
+                                                            //     comm.expectedhere,
+                                                            //     (csys_arc.blockat(comm.spot) & Blocks::block_id_bits())
+                                                            // );
+                                                        }
                                                     }
                                                 }
+                                                None => {
+                                                    more = false;
+                                                }
+                                            }
+                                        }
+                                        for imp in implic {
+                                            csys_arc.queue_rerender_with_key(
+                                                imp,
+                                                true,
+                                                false,
+                                            );
+                                        }
+                                        
+                                    }
+                            
+                                }
+                                None => {}
+                            }
+            
+                            match csys_arc.gen_rebuild_requests.pop() {
+                                Some(index) => {
+                                    // info!("Popping stuff GEN {}", rng.gen_range(0..255));
+                                    csys_arc.rebuild_index(index, true, false);
+                                    let mut genstuff = true;
+                                    while genstuff {
+                                        match csys_arc.gen_rebuild_requests.pop() {
+                                            Some(index) => {
+                                                csys_arc.rebuild_index(index, true, false);
                                             }
                                             None => {
-                                                more = false;
+                                                genstuff = false;
                                             }
                                         }
                                     }
-                                    for imp in implic {
-                                        csys_arc.queue_rerender_with_key(
-                                            imp,
-                                            true,
-                                            false,
-                                        );
-                                    }
-                                    
                                 }
-                        
+                                None => {}
                             }
-                            None => {}
                         }
-        
-                        match csys_arc.gen_rebuild_requests.pop() {
-                            Some(index) => {
-                                // info!("Popping stuff GEN {}", rng.gen_range(0..255));
-                                csys_arc.rebuild_index(index, true, false);
-                                let mut genstuff = true;
-                                while genstuff {
-                                    match csys_arc.gen_rebuild_requests.pop() {
-                                        Some(index) => {
-                                            csys_arc.rebuild_index(index, true, false);
-                                        }
-                                        None => {
-                                            genstuff = false;
-                                        }
-                                    }
-                                }
-                            }
-                            None => {}
+                        None => {
+                            backgroundstuff = false;
                         }
-                    }
-                    None => {
-                        backgroundstuff = false;
                     }
                 }
             }
-        }
-        None => {
+            None => {
+            }
         }
     }
 }
@@ -1114,8 +1120,9 @@ pub fn attend_chunk_queues3() {
 pub fn attend_needed_spots(
 ) {
 
-
-    let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref()};
+    if(unsafe { WORLD_READY.load(Ordering::Relaxed) }) {
+        println!("Attending needed spots");
+        let csys = unsafe { (*addr_of!(CHUNKSYS)).as_ref()};
     let cam_arc = unsafe { CAMERA.as_ref() };
 
 
@@ -1260,6 +1267,8 @@ pub fn attend_needed_spots(
         }
     }
 
+    }
+    
 
 }
 
