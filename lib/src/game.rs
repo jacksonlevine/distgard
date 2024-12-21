@@ -1545,7 +1545,7 @@ impl Game {
         );
 
         
-
+        
         
         //IMPORTANT: Push the inv row slots first
         fn add_inventory_rows(
@@ -2210,6 +2210,16 @@ impl Game {
         })
     }
 
+
+    pub fn set_seed_everywhere(&self, newseed: u32) {
+        unsafe {
+            if let Some(ref chunksys) = CHUNKSYS {
+                chunksys.change_seed(newseed);
+            } else {
+                panic!("CHUNKSYS is not initialized!");
+            }
+        }
+    }
     pub fn draw_dead_screen(&self, deathtype: DeathType) {
         unsafe {
             gl::Disable(gl::CULL_FACE);

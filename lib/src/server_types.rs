@@ -71,10 +71,16 @@ impl BorshDeserialize for SerIVec3 {
     }
 }
 
+#[derive(Clone, BorshDeserialize, BorshSerialize, Debug)]
+pub struct WorldInfoYo {
+    pub seed: u32,
+}
+
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub enum Message {
     None,
     Hello(u32),
+    WorldRealInfo(WorldInfoYo),
     // RequestUdm,
     // RequestSeed,
     // RequestPt,

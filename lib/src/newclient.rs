@@ -14,7 +14,7 @@ use jeffy_quintet::{client::*, shared::channels::ChannelsConfiguration};
 // use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 use connection::ClientEndpointConfiguration;
 
-use crate::game::CURRSEED;
+use crate::game::{CHUNKSYS, CURRSEED, RECEIVED_WORLD};
 use crate::server_types::Message;
 //use crate::{add_player_to_scene, ChildJId, JId, JMoveState, JMyCollider, JMyId, JMyPlayer, JOtherPlayers};
 
@@ -98,7 +98,8 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
         .unwrap(),
     );
     println!("Starting connection1");
-    match client.connection_mut().send_message_on(3, Message::Hello(unsafe { CURRSEED.load(Ordering::Relaxed) })) {
+
+    match client.connection_mut().send_message_on(3, Message::Hello(100)) {
         Ok(_) => {
             println!("Sent bytes!");
         },
@@ -106,6 +107,7 @@ pub fn start_connection(mut client: ResMut<QuintetClient>) {
             println!("Failed to send");
         }
     }
+    
 }
 
 // pub fn update_otherplayers_interps(
@@ -145,7 +147,19 @@ pub fn handle_server_messages(
                     (channelId, Message::Hello(seed)) => {
                         println!("Received: {}", seed)
                     }
-        
+                    (channelId, Message::WorldRealInfo(info)) => {
+                        unsafe {
+                            if let Some(ref chunksys) = CHUNKSYS {
+                                println!("Received seed {} from server.", info.seed);
+                                chunksys.change_seed(info.seed);
+                            } else {
+                                panic!("CHUNKSYS is not initialized when received seed from server");
+                            }
+
+                            RECEIVED_WORLD.store(true, Ordering::Relaxed);
+                        }
+                        
+                    }
                    
                     // (channelid, Message::Disconnect) => {
         
@@ -166,7 +180,7 @@ pub fn handle_server_messages(
         
                     // },
                     // (channelid, Message::MobUpdateBatch) => {
-        
+         
                     // },
                     // (channelid, Message::MultiBlockSet(blocks)) => {
         

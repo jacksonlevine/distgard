@@ -484,7 +484,59 @@ impl ChunkSystem {
         cs
     }
     
-    
+
+    pub fn change_seed(&self, newseed: u32) {
+
+        let new_perlin = Perlin::new(newseed);
+        {
+            let mut perlin_lock = self.perlin.write(); 
+            *perlin_lock = new_perlin; 
+        }
+        println!("Replaced Perlin noise generator with a new seed: {}", newseed);
+
+        if(unsafe { AM_I_A_FUCKING_SERVER }) {
+
+            println!("IM A SERVER OR SINGLEPLAYER");
+            unsafe {
+                //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                println!("Opening db");
+                match sled::open(String::from("dgsaves/") + newseed.to_string().as_str()) {
+                    Ok(db) => {
+                        println!("Opened db, assigning to USERDATAMAP");
+                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
+                        println!("Opened db");
+                    }
+                    Err(e) => {
+                        println!("Error opening db: {}", e);
+                    }
+                }
+
+                NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+            }
+        } else {
+            unsafe {
+                println!("Changing seed for a CLIENT TRYING TO JOIN MULTIPLAYER");
+                //USERDATAMAP = Some(Arc::new(DashMap::new()));
+                println!("Opening db");
+                match sled::open(String::from("dgsavesmp/") + newseed.to_string().as_str()) {
+                    Ok(db) => {
+                        println!("Opened db, assigning to USERDATAMAP");
+                        USERDATAMAPANDMISCMAP = Some(UserDataMapAndMiscMap(db));
+                        println!("Opened db");
+                    }
+                    Err(e) => {
+                        println!("Error opening db: {}", e);
+                    }
+                }
+
+                NONUSERDATAMAP = Some(Arc::new(DashMap::new()));
+            }
+        }
+
+
+
+        unsafe { CURRSEED.store(newseed, std::sync::atomic::Ordering::Relaxed); }
+    }
     pub fn write_new_udm_entry(&self, spot:IVec3, block: u32) {
         let seed = unsafe { CURRSEED.load(std::sync::atomic::Ordering::Relaxed) };
         let table_name = format!("userdatamap_{}", seed);

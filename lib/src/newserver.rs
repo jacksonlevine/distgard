@@ -12,6 +12,9 @@ use jeffy_quintet::server::certificate::CertificateRetrievalMode;
 
 use crate::server_types::*;
 
+
+pub const SERVERSEED: u32 = 100;
+
 pub fn start_listening(mut server: ResMut<QuintetServer>) {
     println!("Server starting!");
     server
@@ -39,9 +42,16 @@ pub fn handle_client_messages(
     for client_id in endpoint.clients() {
         while let Some(message) = endpoint.try_receive_message_from::<Message>(client_id) {
             match message {
+                (3, Message::Hello(100) ) => {
+                    println!("Got hello 100, sending seed!");
+                    endpoint.send_message_on(client_id, 3, Message::WorldRealInfo(WorldInfoYo{
+                        seed: SERVERSEED
+                    }));
+                }
                 _ => {
                     println!("Received message on {}", message.0);
                     // TODO: handle potential error
+
 
                     match endpoint.send_group_message_on(
                     endpoint.clients().iter(),//.filter(|s| **s != client_id),
